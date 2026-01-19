@@ -1,0 +1,1178 @@
+<!-- START OF FILE Trading_PnL_Universal_V17.html -->
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Trading PnL Universal V17</title>
+<style>
+/* --- BASE STYLES --- */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px; color:#1c1c1e; overflow-x: hidden;}
+@media(max-width: 768px) { body { padding: 10px; padding-bottom: env(safe-area-inset-bottom); background: #f0f2f5; } }
+
+.container{max-width:1000px;margin:0 auto;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3); min-height:80vh; display: flex; flex-direction: column;}
+@media(max-width: 768px) { .container { border-radius: 0; box-shadow: none; min-height: 100vh; } }
+
+.header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;text-align:center;border-radius:20px 20px 0 0; flex-shrink: 0;}
+@media(max-width: 768px) { .header { border-radius: 0; padding-top: max(20px, env(safe-area-inset-top)); } }
+
+.header h1{font-size:1.5em;margin-bottom:8px}
+.backup-status{font-size:.75em;opacity:.9;margin-top:8px; display:inline-block; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:10px;}
+
+/* NAVIGATION */
+.nav{display:flex;background:#f8f9fa;border-bottom:2px solid #e9ecef;overflow-x:auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; position: sticky; top: 0; z-index: 100;}
+.nav-btn{flex:1;min-width:70px;padding:15px 8px;background:none;border:none;cursor:pointer;font-size:.9em;font-weight:600;color:#495057;white-space:nowrap; transition: background 0.2s;}
+.nav-btn.active{background:white;color:#667eea;border-bottom:3px solid #667eea}
+
+@media(max-width: 768px) {
+    .nav-btn {
+        padding: 14px 2px;
+        font-size: 0.8em; 
+        min-width: auto;   
+    }
+}
+
+/* CONTENT */
+.content{padding:20px; flex-grow: 1;}
+@media(max-width: 768px) { .content { background: #f2f2f7; } }
+.view{display:none; animation: fadeIn 0.2s ease;}
+.view.active{display:block}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* FORMS */
+.form-group{margin-bottom:15px; background: white; }
+@media(max-width: 768px) { .form-group { padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 15px;} }
+
+.form-group label{display:block;margin-bottom:8px;font-weight:600;color:#495057; font-size: 0.85em; text-transform: uppercase;}
+.form-group input, .form-group textarea{width:100%;padding:14px;border:2px solid #e9ecef;border-radius:8px;font-size:18px;font-family:inherit; font-weight: 600;}
+@media(max-width: 768px) { .form-group input, .form-group textarea { border: none; border-bottom: 1px solid #e5e5ea; border-radius: 0; padding: 8px 0; } }
+.form-group input:focus, .form-group textarea:focus{outline:none;border-color:#667eea}
+
+/* BUTTONS */
+.btn{width:100%;padding:16px;color:white;border:none;border-radius:8px;font-size:1.1em;font-weight:600;cursor:pointer;margin-bottom:10px; transition: transform 0.1s; text-align: center;}
+.btn:active { transform: scale(0.98); opacity: 0.9; }
+.btn-sm { padding: 8px 12px; font-size: 0.9em; width: auto; display: inline-block; }
+.btn-primary{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+.btn-success{background:linear-gradient(135deg,#51cf66 0%,#37b24d 100%)}
+.btn-info{background:linear-gradient(135deg,#339af0 0%,#1971c2 100%)}
+.btn-sync{background:linear-gradient(135deg,#ff922b 0%,#fd7e14 100%);}
+.btn-outline { background: transparent; border: 2px solid #e9ecef; color: #495057; }
+@media(max-width: 768px) { .btn-outline { background: white; } }
+.btn-reconnect{background:#fff3bf;color:#e67700;border:1px solid #fcc419;margin-top:10px}
+
+/* CALENDAR */
+.calendar{display:grid; gap:8px; margin-top:15px}
+@media(max-width: 768px) { .calendar { gap: 4px; } }
+
+.calendar-header{text-align:center;font-weight:600;padding:8px;background:#f8f9fa;border-radius:6px;font-size:.85em}
+.calendar-day{position:relative; aspect-ratio:1;border-radius:8px;padding:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-weight:600;cursor:pointer;min-height:60px; background: #f8f9fa;}
+@media(max-width: 768px) { .calendar-day { background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.05); min-height: auto; } }
+
+.calendar-day.empty{background:transparent;cursor:default; box-shadow: none;}
+.calendar-day.future{background:#f8f9fa;color:#adb5bd; box-shadow: none;}
+.calendar-day.profit{background:linear-gradient(135deg,#51cf66 0%,#37b24d 100%);color:white}
+.calendar-day.loss{background:linear-gradient(135deg,#ff6b6b 0%,#fa5252 100%);color:white}
+.calendar-day.weekend-hidden { visibility: hidden; pointer-events: none; }
+.note-icon { position: absolute; top: 4px; right: 4px; font-size: 0.8em; opacity: 0.8; }
+.day-number{font-size:.85em;margin-bottom:4px}
+.day-pnl{font-size:.75em;font-weight:700}
+@media(max-width: 768px) { .day-pnl { font-size: 0.65em; } .note-icon { top: 1px; right: 1px; font-size: 0.6em; } }
+
+.month-selector{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding:12px;background:#f8f9fa;border-radius:8px}
+@media(max-width: 768px) { .month-selector { background: white; } }
+.month-selector button{padding:8px 12px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600}
+.month-selector h2{color:#495057;font-size:1.1em}
+
+/* STATS */
+.stat-row{display:flex;justify-content:space-between;padding:10px;background:white;border-radius:8px;margin-bottom:6px;font-size:.9em}
+.stat-row-label{color:#495057;font-weight:500}
+.stat-row-value{font-weight:700}
+.stat-row-value.profit{color:#37b24d} .stat-row-value.loss{color:#fa5252}
+
+.stats-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:20px}
+@media(min-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+
+.stat-card{background:#f8f9fa;padding:15px 10px;border-radius:8px;text-align:center}
+@media(max-width: 768px) { .stat-card { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); } }
+.stat-label{font-size:.8em;color:#868e96;margin-bottom:6px}
+.stat-value{font-size:1.3em;font-weight:700}
+.stat-value.profit{color:#37b24d}
+.stat-value.loss{color:#fa5252}
+
+/* CHARTS */
+.chart-container{background:#f8f9fa;padding:15px;border-radius:12px;margin-bottom:15px; position: relative;}
+@media(max-width: 768px) { .chart-container { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); } }
+.chart-title{font-size:1em;font-weight:600;color:#495057;margin-bottom:12px;text-align:center}
+
+.bar-chart{display:flex;align-items:flex-end;height:200px;padding:10px;background:white;border-radius:8px;overflow-x:auto;gap:3px}
+.bar-wrapper{display:flex;flex-direction:column;align-items:center;min-width:25px; flex: 1;}
+.bar{width:100%; max-width: 30px; min-height:2px;border-radius:3px 3px 0 0}
+.bar.profit{background:linear-gradient(to top,#37b24d,#51cf66)}
+.bar.loss{background:linear-gradient(to top,#fa5252,#ff6b6b)}
+.bar-label{font-size:.65em;color:#868e96;margin-top:4px;font-weight:600}
+.bar-value{font-size:.6em;color:#495057;font-weight:600;margin-bottom:2px}
+
+.line-chart{position:relative;height:250px;background:white;border-radius:8px;padding:20px 10px 30px 45px}
+.line-chart svg{width:100%;height:100%;overflow:visible}
+
+/* LISTS */
+.month-summary{background:white;border-radius:8px;padding:15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #e9ecef}
+@media(max-width: 768px) { .month-summary { background: #f9f9f9; box-shadow: none; border: 1px solid #f1f3f5; border-left-width: 4px; } }
+.month-summary.current{border-left-color:#667eea;background:#f8f9ff}
+.month-summary.profit{border-left-color:#37b24d}
+.month-summary.loss{border-left-color:#fa5252}
+.month-summary-left{flex:1}
+.month-summary-title{font-weight:600;color:#495057;margin-bottom:4px}
+.month-summary-subtitle{font-size:.8em;color:#868e96}
+.month-summary-value{font-size:1.3em;font-weight:700;text-align:right}
+.month-summary-value.profit{color:#37b24d}
+.month-summary-value.loss{color:#fa5252}
+
+/* MODAL */
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px; backdrop-filter: blur(5px);}
+.modal.active{display:flex}
+.modal-content{background:white;padding:0;border-radius:15px;max-width:500px;width:100%; display:flex; flex-direction: column; max-height: 90vh; overflow: hidden;}
+@media(max-width: 768px) { .modal-content { border-radius: 20px; width: 95%; } }
+.modal-header{padding:20px; background:#f8f9fa; border-bottom:1px solid #e9ecef; text-align:center; font-weight:700; color:#495057;}
+.modal-body{padding:20px; overflow-y: auto;}
+.modal-tabs{display:flex; border-bottom:1px solid #e9ecef;}
+.modal-tab{flex:1; padding:15px; text-align:center; cursor:pointer; font-weight:600; color:#868e96; background:#f8f9fa;}
+.modal-tab.active{background:white; color:#667eea; border-bottom:3px solid #667eea;}
+.trade-list-item{background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:10px; display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; align-items:center;}
+.trade-time-group { display: flex; gap: 5px; font-size: 0.8em; color: #868e96; }
+.trade-time-input { width: 100%; border: 1px solid #ced4da; border-radius: 4px; padding: 2px; }
+.modal-footer{padding:20px; border-top:1px solid #e9ecef; display:flex; gap:10px;}
+.btn-cancel{flex:1;padding:14px;background:#e9ecef;color:#495057;border:none;border-radius:8px;font-weight:600;cursor:pointer}
+.btn-delete{flex:1;padding:14px;background:#fa5252;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer}
+
+/* DAY DETAILS */
+.day-detail-header { text-align: center; margin-bottom: 20px; }
+.day-detail-total { font-size: 2em; font-weight: 800; margin-top: 5px; }
+.day-detail-total.profit { color: #34c759; }
+.day-detail-total.loss { color: #fa5252; }
+.day-detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+.detail-card { background: #f8f9fa; padding: 12px; border-radius: 8px; text-align: center; }
+@media(max-width: 768px) { .detail-card { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); } }
+.detail-label { font-size: 0.75em; color: #868e96; text-transform: uppercase; margin-bottom: 4px; }
+.detail-value { font-weight: 700; font-size: 1.1em; color: #495057; }
+.trade-row { 
+    display: grid; grid-template-columns: 60px 1fr 80px; gap: 15px; align-items: center; 
+    padding: 15px; border-bottom: 1px solid #f1f3f5; background: white; 
+}
+.trade-row:last-child { border-bottom: none; }
+.trade-time { font-size: 0.85em; color: #868e96; display: flex; flex-direction: column; }
+.trade-duration { font-size: 0.8em; color: #adb5bd; }
+.trade-bar-container { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; display: flex; }
+.trade-bar-fill { height: 100%; border-radius: 4px; }
+.trade-bar-fill.profit { background: #37b24d; }
+.trade-bar-fill.loss { background: #fa5252; }
+.trade-pnl { font-weight: 700; text-align: right; }
+.trade-pnl.profit { color: #37b24d; }
+.trade-pnl.loss { color: #fa5252; }
+
+/* TRADE STATS ROW */
+.trade-stats-summary {
+    display: flex; justify-content: space-around; margin-top: 15px; 
+    background: white; padding: 10px; border-radius: 8px; 
+    font-size: 0.9em; border: 1px solid #e9ecef;
+}
+.trade-stats-item strong { color: #495057; }
+
+.info-box{background:#e7f5ff;color:#1971c2;padding:15px;border-radius:8px;margin-bottom:15px;font-size:.9em}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>📊 Trading PnL Tracker</h1>
+<p>Universal Version V17 (Robust Import)</p>
+<div class="backup-status" id="status">🔒 Bereit</div>
+</div>
+<div class="nav">
+<!-- Views IDs match array in JS -->
+<button class="nav-btn active" onclick="showView('today')">Heute</button>
+<button class="nav-btn" onclick="showView('calendar')">Kalender</button>
+<button class="nav-btn" onclick="showView('wealth')">Vermögen</button>
+<button class="nav-btn" onclick="showView('statistics')">Statistiken</button>
+<button class="nav-btn" onclick="showView('export')">Im/Export</button>
+</div>
+<div class="content">
+<div id="today" class="view active">
+<div class="success-msg" id="msg">Gespeichert! ✓</div>
+<div class="warning-msg" id="warn"></div>
+<div class="success-msg" id="syncMsg" style="display:none;background:#e7f5ff;color:#0c5460;"></div>
+<div style="max-width:400px;margin:0 auto">
+<h2 style="text-align:center;margin-bottom:20px;color:#495057">PnL für Heute</h2>
+<div class="form-group">
+<label>Datum</label>
+<input type="text" id="todayDate" readonly>
+</div>
+<div class="form-group">
+<label>PnL ($)</label>
+<input type="number" inputmode="decimal" step="0.01" id="todayPnL" placeholder="z.B. 250.50">
+</div>
+<button class="btn btn-primary" onclick="saveToday()">Speichern</button>
+</div>
+</div>
+<div id="calendar" class="view">
+<div class="stats" id="calStats"></div>
+<div class="month-selector">
+<button onclick="changeMonth(-1)">←</button>
+<h2 id="monthTitle"></h2>
+<button onclick="changeMonth(1)">→</button>
+</div>
+<div id="calGrid" class="calendar"></div>
+</div>
+
+<!-- DAY DETAILS -->
+<div id="day-details" class="view">
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn btn-outline" style="flex: 1;" onclick="showView('calendar')">← Zurück zum Kalender</button>
+        <button class="btn btn-info" style="width: auto;" onclick="editCurrentDay()">✏️ Bearbeiten</button>
+    </div>
+    <div id="dayDetailContent"></div>
+</div>
+
+<div id="wealth" class="view">
+<h2 style="text-align:center;margin-bottom:20px;color:#495057">📈 Vermögensentwicklung</h2>
+<div class="chart-container">
+<div class="chart-title">Kumuliertes PnL (Gesamt)</div>
+<div class="line-chart" id="wealthChart"></div>
+</div>
+<div class="chart-container">
+<div class="chart-title">Monatsübersicht</div>
+<div id="monthSummaries"></div>
+</div>
+</div>
+<div id="statistics" class="view">
+<div class="month-selector">
+<button onclick="changeStatsMonth(-1)">←</button>
+<h2 id="statsTitle"></h2>
+<button onclick="changeStatsMonth(1)">→</button>
+</div>
+<div class="stats" id="statsOverview"></div>
+<div class="chart-container">
+<div class="chart-title">📈 Vermögensentwicklung (Kumuliert)</div>
+<div class="line-chart" id="lineChart"></div>
+</div>
+<div class="chart-container">
+<div class="chart-title">📊 Tägliches PnL</div>
+<div class="bar-chart" id="barChart"></div>
+</div>
+<div class="chart-container">
+<div class="chart-title">🔎 Einzeltrade-Performance</div>
+<div class="bar-chart" id="tradeBarChart"></div>
+<div id="tradeStatsRow" class="trade-stats-summary"></div>
+</div>
+<div class="chart-container">
+<div class="chart-title">📅 Wochentag-Analyse (Ø PnL)</div>
+<div class="bar-chart" id="weekdayChart"></div>
+</div>
+<div class="stats-grid">
+<div class="chart-container">
+<div class="chart-title">💰 Performance</div>
+<div id="perf"></div>
+</div>
+<div class="chart-container">
+<div class="chart-title">🎯 Streaks</div>
+<div id="streak"></div>
+</div>
+</div>
+<div class="chart-container">
+<div class="chart-title">📈 Insights</div>
+<div id="insights"></div>
+</div>
+</div>
+<div id="export" class="view">
+<div style="max-width:600px;margin:0 auto">
+<h2 style="text-align:center;margin-bottom:15px;color:#495057">📥 Import / Export</h2>
+<div class="info-box"><strong>💾 CSV Import:</strong> Lade deine gesicherten PnL-Daten!</div>
+<input type="file" id="csvFile" accept=".csv" style="display:none">
+<button class="btn btn-info" onclick="document.getElementById('csvFile').click()">📥 Datei manuell importieren</button>
+<button class="btn btn-success" onclick="exportCSV()">📤 CSV Exportieren</button>
+
+<div style="margin-top:30px;padding-top:20px;border-top:2px dashed #e9ecef" id="desktopSyncSection">
+<h3 style="text-align:center;margin-bottom:10px;color:#495057">🔄 Automatischer Sync</h3>
+<div class="info-box" style="background:#fff3bf;color:#e67700">
+<strong>Hinweis:</strong> Wenn du Chrome neu startest, muss der Zugriff aus Sicherheitsgründen einmalig bestätigt werden.
+</div>
+<div id="syncControls" style="text-align:center">
+<button class="btn btn-sync" onclick="setupSyncFolder()">📂 Backup-Ordner verknüpfen</button>
+</div>
+<div id="syncStatus" style="text-align:center;font-size:0.85em;color:#868e96;margin-top:5px">Kein Ordner verknüpft</div>
+</div>
+
+<div style="padding:12px;background:#f8f9fa;border-radius:8px;text-align:center;margin-top:20px">
+<strong>Aktuelle Daten:</strong>
+<div id="dataInfo" style="margin-top:8px"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+<div class="modal-content">
+<div class="modal-header"><span id="modalTitle"></span></div>
+<div class="modal-tabs">
+<div class="modal-tab active" onclick="switchModalTab('simple')">Gesamt</div>
+<div class="modal-tab" onclick="switchModalTab('trades')">Trades</div>
+<div class="modal-tab" onclick="switchModalTab('notes')">Notiz</div>
+</div>
+<div class="modal-body">
+<div id="tab-simple" style="display:block">
+<div class="form-group">
+<label>Tages PnL ($)</label>
+<input type="number" inputmode="decimal" step="0.01" id="modalPnL" placeholder="0.00">
+</div>
+<p style="font-size:0.85em;color:#868e96;text-align:center">Gesamtsumme aller Trades</p>
+</div>
+<div id="tab-trades" style="display:none">
+<div id="tradesList"></div>
+<button class="btn btn-sm btn-info" onclick="addTradeRow()">+ Trade hinzufügen</button>
+</div>
+<div id="tab-notes" style="display:none">
+<div class="form-group">
+<label>Tagesnotizen</label>
+<textarea id="modalNote" rows="6" placeholder="Marktbedingungen, Psychologie..."></textarea>
+</div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn-cancel" onclick="closeModal()">Abbrechen</button>
+<button class="btn btn-primary" onclick="saveModal()" style="flex:1">Speichern</button>
+<button class="btn-delete" id="delBtn" onclick="deleteEntry()" style="display:none;width:auto">🗑️</button>
+</div>
+</div>
+</div>
+
+<script>
+let calMonth=new Date(),statsMonth=new Date(),data={},selDate=null,dataCount=0,cachedDirHandle=null;
+let currentTrades = [];
+
+// --- HELPER ---
+function getEntry(key) {
+    let entry = data[key];
+    if (typeof entry === 'undefined') return { total: 0, trades: [], note: '' };
+    if (typeof entry === 'number') return { total: entry, trades: [], note: '' };
+    if (!entry.trades) entry.trades = [];
+    if (!entry.note) entry.note = '';
+    return entry;
+}
+
+const DB_NAME = 'TradingPnL_DB';
+const STORE_NAME = 'settings';
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => { e.target.result.createObjectStore(STORE_NAME); };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+// --- SYNC LOGIC (DESKTOP ONLY) ---
+async function saveDirHandle(handle) {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(handle, 'backup_dir_handle');
+    cachedDirHandle = handle;
+    updateSyncUI(true);
+}
+
+async function getDirHandle() {
+    const db = await openDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).get('backup_dir_handle');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+    });
+}
+
+function updateSyncUI(linked, needPermission = false) {
+    const statusEl = document.getElementById('syncStatus');
+    const controlsEl = document.getElementById('syncControls');
+    if (linked) {
+        if (needPermission) {
+            statusEl.textContent = '⚠️ Zugriff pausiert';
+            statusEl.style.color = '#e67700';
+            controlsEl.innerHTML = '<button class="btn btn-reconnect" onclick="restorePermission()">🔄 Sync Starten (Zugriff erlauben)</button>';
+        } else {
+            statusEl.textContent = '✅ Automatisch aktiv';
+            statusEl.style.color = '#2b8a3e';
+            controlsEl.innerHTML = '<button class="btn btn-sync" onclick="setupSyncFolder()" style="opacity:0.7">📂 Ordner ändern</button>';
+        }
+    } else {
+        statusEl.textContent = 'Kein Ordner verknüpft';
+        statusEl.style.color = '#868e96';
+        controlsEl.innerHTML = '<button class="btn btn-sync" onclick="setupSyncFolder()">📂 Backup-Ordner verknüpfen</button>';
+    }
+}
+
+async function setupSyncFolder() {
+    if (!('showDirectoryPicker' in window)) { alert("Browser nicht unterstützt."); return; }
+    try {
+        const handle = await window.showDirectoryPicker();
+        await saveDirHandle(handle);
+        runSync(handle);
+    } catch (e) { if (e.name !== 'AbortError') alert('Fehler: ' + e.message); }
+}
+
+async function restorePermission() {
+    if (!cachedDirHandle) cachedDirHandle = await getDirHandle();
+    if (!cachedDirHandle) return;
+    try {
+        const permission = await cachedDirHandle.requestPermission({ mode: 'read' });
+        if (permission === 'granted') runSync(cachedDirHandle);
+        else alert("Zugriff verweigert.");
+    } catch (e) { alert("Fehler beim Zugriff."); }
+}
+
+async function initSyncCheck() {
+    // Hide Sync on Mobile (No support)
+    if (!('showDirectoryPicker' in window)) {
+        document.getElementById('desktopSyncSection').style.display = 'none';
+        return;
+    }
+    
+    cachedDirHandle = await getDirHandle();
+    if (!cachedDirHandle) { updateSyncUI(false); return; }
+    const opts = { mode: 'read' };
+    const permState = await cachedDirHandle.queryPermission(opts);
+    if (permState === 'granted') { updateSyncUI(true, false); runSync(cachedDirHandle); }
+    else { updateSyncUI(true, true); }
+}
+
+async function runSync(dirHandle) {
+    try {
+        updateSyncUI(true, false);
+        const files = [];
+        for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
+                const match = entry.name.match(/pnl_(\d{4}-\d{2}-\d{2})\.csv/);
+                if (match) files.push({ handle: entry, date: new Date(match[1]), name: entry.name });
+            }
+        }
+        if (files.length === 0) return;
+        files.sort((a, b) => b.date - a.date);
+        const newest = files[0];
+        const fileData = await newest.handle.getFile();
+        const text = await fileData.text();
+        const importData = parseCSV(text);
+        const currentCount = Object.keys(data).length;
+        const importCount = Object.keys(importData).length;
+        if (importCount > currentCount) {
+            data = importData;
+            save(); init(); 
+            showSyncMessage(`🔄 Auto-Sync: ${importCount-currentCount} neue Einträge aus ${newest.name}`);
+        }
+    } catch (e) { console.error("Sync Error:", e); updateSyncUI(true, true); }
+}
+
+// --- ROBUST CSV PARSER V17 ---
+function parseCSV(csvText) {
+    const result = {};
+    // Split by newlines (handling CR/LF)
+    const lines = csvText.split(/\r?\n/);
+    if(lines.length === 0) return result;
+
+    let delim = lines[0].includes(';') ? ';' : ',';
+    
+    // Robust line parser that handles escaped quotes like ""
+    const parseLine = (text) => {
+        let arr = [];
+        let cur = "";
+        let inQuote = false;
+        for (let i = 0; i < text.length; i++) {
+            let c = text[i];
+            if (inQuote) {
+                if (c === '"') {
+                    // Check next char
+                    if (i + 1 < text.length && text[i + 1] === '"') {
+                        cur += '"'; // It was an escaped quote
+                        i++; // Skip next
+                    } else {
+                        inQuote = false; // End of field
+                    }
+                } else {
+                    cur += c;
+                }
+            } else {
+                if (c === '"') {
+                    inQuote = true;
+                } else if (c === delim) {
+                    arr.push(cur);
+                    cur = "";
+                } else {
+                    cur += c;
+                }
+            }
+        }
+        arr.push(cur);
+        return arr;
+    };
+
+    lines.forEach((line, i) => {
+        if (i === 0 || !line.trim()) return;
+        const parts = parseLine(line);
+        if (parts.length < 2) return;
+
+        let dateStr = parts[0].trim();
+        let valStr = parts[1].trim();
+        let note = parts[2] ? parts[2].trim() : "";
+        let details = parts[3] ? parts[3].trim() : "";
+
+        // Number Parsing
+        if (valStr.includes(',') && valStr.includes('.')) {
+            if (valStr.lastIndexOf('.') > valStr.lastIndexOf(',')) valStr = valStr.replace(/,/g, '');
+            else valStr = valStr.replace(/\./g, '').replace(',', '.');
+        } else if (valStr.includes(',')) valStr = valStr.replace(',', '.');
+        
+        const [d, m, y] = dateStr.split('.');
+        if (d && m && y) {
+            const key = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            const val = parseFloat(valStr);
+            if (!isNaN(val)) {
+                let trades = [];
+                try { if(details) trades = JSON.parse(details); } catch(e){}
+                result[key] = { total: val, trades: trades, note: note };
+            }
+        }
+    });
+    return result;
+}
+
+function showSyncMessage(txt) {
+    const el = document.getElementById('syncMsg');
+    el.textContent = txt;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 6000);
+}
+
+// --- STANDARD FUNCTIONS ---
+
+function fd(d){return`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`}
+function dk(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+
+function save(){
+    const s=JSON.stringify(data);
+    localStorage.setItem('tradingPnL_backup3',localStorage.getItem('tradingPnL_backup2')||s);
+    localStorage.setItem('tradingPnL_backup2',localStorage.getItem('tradingPnL_backup1')||s);
+    localStorage.setItem('tradingPnL_backup1',localStorage.getItem('tradingPnL')||s);
+    localStorage.setItem('tradingPnL',s);
+    localStorage.setItem('tradingPnL_count',Object.keys(data).length.toString());
+    updateStatus();
+}
+
+function updateStatus(){ document.getElementById('status').textContent=`🔒 ${Object.keys(data).length} Einträge gesichert`; }
+
+function load(){
+    try{
+        const l=localStorage.getItem('tradingPnL');
+        if(l) {
+            data=JSON.parse(l);
+            Object.keys(data).forEach(k => {
+                if(typeof data[k] === 'number') data[k] = { total: data[k], trades: [], note: '' };
+            });
+        }
+        init();
+        initSyncCheck();
+    }catch(e){console.error(e);init()}
+}
+
+function init(){
+    const t=new Date();
+    document.getElementById('todayDate').value=fd(t);
+    const k=dk(t);
+    const entry = getEntry(k);
+    if(data[k]) document.getElementById('todayPnL').value = entry.total;
+    updateDataInfo();
+    updateStatus();
+}
+
+function saveToday(){
+    const t=new Date(), v=document.getElementById('todayPnL').value;
+    if(!v){alert('Bitte PnL eingeben');return}
+    const k = dk(t);
+    let entry = getEntry(k);
+    entry.total = parseFloat(v);
+    data[k] = entry;
+    save();
+    document.getElementById('msg').style.display='block';
+    setTimeout(()=>document.getElementById('msg').style.display='none',3000);
+}
+
+// --- NAVIGATION & SWIPE ---
+const viewIds = ['today', 'calendar', 'wealth', 'statistics', 'export'];
+
+function showView(n){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById(n).classList.add('active');
+    
+    const btnIndex = viewIds.indexOf(n);
+    if(btnIndex > -1) {
+        document.querySelectorAll('.nav-btn')[btnIndex].classList.add('active');
+    }
+
+    if(n==='calendar')renderCal();
+    else if(n==='wealth')renderWealth();
+    else if(n==='statistics')renderStats();
+    else if(n==='export')updateDataInfo();
+    else if(n==='day-details') { /* Handled in renderDayDetails */ }
+}
+
+// Swipe Logic
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+}, false);
+
+document.addEventListener('touchend', function(e) {
+    const touchEndX = e.changedTouches[0].screenX;
+    const touchEndY = e.changedTouches[0].screenY;
+    handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+}, false);
+
+function handleSwipe(sx, sy, ex, ey) {
+    if(document.getElementById('day-details').classList.contains('active')) return;
+
+    const diffX = ex - sx;
+    const diffY = ey - sy;
+
+    if (Math.abs(diffX) > 50 && Math.abs(diffY) < 50) {
+        const currentViewEl = document.querySelector('.view.active');
+        if(!currentViewEl) return;
+        
+        const currentId = currentViewEl.id;
+        const currentIndex = viewIds.indexOf(currentId);
+        
+        if(currentIndex === -1) return;
+
+        if (diffX < 0) { // Swipe Left -> Next Tab
+            if (currentIndex < viewIds.length - 1) showView(viewIds[currentIndex + 1]);
+        } else { // Swipe Right -> Prev Tab
+            if (currentIndex > 0) showView(viewIds[currentIndex - 1]);
+        }
+    }
+}
+
+function changeMonth(d){calMonth.setMonth(calMonth.getMonth()+d);renderCal()}
+function changeStatsMonth(d){statsMonth.setMonth(statsMonth.getMonth()+d);renderStats()}
+
+function renderCal(){
+    const y=calMonth.getFullYear(),m=calMonth.getMonth();
+    const mn=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+    document.getElementById('monthTitle').textContent=`${mn[m]} ${y}`;
+    renderMonthStats(y,m);
+    const fd=new Date(y,m,1),ld=new Date(y,m+1,0);
+    const g=document.getElementById('calGrid');
+    g.innerHTML='';
+
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    let hasWeekendData = false;
+    for(let d=1; d<=lastDay; d++){
+        const t = new Date(y,m,d);
+        if((t.getDay()===0 || t.getDay()===6) && data[dk(t)]) { hasWeekendData = true; break; }
+    }
+
+    let headers = hasWeekendData ? ['Mo','Di','Mi','Do','Fr','Sa','So'] : ['Mo','Di','Mi','Do','Fr'];
+    g.style.gridTemplateColumns = `repeat(${headers.length}, 1fr)`;
+    headers.forEach(h => {
+        const div = document.createElement('div');
+        div.className = 'calendar-header';
+        div.textContent = h;
+        g.appendChild(div);
+    });
+
+    const firstDayObj = new Date(y, m, 1);
+    let firstDayWeekday = firstDayObj.getDay(); 
+    let emptyCells = hasWeekendData ? (firstDayWeekday === 0 ? 6 : firstDayWeekday - 1) : (firstDayWeekday >= 1 && firstDayWeekday <= 5 ? firstDayWeekday - 1 : 0);
+
+    for(let i=0;i<emptyCells;i++){
+        const e=document.createElement('div');
+        e.className='calendar-day empty';
+        g.appendChild(e);
+    }
+
+    for(let day=1;day<=lastDay;day++){
+        const dt=new Date(y,m,day);
+        const dow=dt.getDay();
+        const k=dk(dt);
+        if(!hasWeekendData && (dow===0 || dow===6)) continue;
+
+        const dv=document.createElement('div');
+        dv.className='calendar-day';
+        if((dow===0||dow===6) && !data[k]) dv.classList.add('weekend-hidden');
+
+        dv.innerHTML = `<div class="day-number">${day}</div>`;
+        
+        if(data[k]){
+            const entry = getEntry(k);
+            const p = entry.total;
+            dv.classList.add(p>=0?'profit':'loss');
+            dv.innerHTML += `<div class="day-pnl">${p>=0?'+':''}${p.toFixed(0)}</div>`;
+            if(entry.note) dv.innerHTML += `<div class="note-icon">📝</div>`;
+        } else { dv.classList.add('future'); }
+        
+        dv.onclick=()=>{
+            const entry = getEntry(k);
+            if(entry.trades && entry.trades.length > 0) {
+                renderDayDetails(dt);
+            } else {
+                openModal(dt);
+            }
+        };
+        g.appendChild(dv);
+    }
+}
+
+function renderMonthStats(y,m){
+    const md=Object.keys(data).filter(k=>{
+        const[y2,m2]=k.split('-');
+        return parseInt(y2)===y&&parseInt(m2)===m+1;
+    }).map(k=>getEntry(k).total);
+    const t=md.reduce((s,v)=>s+v,0),p=md.filter(v=>v>0).length;
+    const wr=md.length>0?(p/md.length*100).toFixed(1):0;
+    document.getElementById('calStats').innerHTML=`<div class="stat-card"><div class="stat-label">Gesamt</div><div class="stat-value ${t>=0?'profit':'loss'}">${t>=0?'+':''}${t.toFixed(0)}</div></div><div class="stat-card"><div class="stat-label">Tage</div><div class="stat-value">${md.length}</div></div><div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value ${wr>=50?'profit':'loss'}">${Math.round(wr)}%</div></div>`;
+}
+
+// --- DAY DETAILS VIEW ---
+function renderDayDetails(d) {
+    selDate = d;
+    const k = dk(d);
+    const entry = getEntry(k);
+    const trades = entry.trades || [];
+    
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('day-details').classList.add('active');
+    
+    const totalPnL = entry.total;
+    const wins = trades.filter(t => t.pnl > 0).length;
+    const winRate = trades.length ? ((wins / trades.length) * 100).toFixed(0) + '%' : '0%';
+    const grossProfit = trades.reduce((s, t) => s + (t.pnl > 0 ? t.pnl : 0), 0);
+    const grossLoss = Math.abs(trades.reduce((s, t) => s + (t.pnl < 0 ? t.pnl : 0), 0));
+    const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : '∞';
+    const avgPnL = trades.length ? (totalPnL / trades.length).toFixed(2) : 0;
+    
+    let totalMins = 0; let counted = 0;
+    trades.forEach(t => {
+        if(t.start && t.end) {
+            const s = new Date(`2000-01-01T${t.start}`);
+            const e = new Date(`2000-01-01T${t.end}`);
+            let diff = (e - s) / 60000;
+            if(diff < 0) diff += 1440;
+            totalMins += diff; counted++;
+        }
+    });
+    const avgHold = counted ? (totalMins / counted).toFixed(0) + ' min' : '-';
+
+    const content = document.getElementById('dayDetailContent');
+    content.innerHTML = `
+        <div class="day-detail-header">
+            <h3>${fd(d)}</h3>
+            <div class="day-detail-total ${totalPnL>=0?'profit':'loss'}">${totalPnL>=0?'+':''}${totalPnL.toFixed(2)}</div>
+        </div>
+        <div class="day-detail-grid">
+            <div class="detail-card"><div class="detail-label">Win Rate</div><div class="detail-value">${winRate}</div></div>
+            <div class="detail-card"><div class="detail-label">Profit Factor</div><div class="detail-value">${profitFactor}</div></div>
+            <div class="detail-card"><div class="detail-label">Ø PnL</div><div class="detail-value ${avgPnL>=0?'profit':'loss'}">${avgPnL}</div></div>
+            <div class="detail-card"><div class="detail-label">Ø Hold</div><div class="detail-value">${avgHold}</div></div>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">Trades (${trades.length})</div>
+            <div id="dayTradesList"></div>
+        </div>
+        ${entry.note ? `<div class="info-box"><strong>📝 Notiz:</strong><br>${entry.note}</div>` : ''}
+    `;
+
+    const list = document.getElementById('dayTradesList');
+    const maxAbs = Math.max(...trades.map(t => Math.abs(t.pnl))) || 1;
+    
+    trades.forEach(t => {
+        let durationStr = "-";
+        if(t.start && t.end) {
+            const s = new Date(`2000-01-01T${t.start}`);
+            const e = new Date(`2000-01-01T${t.end}`);
+            let diff = (e - s) / 60000;
+            if(diff < 0) diff += 1440;
+            durationStr = diff + " min";
+        }
+        const widthPct = Math.max((Math.abs(t.pnl) / maxAbs) * 100, 1);
+        const row = document.createElement('div');
+        row.className = 'trade-row';
+        row.innerHTML = `
+            <div class="trade-time"><strong>${t.start || '--:--'}</strong><span>${durationStr}</span></div>
+            <div class="trade-bar-container"><div class="trade-bar-fill ${t.pnl>=0?'profit':'loss'}" style="width: ${widthPct}%"></div></div>
+            <div class="trade-pnl ${t.pnl>=0?'profit':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(0)}</div>
+        `;
+        list.appendChild(row);
+    });
+}
+
+function editCurrentDay() { if(selDate) openModal(selDate); }
+
+function openModal(d){
+    selDate = d;
+    const k = dk(d);
+    const entry = getEntry(k);
+    
+    document.getElementById('modalTitle').textContent = fd(d);
+    document.getElementById('modalPnL').value = entry.total !== 0 ? entry.total : '';
+    document.getElementById('modalNote').value = entry.note;
+    
+    currentTrades = entry.trades ? JSON.parse(JSON.stringify(entry.trades)) : [];
+    renderTradesList();
+    
+    document.getElementById('delBtn').style.display = data[k] ? 'block' : 'none';
+    
+    switchModalTab('simple');
+    document.getElementById('modal').classList.add('active');
+}
+
+function switchModalTab(tab) {
+    document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.modal-tab')[tab==='simple'?0:tab==='trades'?1:2].classList.add('active');
+    document.getElementById('tab-simple').style.display = tab==='simple'?'block':'none';
+    document.getElementById('tab-trades').style.display = tab==='trades'?'block':'none';
+    document.getElementById('tab-notes').style.display = tab==='notes'?'block':'none';
+}
+
+function renderTradesList() {
+    const list = document.getElementById('tradesList');
+    list.innerHTML = '';
+    currentTrades.forEach((t, i) => {
+        const div = document.createElement('div');
+        div.className = 'trade-list-item';
+        div.innerHTML = `
+            <div class="trade-inputs-row" style="display:flex; gap:10px; margin-bottom:5px;">
+                <input type="number" inputmode="decimal" placeholder="PnL" value="${t.pnl}" onchange="updateTrade(${i}, 'pnl', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:8px; width:100%">
+            </div>
+            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-bottom:5px;">
+                <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.start||''}" onchange="updateTrade(${i}, 'start', this.value)">
+                <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.end||''}" onchange="updateTrade(${i}, 'end', this.value)">
+            </div>
+            <button class="btn-delete-small" style="background: #ff3b30; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.8em; width: 100%;" onclick="removeTrade(${i})">Löschen</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function addTradeRow() { currentTrades.push({ pnl: 0, start: '', end: '' }); renderTradesList(); }
+function removeTrade(i) { currentTrades.splice(i, 1); renderTradesList(); recalcTotalFromTrades(); }
+function updateTrade(i, field, val) { if(field === 'pnl') currentTrades[i].pnl = parseFloat(val) || 0; else currentTrades[i][field] = val; recalcTotalFromTrades(); }
+function recalcTotalFromTrades() { if(currentTrades.length > 0) { const sum = currentTrades.reduce((a, b) => a + (b.pnl || 0), 0); document.getElementById('modalPnL').value = sum; } }
+
+function saveModal(){
+    if(!selDate) return;
+    const k = dk(selDate);
+    const pnlVal = parseFloat(document.getElementById('modalPnL').value) || 0;
+    const note = document.getElementById('modalNote').value;
+    data[k] = { total: pnlVal, trades: currentTrades, note: note };
+    save();
+    closeModal();
+    if(document.getElementById('day-details').classList.contains('active')) renderDayDetails(selDate); else renderCal();
+}
+
+function closeModal(){
+    document.getElementById('modal').classList.remove('active');
+    if(!document.getElementById('day-details').classList.contains('active')) selDate = null;
+}
+
+function deleteEntry(){
+    if(!selDate) return;
+    delete data[dk(selDate)];
+    save();
+    closeModal();
+    showView('calendar');
+}
+
+// --- CHART ENGINE ---
+function drawLineChart(containerId, entries, cumulativeTotal) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    container.style.position = 'relative';
+
+    if(entries.length === 0) { container.innerHTML = '<p style="text-align:center;padding:50px;color:#868e96">Keine Daten</p>'; return; }
+
+    let runningCum = 0;
+    const points = entries.map(e => { runningCum += e.v; return { k: e.k, c: runningCum }; });
+    const maxC = Math.max(...points.map(p => p.c));
+    const minC = Math.min(...points.map(p => p.c));
+    const range = Math.max(maxC - minC, 1);
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox','0 0 100 100');
+    svg.setAttribute('preserveAspectRatio','none');
+    svg.style.width = '100%'; svg.style.height = '100%'; svg.style.position = 'absolute'; svg.style.left = '0'; svg.style.top = '0';
+
+    if(minC < 0 && maxC > 0) {
+        const zy = 100 - ((0 - minC) / range) * 100;
+        const zl = document.createElementNS('http://www.w3.org/2000/svg','line');
+        zl.setAttribute('x1','0'); zl.setAttribute('y1',zy); zl.setAttribute('x2','100'); zl.setAttribute('y2',zy);
+        zl.setAttribute('stroke','#ced4da'); zl.setAttribute('stroke-width','0.5'); zl.setAttribute('stroke-dasharray','2');
+        zl.setAttribute('vector-effect','non-scaling-stroke');
+        svg.appendChild(zl);
+    }
+
+    let pathD = '';
+    points.forEach((p, i) => {
+        const x = ((i / (points.length - 1 || 1)) * 100).toFixed(2);
+        const y = (100 - ((p.c - minC) / range) * 100).toFixed(2);
+        pathD += `${i === 0 ? 'M' : 'L'}${x},${y} `;
+    });
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', pathD); path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', cumulativeTotal >= 0 ? '#37b24d' : '#fa5252');
+    path.setAttribute('stroke-width', '2'); path.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(path);
+    container.appendChild(svg);
+
+    const createLabel = (text, cssObj) => {
+        const el = document.createElement('div');
+        el.textContent = text;
+        Object.assign(el.style, { position: 'absolute', fontSize: '0.7em', color: '#6c757d', fontWeight: '600', pointerEvents: 'none', fontFamily: 'sans-serif', ...cssObj });
+        return el;
+    };
+
+    container.appendChild(createLabel(maxC.toFixed(0), { top: '2px', left: '5px' }));
+    container.appendChild(createLabel(minC.toFixed(0), { bottom: '20px', left: '5px' }));
+    const firstDate = entries[0].k.split('-');
+    const lastDate = entries[entries.length-1].k.split('-');
+    container.appendChild(createLabel(`${firstDate[2]}.${firstDate[1]}`, { bottom: '2px', left: '5px' }));
+    container.appendChild(createLabel(`${lastDate[2]}.${lastDate[1]}`, { bottom: '2px', right: '5px' }));
+
+    const valDiv = document.createElement('div');
+    valDiv.style = `position:absolute;top:5px;right:10px;font-size:1em;font-weight:700;color:${cumulativeTotal >= 0 ? '#37b24d' : '#fa5252'}`;
+    valDiv.textContent = (cumulativeTotal >= 0 ? '+' : '') + cumulativeTotal.toFixed(0);
+    container.appendChild(valDiv);
+}
+
+function renderWealth(){
+    const allEntries = Object.keys(data).sort().map(k => ({ k: k, v: getEntry(k).total }));
+    const totalWealth = allEntries.reduce((s, e) => s + e.v, 0);
+    drawLineChart('wealthChart', allEntries, totalWealth);
+    const ms = document.getElementById('monthSummaries'); 
+    ms.innerHTML = '';
+    const monthMap = {};
+    allEntries.forEach(e => {
+        const [y, m] = e.k.split('-'); const key = `${y}-${m}`;
+        if (!monthMap[key]) monthMap[key] = { pnl: 0, days: 0, wins: 0 };
+        monthMap[key].pnl += e.v; monthMap[key].days++; if (e.v > 0) monthMap[key].wins++;
+    });
+    Object.keys(monthMap).sort().reverse().forEach(mk => {
+        const [y, m] = mk.split('-');
+        const mn = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+        const md = monthMap[mk];
+        const div = document.createElement('div');
+        div.className = `month-summary ${md.pnl >= 0 ? 'profit' : 'loss'}`;
+        div.innerHTML = `<div class="month-summary-left"><div class="month-summary-title">${mn[parseInt(m)-1]} ${y}</div><div class="month-summary-subtitle">${md.days} Tage</div></div><div class="month-summary-value ${md.pnl >= 0 ? 'profit' : 'loss'}">${md.pnl.toFixed(2)}</div>`;
+        ms.appendChild(div);
+    });
+}
+
+function renderStats(){
+    const y=statsMonth.getFullYear(),m=statsMonth.getMonth();
+    const mn=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    document.getElementById('statsTitle').textContent=`${mn[m]} ${y}`;
+    
+    const me=Object.keys(data).filter(k=>{
+        const[y2,m2]=k.split('-'); return parseInt(y2)===y&&parseInt(m2)===m+1;
+    }).sort().map(k=>({d:parseInt(k.split('-')[2]), v:getEntry(k).total, k:k, entry:getEntry(k)}));
+    
+    const md=me.map(e=>e.v), w=md.filter(v=>v>0), l=md.filter(v=>v<0);
+    const t=md.reduce((s,v)=>s+v,0), p=w.length, lc=l.length;
+    
+    document.getElementById('statsOverview').innerHTML=`<div class="stat-card"><div class="stat-label">Gesamt</div><div class="stat-value ${t>=0?'profit':'loss'}">${t.toFixed(0)}</div></div><div class="stat-card"><div class="stat-label">Tage</div><div class="stat-value">${md.length}</div></div><div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value">${md.length?(p/md.length*100).toFixed(0):0}%</div></div>`;
+
+    const monthEntries = me.map(x => ({k: x.k, v: x.v}));
+    drawLineChart('lineChart', monthEntries, t);
+
+    const bc=document.getElementById('barChart'); bc.innerHTML='';
+    if(me.length){
+        const maxVal=Math.max(...md.map(Math.abs));
+        me.forEach(e=>{
+            const h=Math.max((Math.abs(e.v)/maxVal)*150, 2);
+            const d=document.createElement('div'); d.className='bar-wrapper';
+            d.innerHTML=`<div class="bar ${e.v>=0?'profit':'loss'}" style="height:${h}px"></div><div class="bar-label">${e.d}</div>`;
+            bc.appendChild(d);
+        });
+    } else { bc.innerHTML='<p style="text-align:center;color:#868e96;padding:50px">Keine Daten</p>'; }
+
+    // Trade Chart
+    const tc = document.getElementById('tradeBarChart'); tc.innerHTML = '';
+    const tStatsRow = document.getElementById('tradeStatsRow');
+    let allTrades = [];
+    me.forEach(dayObj => {
+        if (dayObj.entry.trades && dayObj.entry.trades.length > 0) {
+            dayObj.entry.trades.forEach(t => allTrades.push({ day: dayObj.d, pnl: parseFloat(t.pnl) || 0 }));
+        } else if (dayObj.entry.total !== 0) {
+            allTrades.push({ day: dayObj.d, pnl: parseFloat(dayObj.entry.total) });
+        }
+    });
+
+    if (allTrades.length > 0) {
+        const maxVal = Math.max(...allTrades.map(t => Math.abs(t.pnl)));
+        allTrades.forEach(t => {
+            const h = Math.max((Math.abs(t.pnl) / maxVal) * 150, 2);
+            const d = document.createElement('div'); d.className = 'bar-wrapper';
+            d.innerHTML = `<div class="bar ${t.pnl >= 0 ? 'profit' : 'loss'}" style="height:${h}px"></div><div class="bar-label">${t.day}</div>`;
+            tc.appendChild(d);
+        });
+        const wins = allTrades.filter(t => t.pnl > 0);
+        const losses = allTrades.filter(t => t.pnl < 0);
+        const grossWin = wins.reduce((s, t) => s + t.pnl, 0);
+        const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+        const pf = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : '∞';
+        const wr = ((wins.length / allTrades.length) * 100).toFixed(0);
+        tStatsRow.innerHTML = `<span><strong>T:</strong> ${allTrades.length}</span><span><strong>WR:</strong> <span style="color:${wr>=50?'#37b24d':'#fa5252'}">${wr}%</span></span><span><strong>PF:</strong> ${pf}</span>`;
+    } else {
+        tc.innerHTML = '<p style="text-align:center;color:#868e96;padding:50px">Keine Trades</p>';
+        tStatsRow.innerHTML = '';
+    }
+
+    const wdChart = document.getElementById('weekdayChart'); wdChart.innerHTML='';
+    const daysStats = {0:{s:0,c:0},1:{s:0,c:0},2:{s:0,c:0},3:{s:0,c:0},4:{s:0,c:0},5:{s:0,c:0},6:{s:0,c:0}};
+    Object.keys(data).forEach(k=>{
+        const dt = new Date(k); const day = dt.getDay(); const val = getEntry(k).total;
+        daysStats[day].s += val; daysStats[day].c++;
+    });
+    const labels=['So','Mo','Di','Mi','Do','Fr','Sa'];
+    const order=[1,2,3,4,5,6,0];
+    const avgs = order.map(i => daysStats[i].c ? daysStats[i].s/daysStats[i].c : 0);
+    const maxAvg = Math.max(...avgs.map(Math.abs));
+    order.forEach((i, idx)=>{
+        const avg = avgs[idx];
+        const h = maxAvg ? (Math.abs(avg)/maxAvg)*100 : 0;
+        const col = document.createElement('div'); col.className='bar-wrapper'; col.style.flex='1';
+        col.innerHTML=`<div class="bar-value">${avg.toFixed(0)}</div><div class="bar ${avg>=0?'profit':'loss'}" style="height:${Math.max(h,2)}px"></div><div class="bar-label">${labels[i]}</div>`;
+        wdChart.appendChild(col);
+    });
+
+    let peak = -Infinity, maxDD = 0, currCum = 0;
+    Object.keys(data).sort().forEach(k => {
+        currCum += getEntry(k).total;
+        if(currCum > peak) peak = currCum;
+        const dd = currCum - peak;
+        if(dd < maxDD) maxDD = dd;
+    });
+
+    let totalMins=0, countTrades=0;
+    me.forEach(day => {
+        if(day.entry.trades) {
+            day.entry.trades.forEach(t => {
+                if(t.start && t.end) {
+                    const s = new Date(`2000-01-01T${t.start}`);
+                    const e = new Date(`2000-01-01T${t.end}`);
+                    let diff = (e - s) / 60000; 
+                    if(diff < 0) diff += 1440; 
+                    totalMins += diff; countTrades++;
+                }
+            });
+        }
+    });
+    const avgHold = countTrades ? (totalMins/countTrades).toFixed(0) + ' min' : '-';
+
+    let mws=0, mls=0, cws=0, cls=0;
+    Object.keys(data).sort().forEach(k => {
+        const v = getEntry(k).total;
+        if(v > 0) { cws++; cls=0; mws=Math.max(mws, cws); }
+        else if(v < 0) { cls++; cws=0; mls=Math.max(mls, cls); }
+    });
+
+    document.getElementById('streak').innerHTML=`<div class="stat-row"><span class="stat-row-label">Win Streak</span><span class="stat-row-value profit">${mws}</span></div><div class="stat-row"><span class="stat-row-label">Loss Streak</span><span class="stat-row-value loss">${mls}</span></div><div class="stat-row"><span class="stat-row-label">Gewinn Tage</span><span class="stat-row-value">${p}</span></div><div class="stat-row"><span class="stat-row-label">Verlust Tage</span><span class="stat-row-value">${lc}</span></div>`;
+    document.getElementById('perf').innerHTML=`<div class="stat-row"><span class="stat-row-label">Max Drawdown</span><span class="stat-row-value loss">${maxDD.toFixed(2)}</span></div><div class="stat-row"><span class="stat-row-label">Max Gewinn</span><span class="stat-row-value profit">${w.length?Math.max(...w).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Max Verlust</span><span class="stat-row-value loss">${l.length?Math.min(...l).toFixed(2):0}</span></div>`;
+    document.getElementById('insights').innerHTML=`<div class="stat-row"><span class="stat-row-label">Ø PnL/Trade</span><span class="stat-row-value" style="color:${t/md.length>=0?'#37b24d':'#fa5252'}">${md.length?(t/md.length).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Ø Holding Time</span><span class="stat-row-value">${avgHold}</span></div><div class="stat-row"><span class="stat-row-label">Profit Factor</span><span class="stat-row-value">${Math.abs(l.reduce((a,b)=>a+b,0))?(w.reduce((a,b)=>a+b,0)/Math.abs(l.reduce((a,b)=>a+b,0))).toFixed(2):'∞'}</span></div>`;
+}
+
+// **UPDATED: ASYNC EXPORT WITH DIRECT FILE ACCESS (Desktop only)**
+async function exportCSV() {
+    // Generate CSV Content
+    let csv = '\uFEFFDatum,PnL,Notiz,Details_JSON\n';
+    Object.keys(data).sort().forEach(k => {
+        const [y, m, d] = k.split('-');
+        const entry = getEntry(k);
+        const note = (entry.note || "").replace(/"/g, '""');
+        const json = JSON.stringify(entry.trades || []).replace(/"/g, '""');
+        const total = (entry.total || 0).toFixed(2);
+        csv += `${d}.${m}.${y},${total},"${note}","${json}"\n`;
+    });
+
+    const filename = `pnl_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    // 1. Try Direct Save to Backup Folder (Desktop with linked folder)
+    if (cachedDirHandle) {
+        try {
+            // Check write permission
+            const opts = { mode: 'readwrite' };
+            if ((await cachedDirHandle.queryPermission(opts)) !== 'granted') {
+                if ((await cachedDirHandle.requestPermission(opts)) !== 'granted') {
+                    throw new Error('Permission denied');
+                }
+            }
+            
+            // Create/Overwrite file
+            const fileHandle = await cachedDirHandle.getFileHandle(filename, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(csv);
+            await writable.close();
+            
+            alert(`✅ Gespeichert im Backup-Ordner:\n${filename}`);
+            return; // Success, stop here.
+        } catch (e) {
+            console.warn("Direkt-Speichern fehlgeschlagen, Fallback zu Download...", e);
+            // Fallthrough to standard download below
+        }
+    }
+
+    // 2. Standard Download Fallback (Mobile / Desktop without linked folder)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a); // Required for Firefox/iOS
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+document.getElementById('csvFile').onchange=function(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+        try{
+            const res = parseCSV(ev.target.result);
+            data = {...data, ...res};
+            save(); alert(`✓ Daten importiert!`); updateDataInfo(); renderCal();
+        }catch(err){console.log(err); alert('Import-Fehler!')}
+    };
+    reader.readAsText(file);
+};
+
+function updateDataInfo(){
+    const c=Object.keys(data).length;
+    const t=Object.values(data).reduce((s,v)=>{
+        return s + (typeof v === 'number' ? v : v.total);
+    },0);
+    document.getElementById('dataInfo').innerHTML=`<strong>${c}</strong> Einträge<br>Gesamt: <strong style="color:${t>=0?'#37b24d':'#fa5252'}">${t>=0?'+':''}${t.toFixed(2)}</strong>`;
+}
+
+document.getElementById('modal').onclick=function(e){if(e.target===this)closeModal()};
+window.onbeforeunload=save;
+setInterval(save,30000);
+load();
+</script>
+</body>
+</html>
