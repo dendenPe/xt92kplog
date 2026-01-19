@@ -185,6 +185,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </style>
 </head>
 <body>
+<div id="passwordPrompt" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);z-index:9999;display:flex;align-items:center;justify-content:center;">
+<div style="background:white;padding:40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:400px;width:90%;">
+<h2 style="text-align:center;margin-bottom:20px;color:#495057;">🔒 Trading Log</h2>
+<input type="password" id="passwordInput" placeholder="Passwort eingeben" style="width:100%;padding:15px;border:2px solid #e9ecef;border-radius:8px;font-size:1em;margin-bottom:15px;">
+<button onclick="checkPassword()" style="width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:1.1em;font-weight:600;cursor:pointer;">Entsperren</button>
+<p id="errorMsg" style="color:#fa5252;text-align:center;margin-top:10px;display:none;">Falsches Passwort!</p>
+</div>
+</div>
 <div class="container">
 <div class="header">
 <h1>📊 Trading PnL Tracker</h1>
@@ -1173,6 +1181,16 @@ document.getElementById('modal').onclick=function(e){if(e.target===this)closeMod
 window.onbeforeunload=save;
 setInterval(save,30000);
 load();
+function checkPassword(){
+const pw=document.getElementById('passwordInput').value;
+if(pw==='09112012'){
+document.getElementById('passwordPrompt').style.display='none';
+}else{
+document.getElementById('errorMsg').style.display='block';
+document.getElementById('passwordInput').value='';
+}
+}
+document.getElementById('passwordInput').onkeypress=function(e){if(e.key==='Enter')checkPassword()};
 </script>
 </body>
 </html>
