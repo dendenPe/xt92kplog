@@ -1,4 +1,4 @@
-<!-- START OF FILE Trading_PnL_Universal_V18.html -->
+<!-- START OF FILE Trading_PnL_GitHub_V19.html -->
 
 <!DOCTYPE html>
 <html lang="de">
@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Trading PnL Universal V18</title>
+<title>Trading PnL Tracker V19</title>
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -171,7 +171,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .trade-bar-fill.profit { background: #37b24d; }
 .trade-bar-fill.loss { background: #fa5252; }
 .trade-pnl { font-weight: 700; text-align: right; }
-.trade-pnl.profit { color: #37b24d; }
+.trade-pnl.profit { color: #34c759; }
 .trade-pnl.loss { color: #fa5252; }
 
 /* TRADE STATS ROW */
@@ -224,7 +224,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="container">
 <div class="header">
 <h1>📊 Trading PnL Tracker</h1>
-<p>Universal Version V18 (Enhanced Today Tab)</p>
+<p>Universal Version V19 (GitHub Ready)</p>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -346,7 +346,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 <div id="export" class="view">
 <div style="max-width:600px;margin:0 auto">
-<h2 style="text-align:center;margin-bottom:15px;color:#495057">💾 Import / Export</h2>
+<h2 style="text-align:center;margin-bottom:15px;color:#495057">📥 Import / Export</h2>
 <div class="info-box"><strong>💾 CSV Import:</strong> Lade deine gesicherten PnL-Daten!</div>
 <input type="file" id="csvFile" accept=".csv" style="display:none">
 <button class="btn btn-info" onclick="document.getElementById('csvFile').click()">📥 Datei manuell importieren</button>
@@ -533,56 +533,64 @@ async function runSync(dirHandle) {
     } catch (e) { console.error("Sync Error:", e); updateSyncUI(true, true); }
 }
 
-// --- ROBUST CSV PARSER V17 ---
+// --- ROBUST CSV PARSER V19 (STATE MACHINE) ---
 function parseCSV(csvText) {
-    const result = {};
-    const lines = csvText.split(/\r?\n/);
-    if(lines.length === 0) return result;
+    const rows = [];
+    let currentRow = [];
+    let currentVal = '';
+    let inQuote = false;
 
-    let delim = lines[0].includes(';') ? ';' : ',';
-    
-    const parseLine = (text) => {
-        let arr = [];
-        let cur = "";
-        let inQuote = false;
-        for (let i = 0; i < text.length; i++) {
-            let c = text[i];
-            if (inQuote) {
-                if (c === '"') {
-                    if (i + 1 < text.length && text[i + 1] === '"') {
-                        cur += '"';
-                        i++;
-                    } else {
-                        inQuote = false;
-                    }
-                } else {
-                    cur += c;
-                }
+    // Normalize line endings
+    const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    for (let i = 0; i < text.length; i++) {
+        let char = text[i];
+        let nextChar = text[i+1];
+
+        if (inQuote) {
+            if (char === '"' && nextChar === '"') {
+                currentVal += '"'; // Handle escaped quote
+                i++; // Skip next quote
+            } else if (char === '"') {
+                inQuote = false; // End of quote
             } else {
-                if (c === '"') {
-                    inQuote = true;
-                } else if (c === delim) {
-                    arr.push(cur);
-                    cur = "";
-                } else {
-                    cur += c;
-                }
+                currentVal += char; // Regular char inside quote (including newlines)
+            }
+        } else {
+            if (char === '"') {
+                inQuote = true; // Start of quote
+            } else if (char === ',' || char === ';') { 
+                // Treat semicolon as delimiter too if detected, but simpler to assume comma for generated files
+                // For safety we treat comma as default delimiter here.
+                currentRow.push(currentVal); 
+                currentVal = '';
+            } else if (char === '\n') {
+                currentRow.push(currentVal);
+                rows.push(currentRow);
+                currentRow = [];
+                currentVal = '';
+            } else {
+                currentVal += char;
             }
         }
-        arr.push(cur);
-        return arr;
-    };
+    }
+    // Push last bit
+    if (currentVal || currentRow.length > 0) {
+        currentRow.push(currentVal);
+        rows.push(currentRow);
+    }
 
-    lines.forEach((line, i) => {
-        if (i === 0 || !line.trim()) return;
-        const parts = parseLine(line);
-        if (parts.length < 2) return;
+    // Convert rows to data object
+    const result = {};
+    rows.forEach((parts, i) => {
+        if (i === 0 || parts.length < 2) return; // Skip header or empty rows
 
         let dateStr = parts[0].trim();
         let valStr = parts[1].trim();
         let note = parts[2] ? parts[2].trim() : "";
         let details = parts[3] ? parts[3].trim() : "";
 
+        // Number Parsing
         if (valStr.includes(',') && valStr.includes('.')) {
             if (valStr.lastIndexOf('.') > valStr.lastIndexOf(',')) valStr = valStr.replace(/,/g, '');
             else valStr = valStr.replace(/\./g, '').replace(',', '.');
@@ -599,6 +607,7 @@ function parseCSV(csvText) {
             }
         }
     });
+
     return result;
 }
 
@@ -1235,6 +1244,7 @@ function renderStats(){
     document.getElementById('insights').innerHTML=`<div class="stat-row"><span class="stat-row-label">Ø PnL/Trade</span><span class="stat-row-value" style="color:${t/md.length>=0?'#37b24d':'#fa5252'}">${md.length?(t/md.length).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Ø Holding Time</span><span class="stat-row-value">${avgHold}</span></div><div class="stat-row"><span class="stat-row-label">Profit Factor</span><span class="stat-row-value">${Math.abs(l.reduce((a,b)=>a+b,0))?(w.reduce((a,b)=>a+b,0)/Math.abs(l.reduce((a,b)=>a+b,0))).toFixed(2):'∞'}</span></div>`;
 }
 
+// **UPDATED: ASYNC EXPORT WITH DIRECT FILE ACCESS (Desktop only)**
 async function exportCSV() {
     let csv = '\uFEFFDatum,PnL,Notiz,Details_JSON\n';
     Object.keys(data).sort().forEach(k => {
@@ -1304,7 +1314,7 @@ function updateDataInfo(){
 
 function checkPassword(){
 const pw=document.getElementById('passwordInput').value;
-if(pw==='09112012'){
+if(pw==='xxx'){
 document.getElementById('passwordPrompt').style.display='none';
 }else{
 document.getElementById('errorMsg').style.display='block';
