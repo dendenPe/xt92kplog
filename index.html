@@ -1,4 +1,4 @@
-<!-- START OF FILE Trading_PnL_Universal_V17.html -->
+<!-- START OF FILE Trading_PnL_Universal_V18.html -->
 
 <!DOCTYPE html>
 <html lang="de">
@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Trading PnL Universal V17</title>
+<title>Trading PnL Universal V18</title>
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -62,6 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-outline { background: transparent; border: 2px solid #e9ecef; color: #495057; }
 @media(max-width: 768px) { .btn-outline { background: white; } }
 .btn-reconnect{background:#fff3bf;color:#e67700;border:1px solid #fcc419;margin-top:10px}
+.btn-delete-small{background:#ff3b30;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.8em;}
 
 /* CALENDAR */
 .calendar{display:grid; gap:8px; margin-top:15px}
@@ -181,7 +182,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 }
 .trade-stats-item strong { color: #495057; }
 
+/* SUCCESS/WARNING MESSAGES */
+.success-msg, .warning-msg {
+    display: none;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: 600;
+}
+.success-msg {
+    background: #d3f9d8;
+    color: #2b8a3e;
+}
+.warning-msg {
+    background: #fff3bf;
+    color: #e67700;
+}
+
 .info-box{background:#e7f5ff;color:#1971c2;padding:15px;border-radius:8px;margin-bottom:15px;font-size:.9em}
+
+/* TODAY TAB STYLES */
+.today-container { max-width: 600px; margin: 0 auto; }
+.today-tabs { display: flex; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+@media(max-width: 768px) { .today-tabs { background: white; } }
+.today-tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-weight: 600; color: #868e96; background: transparent; border: none; }
+.today-tab.active { background: white; color: #667eea; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.today-tab-content { display: none; }
+.today-tab-content.active { display: block; }
 </style>
 </head>
 <body>
@@ -196,11 +224,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="container">
 <div class="header">
 <h1>📊 Trading PnL Tracker</h1>
-<p>Universal Version V17 (Robust Import)</p>
+<p>Universal Version V18 (Enhanced Today Tab)</p>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
-<!-- Views IDs match array in JS -->
 <button class="nav-btn active" onclick="showView('today')">Heute</button>
 <button class="nav-btn" onclick="showView('calendar')">Kalender</button>
 <button class="nav-btn" onclick="showView('wealth')">Vermögen</button>
@@ -212,16 +239,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="success-msg" id="msg">Gespeichert! ✓</div>
 <div class="warning-msg" id="warn"></div>
 <div class="success-msg" id="syncMsg" style="display:none;background:#e7f5ff;color:#0c5460;"></div>
-<div style="max-width:400px;margin:0 auto">
+<div class="today-container">
 <h2 style="text-align:center;margin-bottom:20px;color:#495057">PnL für Heute</h2>
 <div class="form-group">
 <label>Datum</label>
 <input type="text" id="todayDate" readonly>
 </div>
+
+<div class="today-tabs">
+<button class="today-tab active" onclick="switchTodayTab('simple')">Gesamt</button>
+<button class="today-tab" onclick="switchTodayTab('trades')">Trades</button>
+<button class="today-tab" onclick="switchTodayTab('notes')">Notiz</button>
+</div>
+
+<div id="today-simple" class="today-tab-content active">
 <div class="form-group">
-<label>PnL ($)</label>
+<label>Tages PnL ($)</label>
 <input type="number" inputmode="decimal" step="0.01" id="todayPnL" placeholder="z.B. 250.50">
 </div>
+<p style="font-size:0.85em;color:#868e96;text-align:center;margin-top:-10px;">Gesamtsumme aller Trades</p>
+</div>
+
+<div id="today-trades" class="today-tab-content">
+<div id="todayTradesList"></div>
+<button class="btn btn-sm btn-info" onclick="addTodayTrade()" style="margin-top:10px;">+ Trade hinzufügen</button>
+</div>
+
+<div id="today-notes" class="today-tab-content">
+<div class="form-group">
+<label>Tagesnotizen</label>
+<textarea id="todayNote" rows="6" placeholder="Marktbedingungen, Psychologie, Learnings..."></textarea>
+</div>
+</div>
+
 <button class="btn btn-primary" onclick="saveToday()">Speichern</button>
 </div>
 </div>
@@ -296,7 +346,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 <div id="export" class="view">
 <div style="max-width:600px;margin:0 auto">
-<h2 style="text-align:center;margin-bottom:15px;color:#495057">📥 Import / Export</h2>
+<h2 style="text-align:center;margin-bottom:15px;color:#495057">💾 Import / Export</h2>
 <div class="info-box"><strong>💾 CSV Import:</strong> Lade deine gesicherten PnL-Daten!</div>
 <input type="file" id="csvFile" accept=".csv" style="display:none">
 <button class="btn btn-info" onclick="document.getElementById('csvFile').click()">📥 Datei manuell importieren</button>
@@ -361,6 +411,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <script>
 let calMonth=new Date(),statsMonth=new Date(),data={},selDate=null,dataCount=0,cachedDirHandle=null;
 let currentTrades = [];
+let todayTrades = [];
 
 // --- HELPER ---
 function getEntry(key) {
@@ -443,7 +494,6 @@ async function restorePermission() {
 }
 
 async function initSyncCheck() {
-    // Hide Sync on Mobile (No support)
     if (!('showDirectoryPicker' in window)) {
         document.getElementById('desktopSyncSection').style.display = 'none';
         return;
@@ -486,13 +536,11 @@ async function runSync(dirHandle) {
 // --- ROBUST CSV PARSER V17 ---
 function parseCSV(csvText) {
     const result = {};
-    // Split by newlines (handling CR/LF)
     const lines = csvText.split(/\r?\n/);
     if(lines.length === 0) return result;
 
     let delim = lines[0].includes(';') ? ';' : ',';
     
-    // Robust line parser that handles escaped quotes like ""
     const parseLine = (text) => {
         let arr = [];
         let cur = "";
@@ -501,12 +549,11 @@ function parseCSV(csvText) {
             let c = text[i];
             if (inQuote) {
                 if (c === '"') {
-                    // Check next char
                     if (i + 1 < text.length && text[i + 1] === '"') {
-                        cur += '"'; // It was an escaped quote
-                        i++; // Skip next
+                        cur += '"';
+                        i++;
                     } else {
-                        inQuote = false; // End of field
+                        inQuote = false;
                     }
                 } else {
                     cur += c;
@@ -536,7 +583,6 @@ function parseCSV(csvText) {
         let note = parts[2] ? parts[2].trim() : "";
         let details = parts[3] ? parts[3].trim() : "";
 
-        // Number Parsing
         if (valStr.includes(',') && valStr.includes('.')) {
             if (valStr.lastIndexOf('.') > valStr.lastIndexOf(',')) valStr = valStr.replace(/,/g, '');
             else valStr = valStr.replace(/\./g, '').replace(',', '.');
@@ -599,18 +645,102 @@ function init(){
     document.getElementById('todayDate').value=fd(t);
     const k=dk(t);
     const entry = getEntry(k);
-    if(data[k]) document.getElementById('todayPnL').value = entry.total;
+    
+    if(data[k]) {
+        document.getElementById('todayPnL').value = entry.total;
+        document.getElementById('todayNote').value = entry.note || '';
+        todayTrades = entry.trades ? JSON.parse(JSON.stringify(entry.trades)) : [];
+    } else {
+        document.getElementById('todayPnL').value = '';
+        document.getElementById('todayNote').value = '';
+        todayTrades = [];
+    }
+    
+    renderTodayTradesList();
     updateDataInfo();
     updateStatus();
 }
 
+// --- TODAY TAB FUNCTIONS ---
+function switchTodayTab(tab) {
+    document.querySelectorAll('.today-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.today-tab-content').forEach(c => c.classList.remove('active'));
+    
+    if(tab === 'simple') {
+        document.querySelectorAll('.today-tab')[0].classList.add('active');
+        document.getElementById('today-simple').classList.add('active');
+    } else if(tab === 'trades') {
+        document.querySelectorAll('.today-tab')[1].classList.add('active');
+        document.getElementById('today-trades').classList.add('active');
+    } else {
+        document.querySelectorAll('.today-tab')[2].classList.add('active');
+        document.getElementById('today-notes').classList.add('active');
+    }
+}
+
+function renderTodayTradesList() {
+    const list = document.getElementById('todayTradesList');
+    list.innerHTML = '';
+    todayTrades.forEach((t, i) => {
+        const div = document.createElement('div');
+        div.className = 'trade-list-item';
+        div.innerHTML = `
+            <div class="trade-inputs-row" style="display:flex; gap:10px; margin-bottom:5px;">
+                <input type="number" inputmode="decimal" placeholder="PnL" value="${t.pnl}" onchange="updateTodayTrade(${i}, 'pnl', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:8px; width:100%">
+            </div>
+            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-bottom:5px;">
+                <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.start||''}" onchange="updateTodayTrade(${i}, 'start', this.value)">
+                <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.end||''}" onchange="updateTodayTrade(${i}, 'end', this.value)">
+            </div>
+            <button class="btn-delete-small" onclick="removeTodayTrade(${i})">Löschen</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function addTodayTrade() { 
+    todayTrades.push({ pnl: 0, start: '', end: '' }); 
+    renderTodayTradesList(); 
+}
+
+function removeTodayTrade(i) { 
+    todayTrades.splice(i, 1); 
+    renderTodayTradesList(); 
+    recalcTodayTotal(); 
+}
+
+function updateTodayTrade(i, field, val) { 
+    if(field === 'pnl') todayTrades[i].pnl = parseFloat(val) || 0; 
+    else todayTrades[i][field] = val; 
+    recalcTodayTotal(); 
+}
+
+function recalcTodayTotal() { 
+    if(todayTrades.length > 0) { 
+        const sum = todayTrades.reduce((a, b) => a + (b.pnl || 0), 0); 
+        document.getElementById('todayPnL').value = sum; 
+    } 
+}
+
 function saveToday(){
-    const t=new Date(), v=document.getElementById('todayPnL').value;
-    if(!v){alert('Bitte PnL eingeben');return}
+    const t=new Date();
+    const v=document.getElementById('todayPnL').value;
+    const note=document.getElementById('todayNote').value;
+    
+    if(!v && todayTrades.length === 0){
+        alert('Bitte PnL oder Trades eingeben');
+        return;
+    }
+    
     const k = dk(t);
-    let entry = getEntry(k);
-    entry.total = parseFloat(v);
-    data[k] = entry;
+    const pnlVal = parseFloat(v) || 0;
+    
+    data[k] = { 
+        total: pnlVal, 
+        trades: todayTrades.length > 0 ? todayTrades : [], 
+        note: note 
+    };
+    
     save();
     document.getElementById('msg').style.display='block';
     setTimeout(()=>document.getElementById('msg').style.display='none',3000);
@@ -633,7 +763,7 @@ function showView(n){
     else if(n==='wealth')renderWealth();
     else if(n==='statistics')renderStats();
     else if(n==='export')updateDataInfo();
-    else if(n==='day-details') { /* Handled in renderDayDetails */ }
+    else if(n==='today')init();
 }
 
 // Swipe Logic
@@ -666,9 +796,9 @@ function handleSwipe(sx, sy, ex, ey) {
         
         if(currentIndex === -1) return;
 
-        if (diffX < 0) { // Swipe Left -> Next Tab
+        if (diffX < 0) {
             if (currentIndex < viewIds.length - 1) showView(viewIds[currentIndex + 1]);
-        } else { // Swipe Right -> Prev Tab
+        } else {
             if (currentIndex > 0) showView(viewIds[currentIndex - 1]);
         }
     }
@@ -869,7 +999,7 @@ function renderTradesList() {
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.start||''}" onchange="updateTrade(${i}, 'start', this.value)">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.end||''}" onchange="updateTrade(${i}, 'end', this.value)">
             </div>
-            <button class="btn-delete-small" style="background: #ff3b30; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.8em; width: 100%;" onclick="removeTrade(${i})">Löschen</button>
+            <button class="btn-delete-small" onclick="removeTrade(${i})">Löschen</button>
         `;
         list.appendChild(div);
     });
@@ -888,7 +1018,9 @@ function saveModal(){
     data[k] = { total: pnlVal, trades: currentTrades, note: note };
     save();
     closeModal();
-    if(document.getElementById('day-details').classList.contains('active')) renderDayDetails(selDate); else renderCal();
+    if(document.getElementById('day-details').classList.contains('active')) renderDayDetails(selDate); 
+    else renderCal();
+    if(dk(new Date()) === k) init();
 }
 
 function closeModal(){
@@ -902,6 +1034,7 @@ function deleteEntry(){
     save();
     closeModal();
     showView('calendar');
+    if(dk(new Date()) === dk(selDate)) init();
 }
 
 // --- CHART ENGINE ---
@@ -1017,7 +1150,6 @@ function renderStats(){
         });
     } else { bc.innerHTML='<p style="text-align:center;color:#868e96;padding:50px">Keine Daten</p>'; }
 
-    // Trade Chart
     const tc = document.getElementById('tradeBarChart'); tc.innerHTML = '';
     const tStatsRow = document.getElementById('tradeStatsRow');
     let allTrades = [];
@@ -1103,9 +1235,7 @@ function renderStats(){
     document.getElementById('insights').innerHTML=`<div class="stat-row"><span class="stat-row-label">Ø PnL/Trade</span><span class="stat-row-value" style="color:${t/md.length>=0?'#37b24d':'#fa5252'}">${md.length?(t/md.length).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Ø Holding Time</span><span class="stat-row-value">${avgHold}</span></div><div class="stat-row"><span class="stat-row-label">Profit Factor</span><span class="stat-row-value">${Math.abs(l.reduce((a,b)=>a+b,0))?(w.reduce((a,b)=>a+b,0)/Math.abs(l.reduce((a,b)=>a+b,0))).toFixed(2):'∞'}</span></div>`;
 }
 
-// **UPDATED: ASYNC EXPORT WITH DIRECT FILE ACCESS (Desktop only)**
 async function exportCSV() {
-    // Generate CSV Content
     let csv = '\uFEFFDatum,PnL,Notiz,Details_JSON\n';
     Object.keys(data).sort().forEach(k => {
         const [y, m, d] = k.split('-');
@@ -1118,10 +1248,8 @@ async function exportCSV() {
 
     const filename = `pnl_${new Date().toISOString().slice(0, 10)}.csv`;
 
-    // 1. Try Direct Save to Backup Folder (Desktop with linked folder)
     if (cachedDirHandle) {
         try {
-            // Check write permission
             const opts = { mode: 'readwrite' };
             if ((await cachedDirHandle.queryPermission(opts)) !== 'granted') {
                 if ((await cachedDirHandle.requestPermission(opts)) !== 'granted') {
@@ -1129,27 +1257,24 @@ async function exportCSV() {
                 }
             }
             
-            // Create/Overwrite file
             const fileHandle = await cachedDirHandle.getFileHandle(filename, { create: true });
             const writable = await fileHandle.createWritable();
             await writable.write(csv);
             await writable.close();
             
             alert(`✅ Gespeichert im Backup-Ordner:\n${filename}`);
-            return; // Success, stop here.
+            return;
         } catch (e) {
             console.warn("Direkt-Speichern fehlgeschlagen, Fallback zu Download...", e);
-            // Fallthrough to standard download below
         }
     }
 
-    // 2. Standard Download Fallback (Mobile / Desktop without linked folder)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    document.body.appendChild(a); // Required for Firefox/iOS
+    document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
@@ -1177,10 +1302,6 @@ function updateDataInfo(){
     document.getElementById('dataInfo').innerHTML=`<strong>${c}</strong> Einträge<br>Gesamt: <strong style="color:${t>=0?'#37b24d':'#fa5252'}">${t>=0?'+':''}${t.toFixed(2)}</strong>`;
 }
 
-document.getElementById('modal').onclick=function(e){if(e.target===this)closeModal()};
-window.onbeforeunload=save;
-setInterval(save,30000);
-load();
 function checkPassword(){
 const pw=document.getElementById('passwordInput').value;
 if(pw==='09112012'){
@@ -1191,6 +1312,11 @@ document.getElementById('passwordInput').value='';
 }
 }
 document.getElementById('passwordInput').onkeypress=function(e){if(e.key==='Enter')checkPassword()};
+
+document.getElementById('modal').onclick=function(e){if(e.target===this)closeModal()};
+window.onbeforeunload=save;
+setInterval(save,30000);
+load();
 </script>
 </body>
 </html>
