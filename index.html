@@ -1,4 +1,4 @@
-<!-- START OF FILE Trading_PnL_GitHub_V19.html -->
+<!-- START OF FILE Trading_PnL_GitHub_V21.html -->
 
 <!DOCTYPE html>
 <html lang="de">
@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Trading PnL Tracker V19</title>
+<title>Trading PnL Tracker V21</title>
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -47,9 +47,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 @media(max-width: 768px) { .form-group { padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 15px;} }
 
 .form-group label{display:block;margin-bottom:8px;font-weight:600;color:#495057; font-size: 0.85em; text-transform: uppercase;}
-.form-group input, .form-group textarea{width:100%;padding:14px;border:2px solid #e9ecef;border-radius:8px;font-size:18px;font-family:inherit; font-weight: 600;}
-@media(max-width: 768px) { .form-group input, .form-group textarea { border: none; border-bottom: 1px solid #e5e5ea; border-radius: 0; padding: 8px 0; } }
-.form-group input:focus, .form-group textarea:focus{outline:none;border-color:#667eea}
+.form-group input, .form-group textarea, .form-group select{width:100%;padding:14px;border:2px solid #e9ecef;border-radius:8px;font-size:18px;font-family:inherit; font-weight: 600;}
+@media(max-width: 768px) { .form-group input, .form-group textarea, .form-group select { border: none; border-bottom: 1px solid #e5e5ea; border-radius: 0; padding: 8px 0; } }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus{outline:none;border-color:#667eea}
 
 /* BUTTONS */
 .btn{width:100%;padding:16px;color:white;border:none;border-radius:8px;font-size:1.1em;font-weight:600;cursor:pointer;margin-bottom:10px; transition: transform 0.1s; text-align: center;}
@@ -62,7 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-outline { background: transparent; border: 2px solid #e9ecef; color: #495057; }
 @media(max-width: 768px) { .btn-outline { background: white; } }
 .btn-reconnect{background:#fff3bf;color:#e67700;border:1px solid #fcc419;margin-top:10px}
-.btn-delete-small{background:#ff3b30;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.8em;}
+.btn-delete-small{background:#ff3b30;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.8em; width: 100%; margin-top: 5px;}
 
 /* CALENDAR */
 .calendar{display:grid; gap:8px; margin-top:15px}
@@ -113,6 +113,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .bar{width:100%; max-width: 30px; min-height:2px;border-radius:3px 3px 0 0}
 .bar.profit{background:linear-gradient(to top,#37b24d,#51cf66)}
 .bar.loss{background:linear-gradient(to top,#fa5252,#ff6b6b)}
+.bar.fee{background:linear-gradient(to top,#fab005,#ffd43b)}
 .bar-label{font-size:.65em;color:#868e96;margin-top:4px;font-weight:600}
 .bar-value{font-size:.6em;color:#495057;font-weight:600;margin-bottom:2px}
 
@@ -142,7 +143,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .modal-tabs{display:flex; border-bottom:1px solid #e9ecef;}
 .modal-tab{flex:1; padding:15px; text-align:center; cursor:pointer; font-weight:600; color:#868e96; background:#f8f9fa;}
 .modal-tab.active{background:white; color:#667eea; border-bottom:3px solid #667eea;}
-.trade-list-item{background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:10px; display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; align-items:center;}
+.trade-list-item{background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; flex-direction:column; gap:6px;}
 .trade-time-group { display: flex; gap: 5px; font-size: 0.8em; color: #868e96; }
 .trade-time-input { width: 100%; border: 1px solid #ced4da; border-radius: 4px; padding: 2px; }
 .modal-footer{padding:20px; border-top:1px solid #e9ecef; display:flex; gap:10px;}
@@ -224,7 +225,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="container">
 <div class="header">
 <h1>📊 Trading PnL Tracker</h1>
-<p>Universal Version V19 (GitHub Ready)</p>
+<p>Universal Version V21 (GitHub Ready)</p>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -315,6 +316,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="chart-container">
 <div class="chart-title">📈 Vermögensentwicklung (Kumuliert)</div>
 <div class="line-chart" id="lineChart"></div>
+</div>
+<div class="chart-container">
+<div class="chart-title">💸 Broker Gebühren</div>
+<div class="stat-row"><span class="stat-row-label">Gesamt (Lifetime)</span><span class="stat-row-value loss" id="lifetimeFees">0.00</span></div>
+<div class="stat-row"><span class="stat-row-label">Dieser Monat</span><span class="stat-row-value loss" id="monthFees">0.00</span></div>
+<div class="bar-chart" id="feeBarChart"></div>
 </div>
 <div class="chart-container">
 <div class="chart-title">📊 Tägliches PnL</div>
@@ -421,6 +428,21 @@ function getEntry(key) {
     if (!entry.trades) entry.trades = [];
     if (!entry.note) entry.note = '';
     return entry;
+}
+
+function getComm(inst, qty) {
+    // FALLBACK for Legacy Data:
+    // If qty is missing/null/undefined, default to 1
+    let q = parseFloat(qty);
+    if(isNaN(q)) q = 1;
+    
+    // If inst is missing, default to 'ES'
+    const i = inst || 'ES';
+
+    // Costs are Roundtrip
+    if(i === 'ES' || i === 'NQ') return 4.50 * q;
+    if(i === 'MES') return 1.00 * q;
+    return 0;
 }
 
 const DB_NAME = 'TradingPnL_DB';
@@ -694,10 +716,18 @@ function renderTodayTradesList() {
         const div = document.createElement('div');
         div.className = 'trade-list-item';
         div.innerHTML = `
-            <div class="trade-inputs-row" style="display:flex; gap:10px; margin-bottom:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:10px;">
                 <input type="number" inputmode="decimal" placeholder="PnL" value="${t.pnl}" onchange="updateTodayTrade(${i}, 'pnl', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:8px; width:100%">
             </div>
-            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-bottom:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:5px;">
+                <select style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:70%" onchange="updateTodayTrade(${i}, 'inst', this.value)">
+                    <option value="ES" ${(!t.inst || t.inst==='ES')?'selected':''}>ES</option>
+                    <option value="NQ" ${t.inst==='NQ'?'selected':''}>NQ</option>
+                    <option value="MES" ${t.inst==='MES'?'selected':''}>MES</option>
+                </select>
+                <input type="number" placeholder="Anz." value="${t.qty||1}" onchange="updateTodayTrade(${i}, 'qty', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:30%">
+            </div>
+            <div class="trade-inputs-row" style="display:flex; gap:5px;">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.start||''}" onchange="updateTodayTrade(${i}, 'start', this.value)">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.end||''}" onchange="updateTodayTrade(${i}, 'end', this.value)">
             </div>
@@ -708,7 +738,7 @@ function renderTodayTradesList() {
 }
 
 function addTodayTrade() { 
-    todayTrades.push({ pnl: 0, start: '', end: '' }); 
+    todayTrades.push({ pnl: 0, start: '', end: '', inst: 'ES', qty: 1 }); 
     renderTodayTradesList(); 
 }
 
@@ -719,7 +749,7 @@ function removeTodayTrade(i) {
 }
 
 function updateTodayTrade(i, field, val) { 
-    if(field === 'pnl') todayTrades[i].pnl = parseFloat(val) || 0; 
+    if(field === 'pnl' || field === 'qty') todayTrades[i][field] = parseFloat(val) || 0; 
     else todayTrades[i][field] = val; 
     recalcTodayTotal(); 
 }
@@ -1001,10 +1031,18 @@ function renderTradesList() {
         const div = document.createElement('div');
         div.className = 'trade-list-item';
         div.innerHTML = `
-            <div class="trade-inputs-row" style="display:flex; gap:10px; margin-bottom:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:10px;">
                 <input type="number" inputmode="decimal" placeholder="PnL" value="${t.pnl}" onchange="updateTrade(${i}, 'pnl', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:8px; width:100%">
             </div>
-            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-bottom:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:5px;">
+                <select style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:70%" onchange="updateTrade(${i}, 'inst', this.value)">
+                    <option value="ES" ${(!t.inst || t.inst==='ES')?'selected':''}>ES</option>
+                    <option value="NQ" ${t.inst==='NQ'?'selected':''}>NQ</option>
+                    <option value="MES" ${t.inst==='MES'?'selected':''}>MES</option>
+                </select>
+                <input type="number" placeholder="Anz." value="${t.qty||1}" onchange="updateTrade(${i}, 'qty', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:30%">
+            </div>
+            <div class="trade-inputs-row" style="display:flex; gap:5px;">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.start||''}" onchange="updateTrade(${i}, 'start', this.value)">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.end||''}" onchange="updateTrade(${i}, 'end', this.value)">
             </div>
@@ -1014,9 +1052,13 @@ function renderTradesList() {
     });
 }
 
-function addTradeRow() { currentTrades.push({ pnl: 0, start: '', end: '' }); renderTradesList(); }
+function addTradeRow() { currentTrades.push({ pnl: 0, start: '', end: '', inst: 'ES', qty: 1 }); renderTradesList(); }
 function removeTrade(i) { currentTrades.splice(i, 1); renderTradesList(); recalcTotalFromTrades(); }
-function updateTrade(i, field, val) { if(field === 'pnl') currentTrades[i].pnl = parseFloat(val) || 0; else currentTrades[i][field] = val; recalcTotalFromTrades(); }
+function updateTrade(i, field, val) { 
+    if(field === 'pnl' || field === 'qty') currentTrades[i][field] = parseFloat(val) || 0; 
+    else currentTrades[i][field] = val; 
+    recalcTotalFromTrades(); 
+}
 function recalcTotalFromTrades() { if(currentTrades.length > 0) { const sum = currentTrades.reduce((a, b) => a + (b.pnl || 0), 0); document.getElementById('modalPnL').value = sum; } }
 
 function saveModal(){
@@ -1136,10 +1178,43 @@ function renderStats(){
     const mn=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
     document.getElementById('statsTitle').textContent=`${mn[m]} ${y}`;
     
+    // Global Loop for Lifetime Fees
+    let lifetimeFees = 0;
+    Object.values(data).forEach(entry => {
+        if(entry.trades) {
+            entry.trades.forEach(t => lifetimeFees += getComm(t.inst, t.qty));
+        }
+    });
+    document.getElementById('lifetimeFees').textContent = '-' + lifetimeFees.toFixed(2);
+
     const me=Object.keys(data).filter(k=>{
         const[y2,m2]=k.split('-'); return parseInt(y2)===y&&parseInt(m2)===m+1;
     }).sort().map(k=>({d:parseInt(k.split('-')[2]), v:getEntry(k).total, k:k, entry:getEntry(k)}));
     
+    // Month Fees & Fee Chart
+    let monthFees = 0;
+    const feeChartData = [];
+    me.forEach(dayObj => {
+        let dailyFee = 0;
+        if(dayObj.entry.trades) {
+            dayObj.entry.trades.forEach(t => dailyFee += getComm(t.inst, t.qty));
+        }
+        monthFees += dailyFee;
+        if(dailyFee > 0) feeChartData.push({ day: dayObj.d, fee: dailyFee });
+    });
+    document.getElementById('monthFees').textContent = '-' + monthFees.toFixed(2);
+    
+    const fc = document.getElementById('feeBarChart'); fc.innerHTML = '';
+    if(feeChartData.length) {
+        const maxFee = Math.max(...feeChartData.map(d => d.fee));
+        feeChartData.forEach(d => {
+             const h = Math.max((d.fee / maxFee) * 150, 2);
+             const div = document.createElement('div'); div.className = 'bar-wrapper';
+             div.innerHTML = `<div class="bar fee" style="height:${h}px"></div><div class="bar-label">${d.day}</div><div class="bar-value">${d.fee.toFixed(0)}</div>`;
+             fc.appendChild(div);
+        });
+    } else { fc.innerHTML = '<p style="text-align:center;color:#868e96;padding:50px">Keine Gebühren</p>'; }
+
     const md=me.map(e=>e.v), w=md.filter(v=>v>0), l=md.filter(v=>v<0);
     const t=md.reduce((s,v)=>s+v,0), p=w.length, lc=l.length;
     
