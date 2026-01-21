@@ -1,4 +1,4 @@
-<!-- START OF FILE Trading_PnL_GitHub_V21.html -->
+<!-- START OF FILE Trading_PnL_GitHub_V24.html -->
 
 <!DOCTYPE html>
 <html lang="de">
@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Trading PnL Tracker V21</title>
+<title>Trading PnL Tracker V24</title>
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -108,6 +108,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 @media(max-width: 768px) { .chart-container { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); } }
 .chart-title{font-size:1em;font-weight:600;color:#495057;margin-bottom:12px;text-align:center}
 
+/* General Bar Chart (Used for Fees and Daily PnL) */
 .bar-chart{display:flex;align-items:flex-end;height:200px;padding:10px;background:white;border-radius:8px;overflow-x:auto;gap:3px}
 .bar-wrapper{display:flex;flex-direction:column;align-items:center;min-width:25px; flex: 1;}
 .bar{width:100%; max-width: 30px; min-height:2px;border-radius:3px 3px 0 0}
@@ -116,6 +117,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .bar.fee{background:linear-gradient(to top,#fab005,#ffd43b)}
 .bar-label{font-size:.65em;color:#868e96;margin-top:4px;font-weight:600}
 .bar-value{font-size:.6em;color:#495057;font-weight:600;margin-bottom:2px}
+
+/* Zero-Line Trade Chart (Stats) */
+.trade-chart-container {
+    display: flex;
+    height: 200px;
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    align-items: stretch; /* Stretch to fill height */
+    position: relative;
+    width: 100%;
+}
+.trade-bar-wrapper {
+    flex: 1;
+    position: relative;
+    height: 100%;
+    margin: 0 1px;
+}
+.trade-bar-line {
+    width: 100%;
+    min-height: 2px;
+    border-radius: 2px;
+    position: absolute;
+    /* Top/Bottom set via JS */
+}
+.trade-bar-line.profit { background: #37b24d; }
+.trade-bar-line.loss { background: #fa5252; }
+.zero-line {
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    background: #e9ecef;
+    top: 50%;
+    left: 0;
+    z-index: 0;
+}
 
 .line-chart{position:relative;height:250px;background:white;border-radius:8px;padding:20px 10px 30px 45px}
 .line-chart svg{width:100%;height:100%;overflow:visible}
@@ -175,6 +212,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .trade-pnl.profit { color: #34c759; }
 .trade-pnl.loss { color: #fa5252; }
 
+/* WATERFALL CHART */
+.waterfall-container { 
+    background: white; padding: 10px; border-radius: 8px; 
+    height: 220px; margin-bottom: 20px; 
+    overflow-x: auto; /* Enable scrolling */
+    display: flex; flex-direction: column;
+}
+.waterfall-chart { flex: 1; min-width: 100%; position: relative;}
+.waterfall-chart svg { height: 100%; display: block; }
+
 /* TRADE STATS ROW */
 .trade-stats-summary {
     display: flex; justify-content: space-around; margin-top: 15px; 
@@ -225,7 +272,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="container">
 <div class="header">
 <h1>📊 Trading PnL Tracker</h1>
-<p>Universal Version V21 (GitHub Ready)</p>
+<p>Universal Version V24 (GitHub Ready)</p>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -329,7 +376,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 <div class="chart-container">
 <div class="chart-title">🔎 Einzeltrade-Performance</div>
-<div class="bar-chart" id="tradeBarChart"></div>
+<div id="tradeChartWrapper"></div>
 <div id="tradeStatsRow" class="trade-stats-summary"></div>
 </div>
 <div class="chart-container">
@@ -373,7 +420,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div style="padding:12px;background:#f8f9fa;border-radius:8px;text-align:center;margin-top:20px">
 <strong>Aktuelle Daten:</strong>
 <div id="dataInfo" style="margin-top:8px"></div>
-</div>
 </div>
 </div>
 </div>
@@ -431,15 +477,9 @@ function getEntry(key) {
 }
 
 function getComm(inst, qty) {
-    // FALLBACK for Legacy Data:
-    // If qty is missing/null/undefined, default to 1
     let q = parseFloat(qty);
     if(isNaN(q)) q = 1;
-    
-    // If inst is missing, default to 'ES'
     const i = inst || 'ES';
-
-    // Costs are Roundtrip
     if(i === 'ES' || i === 'NQ') return 4.50 * q;
     if(i === 'MES') return 1.00 * q;
     return 0;
@@ -582,8 +622,6 @@ function parseCSV(csvText) {
             if (char === '"') {
                 inQuote = true; // Start of quote
             } else if (char === ',' || char === ';') { 
-                // Treat semicolon as delimiter too if detected, but simpler to assume comma for generated files
-                // For safety we treat comma as default delimiter here.
                 currentRow.push(currentVal); 
                 currentVal = '';
             } else if (char === '\n') {
@@ -596,23 +634,20 @@ function parseCSV(csvText) {
             }
         }
     }
-    // Push last bit
     if (currentVal || currentRow.length > 0) {
         currentRow.push(currentVal);
         rows.push(currentRow);
     }
 
-    // Convert rows to data object
     const result = {};
     rows.forEach((parts, i) => {
-        if (i === 0 || parts.length < 2) return; // Skip header or empty rows
+        if (i === 0 || parts.length < 2) return;
 
         let dateStr = parts[0].trim();
         let valStr = parts[1].trim();
         let note = parts[2] ? parts[2].trim() : "";
         let details = parts[3] ? parts[3].trim() : "";
 
-        // Number Parsing
         if (valStr.includes(',') && valStr.includes('.')) {
             if (valStr.lastIndexOf('.') > valStr.lastIndexOf(',')) valStr = valStr.replace(/,/g, '');
             else valStr = valStr.replace(/\./g, '').replace(',', '.');
@@ -629,7 +664,6 @@ function parseCSV(csvText) {
             }
         }
     });
-
     return result;
 }
 
@@ -953,6 +987,78 @@ function renderDayDetails(d) {
     });
     const avgHold = counted ? (totalMins / counted).toFixed(0) + ' min' : '-';
 
+    // WATERFALL CHART GENERATION (Fixed Width + Scroll)
+    let waterfallHtml = '';
+    if(trades.length > 0) {
+        let runningTotal = 0;
+        let points = [{val: 0, pnl: 0}];
+        trades.forEach(t => {
+            const p = parseFloat(t.pnl) || 0;
+            runningTotal += p;
+            points.push({ val: runningTotal, pnl: p });
+        });
+
+        const maxVal = Math.max(...points.map(p => p.val));
+        const minVal = Math.min(...points.map(p => p.val));
+        const range = Math.max(maxVal - minVal, 10); 
+        const padding = range * 0.1;
+        const drawMin = minVal - padding;
+        const drawMax = maxVal + padding;
+        const drawRange = drawMax - drawMin;
+        
+        // Zero line Y-position
+        const zeroY = 100 - ((0 - drawMin) / drawRange) * 100;
+
+        let svgContent = '';
+        
+        // Zero Line
+        if(drawMin < 0 && drawMax > 0) {
+            svgContent += `<line x1="0" y1="${zeroY}%" x2="100%" y2="${zeroY}%" stroke="#ced4da" stroke-width="1" stroke-dasharray="4" vector-effect="non-scaling-stroke" />`;
+        }
+        
+        // FIXED WIDTH LOGIC (Much thinner bars now)
+        const unitWidth = 20; // Reduced from 60 to 20 for much thinner bars
+        const chartWidth = Math.max(trades.length * unitWidth, 300); 
+        const barWidthPx = unitWidth * 0.8;
+        const gapPx = unitWidth * 0.1;
+
+        for(let i=0; i<trades.length; i++) {
+            const startVal = points[i].val;
+            const endVal = points[i+1].val;
+            const pnl = points[i+1].pnl;
+            
+            const yTopVal = Math.max(startVal, endVal);
+            const yBottomVal = Math.min(startVal, endVal);
+            
+            const yTop = 100 - ((yTopVal - drawMin) / drawRange) * 100;
+            const yBottom = 100 - ((yBottomVal - drawMin) / drawRange) * 100;
+            const height = Math.max(yBottom - yTop, 0.5); // Min height visibility
+
+            const color = pnl >= 0 ? '#37b24d' : '#fa5252';
+            
+            // X position in pixels
+            const xPos = (i * unitWidth) + gapPx;
+            
+            svgContent += `<rect x="${xPos}" y="${yTop}%" width="${barWidthPx}" height="${height}%" fill="${color}" rx="2" />`;
+            
+            // Connecting thin lines
+            if(i < trades.length - 1) {
+                const nextY = 100 - ((endVal - drawMin) / drawRange) * 100;
+                const lineX1 = xPos + barWidthPx;
+                const lineX2 = ((i+1) * unitWidth) + gapPx;
+                svgContent += `<line x1="${lineX1}" y1="${nextY}%" x2="${lineX2}" y2="${nextY}%" stroke="#adb5bd" stroke-width="1" vector-effect="non-scaling-stroke" />`;
+            }
+        }
+        
+        waterfallHtml = `
+        <div class="waterfall-container">
+            <div class="chart-title">Intraday Verlauf (Waterfall)</div>
+            <div class="waterfall-chart">
+                <svg style="width: ${chartWidth}px; min-width: 100%;" preserveAspectRatio="none">${svgContent}</svg>
+            </div>
+        </div>`;
+    }
+
     const content = document.getElementById('dayDetailContent');
     content.innerHTML = `
         <div class="day-detail-header">
@@ -965,6 +1071,7 @@ function renderDayDetails(d) {
             <div class="detail-card"><div class="detail-label">Ø PnL</div><div class="detail-value ${avgPnL>=0?'profit':'loss'}">${avgPnL}</div></div>
             <div class="detail-card"><div class="detail-label">Ø Hold</div><div class="detail-value">${avgHold}</div></div>
         </div>
+        ${waterfallHtml}
         <div class="chart-container">
             <div class="chart-title">Trades (${trades.length})</div>
             <div id="dayTradesList"></div>
@@ -1234,7 +1341,9 @@ function renderStats(){
         });
     } else { bc.innerHTML='<p style="text-align:center;color:#868e96;padding:50px">Keine Daten</p>'; }
 
-    const tc = document.getElementById('tradeBarChart'); tc.innerHTML = '';
+    // UPDATED SINGLE TRADE CHART (TRUE ZERO LINE CENTERED)
+    const tcWrapper = document.getElementById('tradeChartWrapper');
+    tcWrapper.innerHTML = '';
     const tStatsRow = document.getElementById('tradeStatsRow');
     let allTrades = [];
     me.forEach(dayObj => {
@@ -1246,13 +1355,40 @@ function renderStats(){
     });
 
     if (allTrades.length > 0) {
-        const maxVal = Math.max(...allTrades.map(t => Math.abs(t.pnl)));
+        const container = document.createElement('div');
+        container.className = 'trade-chart-container';
+        
+        const maxP = Math.max(...allTrades.map(t => t.pnl));
+        const minP = Math.min(...allTrades.map(t => t.pnl));
+        const absMax = Math.max(Math.abs(maxP), Math.abs(minP)) || 1;
+        
+        const zLine = document.createElement('div');
+        zLine.className = 'zero-line';
+        container.appendChild(zLine);
+
         allTrades.forEach(t => {
-            const h = Math.max((Math.abs(t.pnl) / maxVal) * 150, 2);
-            const d = document.createElement('div'); d.className = 'bar-wrapper';
-            d.innerHTML = `<div class="bar ${t.pnl >= 0 ? 'profit' : 'loss'}" style="height:${h}px"></div><div class="bar-label">${t.day}</div>`;
-            tc.appendChild(d);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'trade-bar-wrapper';
+            
+            // pct is relative to 50% height (half the container)
+            const pct = (Math.abs(t.pnl) / absMax) * 45; 
+            
+            const line = document.createElement('div');
+            line.className = `trade-bar-line ${t.pnl >= 0 ? 'profit' : 'loss'}`;
+            line.style.height = `${Math.max(pct, 1)}%`;
+            
+            if(t.pnl >= 0) {
+                line.style.bottom = '50%'; // Start at middle, grow up
+            } else {
+                line.style.top = '50%'; // Start at middle, grow down
+            }
+            
+            wrapper.appendChild(line);
+            container.appendChild(wrapper);
         });
+        
+        tcWrapper.appendChild(container);
+
         const wins = allTrades.filter(t => t.pnl > 0);
         const losses = allTrades.filter(t => t.pnl < 0);
         const grossWin = wins.reduce((s, t) => s + t.pnl, 0);
@@ -1261,7 +1397,7 @@ function renderStats(){
         const wr = ((wins.length / allTrades.length) * 100).toFixed(0);
         tStatsRow.innerHTML = `<span><strong>T:</strong> ${allTrades.length}</span><span><strong>WR:</strong> <span style="color:${wr>=50?'#37b24d':'#fa5252'}">${wr}%</span></span><span><strong>PF:</strong> ${pf}</span>`;
     } else {
-        tc.innerHTML = '<p style="text-align:center;color:#868e96;padding:50px">Keine Trades</p>';
+        tcWrapper.innerHTML = '<p style="text-align:center;color:#868e96;padding:50px">Keine Trades</p>';
         tStatsRow.innerHTML = '';
     }
 
