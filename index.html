@@ -1,50 +1,184 @@
-<!-- START OF FILE Trading_PnL_GitHub_V26.html -->
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Trading PnL Tracker V26</title>
+<title>Trade Log</title>
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px; color:#1c1c1e; overflow-x: hidden;}
-@media(max-width: 768px) { body { padding: 10px; padding-bottom: env(safe-area-inset-bottom); background: #f0f2f5; } }
+body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    min-height:100vh;
+    padding:3mm 7mm; /* 3mm oben/unten, 7mm links/rechts */
+    color:#1c1c1e; 
+    overflow-x: hidden; 
+    display: flex; 
+    justify-content: center; 
+    align-items: flex-start;
+}
 
-.container{max-width:1000px;margin:0 auto;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3); min-height:80vh; display: flex; flex-direction: column;}
-@media(max-width: 768px) { .container { border-radius: 0; box-shadow: none; min-height: 100vh; } }
+/* KARTEN-CONTAINER - FESTE DIMENSIONEN AN BROWSERFENSTER GEBUNDEN */
+.container{
+    width: calc(100vw - 14mm); /* 7mm links + 7mm rechts = 14mm Abzug */
+    height: calc(100vh - 6mm); /* 3mm oben + 3mm unten = 6mm Abzug */
+    margin: 0;
+    background:white;
+    border-radius:20px;
+    box-shadow:0 20px 60px rgba(0,0,0,.3); 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden;
+    /* Fixierte Positionierung */
+    position: relative;
+}
+
+/* AUF MOBILE: VOLLE BILDSCHIRMGRÖSSE OHNE ABSTÄNDE */
+@media(max-width: 768px) { 
+    body { 
+        padding: 0 !important; /* Keine Abstände mehr auf Mobile */
+        background: #f0f2f5; 
+    }
+    
+    .container { 
+        width: 100vw !important; /* Volle Breite */
+        height: 100vh !important; /* Volle Höhe */
+        border-radius: 0 !important; /* Keine abgerundeten Ecken */
+        box-shadow: none !important; /* Kein Schatten */
+    }
+}
 
 .header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;text-align:center;border-radius:20px 20px 0 0; flex-shrink: 0;}
-@media(max-width: 768px) { .header { border-radius: 0; padding-top: max(20px, env(safe-area-inset-top)); } }
+@media(max-width: 768px) { .header { border-radius: 0; padding-top: 20px; } }
 
 .header h1{font-size:1.5em;margin-bottom:8px}
 .backup-status{font-size:.75em;opacity:.9;margin-top:8px; display:inline-block; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:10px;}
 
-/* NAVIGATION */
+/* NAVIGATION - BREITER */
 .nav{display:flex;background:#f8f9fa;border-bottom:2px solid #e9ecef;overflow-x:auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; position: sticky; top: 0; z-index: 100;}
-.nav-btn{flex:1;min-width:70px;padding:15px 8px;background:none;border:none;cursor:pointer;font-size:.9em;font-weight:600;color:#495057;white-space:nowrap; transition: background 0.2s;}
+.nav-btn{flex:1;min-width:100px;padding:18px 12px;background:none;border:none;cursor:pointer;font-size:1em;font-weight:600;color:#495057;white-space:nowrap; transition: background 0.2s;}
 .nav-btn.active{background:white;color:#667eea;border-bottom:3px solid #667eea}
 
 @media(max-width: 768px) {
     .nav-btn {
-        padding: 14px 2px;
-        font-size: 0.8em; 
+        padding: 16px 8px;
+        font-size: 0.85em; 
         min-width: auto;   
     }
 }
 
-/* CONTENT */
-.content{padding:20px; flex-grow: 1;}
-@media(max-width: 768px) { .content { background: #f2f2f7; } }
-.view{display:none; animation: fadeIn 0.2s ease;}
-.view.active{display:block}
+/* CONTENT - MIT SCROLL INNERHALB DER KARTE */
+.content{padding:20px; flex-grow: 1; overflow-y: auto; height: calc(100% - 140px);}
+@media(max-width: 768px) { .content { background: #f2f2f7; height: calc(100% - 120px); padding: 15px; } }
+.view{display:none; animation: fadeIn 0.2s ease; height: 100%;}
+.view.active{display:flex; flex-direction: column;}
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* FORMS */
-.form-group{margin-bottom:15px; background: white; }
-@media(max-width: 768px) { .form-group { padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 15px;} }
+/* CALENDAR LAYOUT MIT ANPASSUNGEN FÜR MOBILE */
+.calendar-layout {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+    flex-grow: 1;
+}
+
+@media(max-width: 768px) {
+    .calendar-layout {
+        flex-direction: column;
+        height: auto;
+    }
+}
+
+.calendar-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.calendar-section.left {
+    flex: 1.1; /* 10% breiter */
+}
+
+.calendar-section.right {
+    flex: 0.9; /* 10% schmaler */
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15); /* Erhöhte Tiefe: stärkerer Schatten */
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(0,0,0,0.05); /* Leichte Randlinie für mehr Tiefe */
+}
+
+@media(max-width: 768px) {
+    .calendar-section.right {
+        margin-top: 20px;
+        flex: none;
+        height: auto;
+        max-height: 40vh;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Leichterer Schatten auf Mobile */
+    }
+    .calendar-section.left {
+        flex: 1;
+        height: 50vh;
+        min-height: 300px;
+    }
+}
+
+/* STATS IM KALENDER - NEBENEINANDER */
+.stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+@media(max-width: 768px) {
+    .stats {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+.stats .stat-card {
+    flex: 1;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    min-height: auto;
+}
+
+.stats .stat-label {
+    font-size: 0.75em;
+    color: #868e96;
+    margin-bottom: 6px;
+    white-space: nowrap;
+}
+
+.stats .stat-value {
+    font-size: 1.1em;
+    font-weight: 700;
+}
+
+.stats .stat-value.profit {
+    color: #37b24d;
+}
+
+.stats .stat-value.loss {
+    color: #fa5252;
+}
+
+/* FORMS - BREITER */
+.form-group{margin-bottom:15px; background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);}
+@media(max-width: 768px) { .form-group { margin-bottom: 15px;} }
 
 .form-group label{display:block;margin-bottom:8px;font-weight:600;color:#495057; font-size: 0.85em; text-transform: uppercase;}
 .form-group input, .form-group textarea, .form-group select{width:100%;padding:14px;border:2px solid #e9ecef;border-radius:8px;font-size:18px;font-family:inherit; font-weight: 600;}
@@ -64,8 +198,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-reconnect{background:#fff3bf;color:#e67700;border:1px solid #fcc419;margin-top:10px}
 .btn-delete-small{background:#ff3b30;color:white;border:none;border-radius:6px;padding:5px 10px;font-size:0.8em; width: 100%; margin-top: 5px;}
 
-/* CALENDAR */
-.calendar{display:grid; gap:8px; margin-top:15px}
+/* CALENDAR - LINKSBÜNDIG */
+.calendar{display:grid; gap:8px; margin-top:15px; flex-grow: 1;}
 @media(max-width: 768px) { .calendar { gap: 4px; } }
 
 .calendar-header{text-align:center;font-weight:600;padding:8px;background:#f8f9fa;border-radius:6px;font-size:.85em}
@@ -77,6 +211,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .calendar-day.profit{background:linear-gradient(135deg,#51cf66 0%,#37b24d 100%);color:white}
 .calendar-day.loss{background:linear-gradient(135deg,#ff6b6b 0%,#fa5252 100%);color:white}
 .calendar-day.weekend-hidden { visibility: hidden; pointer-events: none; }
+.calendar-day.macro-event { border: 2px solid #fa5252; }
 .note-icon { position: absolute; top: 4px; right: 4px; font-size: 0.8em; opacity: 0.8; }
 .day-number{font-size:.85em;margin-bottom:4px}
 .day-pnl{font-size:.75em;font-weight:700}
@@ -87,7 +222,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .month-selector button{padding:8px 12px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600}
 .month-selector h2{color:#495057;font-size:1.1em}
 
-/* STATS */
+/* TRADINGVIEW WIDGET CONTAINER */
+.tradingview-widget-container {
+    width: 100%;
+    height: 500px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.tradingview-widget-container iframe {
+    border: none;
+}
+
+.widget-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 0.8em;
+    color: #868e96;
+    text-align: center;
+}
+
+/* STATS FÜR STATISTIK-TAB */
 .stat-row{display:flex;justify-content:space-between;padding:10px;background:white;border-radius:8px;margin-bottom:6px;font-size:.9em}
 .stat-row-label{color:#495057;font-weight:500}
 .stat-row-value{font-weight:700}
@@ -251,29 +409,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 .info-box{background:#e7f5ff;color:#1971c2;padding:15px;border-radius:8px;margin-bottom:15px;font-size:.9em}
 
-/* TODAY TAB STYLES */
-.today-container { max-width: 600px; margin: 0 auto; }
+/* TODAY TAB STYLES - BREITER */
+.today-container { max-width: 800px; margin: 0 auto; width: 100%; }
 .today-tabs { display: flex; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
 @media(max-width: 768px) { .today-tabs { background: white; } }
 .today-tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-weight: 600; color: #868e96; background: transparent; border: none; }
 .today-tab.active { background: white; color: #667eea; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 .today-tab-content { display: none; }
 .today-tab-content.active { display: block; }
+
+/* FÜR EXTREM KLEINE BILDSCHIRME (Optional) */
+@media(max-width: 320px) {
+    body { 
+        padding: 0 !important;
+    }
+    
+    .container { 
+        width: 100vw !important;
+        height: 100vh !important;
+    }
+}
 </style>
 </head>
 <body>
-<div id="passwordPrompt" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);z-index:9999;display:flex;align-items:center;justify-content:center;">
-<div style="background:white;padding:40px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:400px;width:90%;">
-<h2 style="text-align:center;margin-bottom:20px;color:#495057;">🔒 Trading Log</h2>
-<input type="password" id="passwordInput" placeholder="Passwort eingeben" style="width:100%;padding:15px;border:2px solid #e9ecef;border-radius:8px;font-size:1em;margin-bottom:15px;">
-<button onclick="checkPassword()" style="width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;border-radius:8px;font-size:1.1em;font-weight:600;cursor:pointer;">Entsperren</button>
-<p id="errorMsg" style="color:#fa5252;text-align:center;margin-top:10px;display:none;">Falsches Passwort!</p>
-</div>
-</div>
+<!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>📊 Trading PnL Tracker</h1>
-<p>Universal Version V26 (GitHub Ready)</p>
+<h1>📊 Trade Log</h1>
+<p>Version 04 - Mit echtem US-Finanzkalender</p>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -324,14 +487,53 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <button class="btn btn-primary" onclick="saveToday()">Speichern</button>
 </div>
 </div>
+
+<!-- KALENDER MIT ECHTEM FINANZKALENDER -->
 <div id="calendar" class="view">
-<div class="stats" id="calStats"></div>
-<div class="month-selector">
-<button onclick="changeMonth(-1)">←</button>
-<h2 id="monthTitle"></h2>
-<button onclick="changeMonth(1)">→</button>
-</div>
-<div id="calGrid" class="calendar"></div>
+    <div class="calendar-layout">
+        <!-- LINKE SEITE: KALENDER -->
+        <div class="calendar-section left">
+            <div class="stats" id="calStats"></div>
+            <div class="month-selector">
+                <button onclick="changeMonth(-1)">←</button>
+                <h2 id="monthTitle"></h2>
+                <button onclick="changeMonth(1)">→</button>
+            </div>
+            <div id="calGrid" class="calendar"></div>
+        </div>
+        
+        <!-- RECHTE SEITE: TRADINGVIEW US-FINANZKALENDER -->
+        <div class="calendar-section right">
+            <h3 style="text-align:center;margin-bottom:15px;color:#495057">📅 US-Finanzkalender</h3>
+            <div class="widget-info">
+                Zeigt wichtige US-Makrodaten für die nächsten 30 Tage
+            </div>
+            
+            <!-- TradingView Economic Calendar Widget -->
+            <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+                {
+                    "width": "100%",
+                    "height": "500",
+                    "locale": "de_DE",
+                    "importanceFilter": "-1,0,1",
+                    "countryFilter": "us",
+                    "currencyFilter": "USD",
+                    "dateRange": "1M",
+                    "colorTheme": "light",
+                    "isTransparent": false,
+                    "showDescription": true
+                }
+                </script>
+            </div>
+            
+            <div class="widget-info">
+                🔴 Hoch | 🟡 Mittel | 🟢 Niedrig<br>
+                Datenquelle: TradingView Economic Calendar
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- DAY DETAILS -->
@@ -343,6 +545,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div id="dayDetailContent"></div>
 </div>
 
+<!-- WEALTH VIEW -->
 <div id="wealth" class="view">
 <h2 style="text-align:center;margin-bottom:20px;color:#495057">📈 Vermögensentwicklung</h2>
 <div class="chart-container">
@@ -354,6 +557,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="monthSummaries"></div>
 </div>
 </div>
+
+<!-- STATISTICS VIEW -->
 <div id="statistics" class="view">
 <div class="month-selector">
 <button onclick="changeStatsMonth(-1)">←</button>
@@ -399,8 +604,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="insights"></div>
 </div>
 </div>
+
+<!-- EXPORT VIEW -->
 <div id="export" class="view">
-<div style="max-width:600px;margin:0 auto">
+<div style="max-width:800px;margin:0 auto; width: 100%;">
 <h2 style="text-align:center;margin-bottom:15px;color:#495057">📥 Import / Export</h2>
 <div class="info-box"><strong>💾 CSV Import:</strong> Lade deine gesicherten PnL-Daten!</div>
 <input type="file" id="csvFile" accept=".csv" style="display:none">
@@ -496,6 +703,57 @@ function openDB() {
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
     });
+}
+
+// --- WICHTIGE MAKRO-EVENTS (für Kalender-Markierungen) ---
+const importantMacroEvents = [
+    'Non-Farm Payrolls',
+    'CPI',
+    'PPI',
+    'FOMC',
+    'Federal Funds Rate',
+    'ISM Manufacturing',
+    'ISM Services',
+    'GDP',
+    'Retail Sales',
+    'Unemployment Rate',
+    'Initial Jobless Claims',
+    'Consumer Confidence',
+    'Housing Starts',
+    'Building Permits',
+    'Existing Home Sales',
+    'New Home Sales',
+    'Durable Goods Orders',
+    'Trade Balance',
+    'Factory Orders',
+    'Business Inventories',
+    'Chicago PMI',
+    'Philadelphia Fed Manufacturing Index',
+    'Leading Economic Index',
+    'Personal Income',
+    'Personal Spending',
+    'PCE Price Index',
+    'Core PCE Price Index',
+    'Industrial Production',
+    'Capacity Utilization',
+    'Consumer Credit',
+    'Wholesale Inventories',
+    'Export Price Index',
+    'Import Price Index'
+];
+
+// Funktion, um zu prüfen, ob ein Tag ein Makro-Event-Tag ist
+function isMacroEventDay(date) {
+    // Diese Funktion könnte erweitert werden, um mit einer API zu prüfen,
+    // ob an einem bestimmten Tag wichtige Makro-Events stattfinden
+    // Für jetzt geben wir zufällige Tage zurück (für Demo-Zwecke)
+    const day = date.getDate();
+    const month = date.getMonth();
+    
+    // Einfache Logik für Demo: 5., 10., 15., 20., 25., 30. sind Makro-Tage
+    // In einer echten Implementierung würdest du hier eine API abfragen
+    const macroDays = [5, 10, 15, 20, 25, 30];
+    return macroDays.includes(day);
 }
 
 // --- SYNC LOGIC (DESKTOP ONLY) ---
@@ -833,7 +1091,9 @@ function showView(n){
         document.querySelectorAll('.nav-btn')[btnIndex].classList.add('active');
     }
 
-    if(n==='calendar')renderCal();
+    if(n==='calendar'){
+        renderCal();
+    }
     else if(n==='wealth')renderWealth();
     else if(n==='statistics')renderStats();
     else if(n==='export')updateDataInfo();
@@ -925,6 +1185,11 @@ function renderCal(){
         const dv=document.createElement('div');
         dv.className='calendar-day';
         if((dow===0||dow===6) && !data[k]) dv.classList.add('weekend-hidden');
+        
+        // Markiere Makro-Event-Tage
+        if(isMacroEventDay(dt)) {
+            dv.classList.add('macro-event');
+        }
 
         dv.innerHTML = `<div class="day-number">${day}</div>`;
         
@@ -955,7 +1220,23 @@ function renderMonthStats(y,m){
     }).map(k=>getEntry(k).total);
     const t=md.reduce((s,v)=>s+v,0),p=md.filter(v=>v>0).length;
     const wr=md.length>0?(p/md.length*100).toFixed(1):0;
-    document.getElementById('calStats').innerHTML=`<div class="stat-card"><div class="stat-label">Gesamt</div><div class="stat-value ${t>=0?'profit':'loss'}">${t>=0?'+':''}${t.toFixed(0)}</div></div><div class="stat-card"><div class="stat-label">Tage</div><div class="stat-value">${md.length}</div></div><div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value ${wr>=50?'profit':'loss'}">${Math.round(wr)}%</div></div>`;
+    
+    // STATS NEBENEINANDER IN EINER ZEILE
+    const calStats = document.getElementById('calStats');
+    calStats.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-label">Gesamt</div>
+            <div class="stat-value ${t>=0?'profit':'loss'}">${t>=0?'+':''}${t.toFixed(0)}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Tage</div>
+            <div class="stat-value">${md.length}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value ${wr>=50?'profit':'loss'}">${Math.round(wr)}%</div>
+        </div>
+    `;
 }
 
 // --- DAY DETAILS VIEW ---
@@ -1081,6 +1362,7 @@ function renderDayDetails(d) {
             <div id="dayTradesList"></div>
         </div>
         ${entry.note ? `<div class="info-box"><strong>📝 Notiz:</strong><br>${entry.note}</div>` : ''}
+        ${isMacroEventDay(d) ? `<div class="warning-msg" style="display:block">⚠️ Heute finden wichtige US-Makrodaten statt!</div>` : ''}
     `;
 
     const list = document.getElementById('dayTradesList');
@@ -1325,8 +1607,8 @@ function renderStats(){
         const maxFee = Math.max(...feeChartData.map(d => d.fee));
         feeChartData.forEach(d => {
              const h = Math.max((d.fee / maxFee) * 150, 2);
-             const div = document.createElement('div'); div.className = 'bar-wrapper';
-             div.innerHTML = `<div class="bar fee" style="height:${h}px"></div><div class="bar-label">${d.day}</div><div class="bar-value">${d.fee.toFixed(0)}</div>`;
+             const div = document.createElement('div'); div.className='bar-wrapper';
+             div.innerHTML=`<div class="bar fee" style="height:${h}px"></div><div class="bar-label">${d.day}</div><div class="bar-value">${d.fee.toFixed(0)}</div>`;
              fc.appendChild(div);
         });
     } else { fc.innerHTML = '<p style="text-align:center;color:#868e96;padding:50px">Keine Gebühren</p>'; }
@@ -1531,17 +1813,6 @@ function updateDataInfo(){
     },0);
     document.getElementById('dataInfo').innerHTML=`<strong>${c}</strong> Einträge<br>Gesamt: <strong style="color:${t>=0?'#37b24d':'#fa5252'}">${t>=0?'+':''}${t.toFixed(2)}</strong>`;
 }
-
-function checkPassword(){
-const pw=document.getElementById('passwordInput').value;
-if(pw==='xxx'){
-document.getElementById('passwordPrompt').style.display='none';
-}else{
-document.getElementById('errorMsg').style.display='block';
-document.getElementById('passwordInput').value='';
-}
-}
-document.getElementById('passwordInput').onkeypress=function(e){if(e.key==='Enter')checkPassword()};
 
 document.getElementById('modal').onclick=function(e){if(e.target===this)closeModal()};
 window.onbeforeunload=save;
