@@ -101,32 +101,143 @@ body{
     flex: 1.1; /* 10% breiter */
 }
 
+/* ERGÄNZE DIESE CSS-STYLES */
 .calendar-section.right {
-    flex: 0.9; /* 10% schmaler */
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-    height: 150%;
-    overflow-y: auto;
-    position: relative;
-    z-index: 1;
-    border: 1px solid rgba(0,0,0,0.02);
+    flex: 0.9;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
 }
 
+.calendar-top-card,
+.calendar-bottom-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    border: 1px solid rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.calendar-top-card {
+    flex: 1.2; /* Etwas größer für den Finanzkalender */
+	min-height: 548px; /* Mindesthöhe */
+}
+
+.calendar-bottom-card {
+    flex: 0.8; /* Etwas kleiner für die Statistik */
+    min-height: 402px; /* Mindesthöhe */
+}
+
+/* Hochwertige Statistik-Karte */
+.month-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.month-stat-card {
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #f0f0f0;
+}
+
+.month-stat-label {
+    font-size: 0.7em;
+    color: #868e96;
+    margin-bottom: 4px;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}
+
+.month-stat-value {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #495057;
+}
+
+.month-stat-value.profit {
+    color: #37b24d;
+}
+
+.month-stat-value.loss {
+    color: #fa5252;
+}
+
+/* Dünnes Balkendiagramm */
+.month-bars-container {
+    display: flex;
+    align-items: flex-end; /* WICHTIG: Balken starten unten */
+    height: 120px;
+    padding: 10px 0;
+    background: #fafafa;
+    border-radius: 6px;
+    margin-top: 10px;
+    position: relative; /* WICHTIG für absolute Positionierung */
+    justify-content: space-around;
+}
+
+.month-bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 1px;
+    height: 100%;
+    justify-content: flex-end; /* Balken starten am Boden */
+}
+
+.month-bar {
+    width: 6px; /* Sehr dünne Balken */
+    min-height: 1px;
+    border-radius: 1px;
+    background: linear-gradient(to top, #667eea, #764ba2);
+    transition: height 0.3s ease;
+}
+
+.month-bar.profit {
+    background: linear-gradient(to top, #37b24d, #51cf66);
+}
+
+.month-bar.loss {
+    background: linear-gradient(to top, #fa5252, #ff6b6b);
+}
+
+.month-bar-label {
+    font-size: 0.6em;
+    color: #868e96;
+    margin-top: 4px;
+    font-weight: 300;
+}
+
+/* Null-Linie für das Diagramm */
+.zero-line-month {
+    display: none; /* Unsichtbar machen, da wir inline-Styles verwenden */
+}
+
+/* Auf Mobile: Beide Karten untereinander */
 @media(max-width: 768px) {
     .calendar-section.right {
-        margin-top: 20px;
         flex: none;
-        height: 400px; /* Feste Höhe für Mobile - ca. 70% der Kalenderbox */
-        min-height: 400px;
-        max-height: 400px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        height: auto;
+        gap: 15px;
     }
-    .calendar-section.left {
-        flex: 1;
-        height: 55vh; /* Kalenderbox-Höhe */
-        min-height: 350px;
+    
+    .calendar-top-card,
+    .calendar-bottom-card {
+        height: auto;
+        min-height: auto;
+        margin-bottom: 15px;
+    }
+    
+    .calendar-bottom-card {
+        order: 3; /* Kommt nach dem Finanzkalender */
     }
 }
 
@@ -245,12 +356,11 @@ body{
     color: #868e96;
     text-align: center;
 }
-
-/* Höhere Widget für Mobile */
+/* TradingView Widget für Mobile anpassen */
 @media(max-width: 768px) {
     .tradingview-widget-container {
-        height: 350px;
-        min-height: 350px;
+        height: 800px !important; /* Höher für Mobile */
+        min-height: 400px;
     }
 }
 
@@ -385,18 +495,10 @@ body{
     background: white; padding: 10px; border-radius: 8px; 
     height: 220px; margin-bottom: 20px; 
     overflow-x: auto; /* Enable scrolling */
-    display: flex; flex-direction: column;
-    align-items: center;
+    display: flex; flex-direction: column; align-items: center;
 }
-.waterfall-chart { 
-    flex: 1; 
-    width: auto;
-    position: relative;
-}
-.waterfall-chart svg { 
-    height: 100%; 
-    display: block; 
-}
+.waterfall-chart { flex: 1; position: relative; justify-content: center; }
+.waterfall-chart svg { height: 100%; display: block; }
 
 /* TRADE STATS ROW */
 .trade-stats-summary {
@@ -505,7 +607,7 @@ body{
 </div>
 </div>
 
-<!-- KALENDER MIT ECHTEM FINANZKALENDER -->
+<!-- ÄNDERE DEN KALENDER-BEREICH IM HTML -->
 <div id="calendar" class="view">
     <div class="calendar-layout">
         <!-- LINKE SEITE: KALENDER -->
@@ -519,35 +621,44 @@ body{
             <div id="calGrid" class="calendar"></div>
         </div>
         
-        <!-- RECHTE SEITE: TRADINGVIEW US-FINANZKALENDER -->
+        <!-- RECHTE SEITE: ZWEI KARTEN ÜBEREINANDER -->
         <div class="calendar-section right">
-            <h3 style="text-align:center;margin-bottom:15px;color:#495057">📅 US-Finanzkalender</h3>
-            <div class="widget-info">
-                Zeigt wichtige US-Makrodaten für die nächsten 30 Tage
+            <!-- Obere Karte: TradingView Finanzkalender -->
+            <div class="calendar-top-card">
+                <h3 style="text-align:center;margin-bottom:15px;color:#495057">📅 Finanzkalender</h3>
+                
+                
+                <!-- TradingView Economic Calendar Widget -->
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+                    {
+                        "width": "100%",
+                        "height": "500",
+                        "locale": "de_DE",
+                        "importanceFilter": "-1,0,1",
+                        "countryFilter": "us",
+                        "currencyFilter": "USD",
+                        "dateRange": "1M",
+                        "colorTheme": "light",
+                        "isTransparent": false,
+                        "showDescription": true
+                    }
+                    </script>
+                </div>
+                
+                <div class="widget-info">
+                    🔴 Hoch | 🟡 Mittel | 🟢 Niedrig<br>
+                    Datenquelle: TradingView Economic Calendar
+                </div>
             </div>
             
-            <!-- TradingView Economic Calendar Widget -->
-            <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-                {
-                    "width": "100%",
-                    "height": "500",
-                    "locale": "de_DE",
-                    "importanceFilter": "-1,0,1",
-                    "countryFilter": "us",
-                    "currencyFilter": "USD",
-                    "dateRange": "1M",
-                    "colorTheme": "light",
-                    "isTransparent": false,
-                    "showDescription": true
-                }
-                </script>
-            </div>
-            
-            <div class="widget-info">
-                🔴 Hoch | 🟡 Mittel | 🟢 Niedrig<br>
-                Datenquelle: TradingView Economic Calendar
+            <!-- Untere Karte: Monats-Statistiken -->
+            <div class="calendar-bottom-card">
+                <h3 style="text-align:center;margin-bottom:15px;color:#495057">📊 Monats-Statistik</h3>
+                <div id="monthStatsContent" style="flex-grow: 1;">
+                    <!-- Wird via JavaScript befüllt -->
+                </div>
             </div>
         </div>
     </div>
@@ -1231,14 +1342,26 @@ function renderCal(){
 }
 
 function renderMonthStats(y,m){
+    // Sammle alle Tagesdaten für diesen Monat
     const md=Object.keys(data).filter(k=>{
         const[y2,m2]=k.split('-');
         return parseInt(y2)===y&&parseInt(m2)===m+1;
-    }).map(k=>getEntry(k).total);
-    const t=md.reduce((s,v)=>s+v,0),p=md.filter(v=>v>0).length;
+    }).sort().map(k=>{
+        const entry = getEntry(k);
+        const day = parseInt(k.split('-')[2]);
+        return {
+            day: day,
+            total: entry.total,
+            trades: entry.trades,
+            date: k
+        };
+    });
+    
+    const t=md.reduce((s,v)=>s+v.total,0);
+    const p=md.filter(v=>v.total>0).length;
     const wr=md.length>0?(p/md.length*100).toFixed(1):0;
     
-    // STATS NEBENEINANDER IN EINER ZEILE
+    // Kalender-Statistik (oben - 3 kleine Karten)
     const calStats = document.getElementById('calStats');
     calStats.innerHTML = `
         <div class="stat-card">
@@ -1254,8 +1377,110 @@ function renderMonthStats(y,m){
             <div class="stat-value ${wr>=50?'profit':'loss'}">${Math.round(wr)}%</div>
         </div>
     `;
+    
+    // RENDER DIE NEUE MONATS-STATISTIK-KARTE (unten rechts)
+    renderMonthStatsCard(md, y, m);
 }
 
+// NEUE FUNKTION: Rendert die große Monats-Statistik-Karte
+function renderMonthStatsCard(monthData, year, month) {
+    const container = document.getElementById('monthStatsContent');
+    
+    if (!container) {
+        console.log("Container monthStatsContent nicht gefunden");
+        return;
+    }
+    
+    if (monthData.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#868e96;padding:40px;">Keine Daten für diesen Monat</p>';
+        return;
+    }
+    
+    // Berechne Brokergebühren für den Monat
+    let monthFees = 0;
+    let bestDay = null;
+    let worstDay = null;
+    
+    monthData.forEach(day => {
+        // Brokergebühren berechnen
+        if (day.trades && day.trades.length > 0) {
+            day.trades.forEach(t => {
+                monthFees += getComm(t.inst, t.qty || 1);
+            });
+        }
+        
+        // Bester/schlechtester Tag finden
+        if (!bestDay || day.total > bestDay.total) bestDay = day;
+        if (!worstDay || day.total < worstDay.total) worstDay = day;
+    });
+    
+    const totalPnL = monthData.reduce((sum, day) => sum + day.total, 0);
+    
+    // HTML für die Statistik-Karte
+    let html = `
+        <div class="month-stats-grid">
+            <div class="month-stat-card">
+                <div class="month-stat-label">Bisheriges PnL</div>
+                <div class="month-stat-value ${totalPnL >= 0 ? 'profit' : 'loss'}">${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(0)}</div>
+            </div>
+            <div class="month-stat-card">
+                <div class="month-stat-label">Brokergebühren</div>
+                <div class="month-stat-value loss">-${monthFees.toFixed(2)}</div>
+            </div>
+            <div class="month-stat-card">
+                <div class="month-stat-label">Bester Tag</div>
+                <div class="month-stat-value profit">+${bestDay.total.toFixed(0)}</div>
+                <div style="font-size:0.65em;color:#868e96;margin-top:2px;">${bestDay.day}.${month+1}</div>
+            </div>
+            <div class="month-stat-card">
+                <div class="month-stat-label">Schlechtester Tag</div>
+                <div class="month-stat-value loss">${worstDay.total.toFixed(0)}</div>
+                <div style="font-size:0.65em;color:#868e96;margin-top:2px;">${worstDay.day}.${month+1}</div>
+            </div>
+        </div>
+        
+                <div style="margin-top:15px;">
+            <div style="font-size:0.75em;color:#868e96;margin-bottom:8px;text-align:center;font-weight:300;">
+                Tägliche Performance (${monthData.length} Tage)
+            </div>
+                                   <div style="height: 120px; background: #fafafa; border-radius: 6px; padding: 10px; position: relative;">
+                <!-- NULL-LINIE AM BODEN DES DIAGRAMMS -->
+                <div style="position: absolute; bottom: 50px; left: 0; right: 0; height: 0.5px; background: #888888; text-align: center; color: white; opacity: 0.7; font-size: 0.7em; z-index: 1;">
+                  
+                </div>
+                
+                <div style="display: flex; align-items: flex-end; height: 100%; justify-content: space-around; padding-bottom: 25px;">
+    `;
+    
+    // Balkendiagramm
+    const maxAbsValue = Math.max(...monthData.map(d => Math.abs(d.total))) || 1;
+    const maxBarHeight = 60;
+    
+    monthData.forEach(day => {
+        const isProfit = day.total >= 0;
+        const barHeight = (Math.abs(day.total) / maxAbsValue) * maxBarHeight;
+        
+        html += `
+                    <div style="display: flex; flex-direction: column; align-items: center; margin: 0 2px;">
+                        <div style="width: 6px; height: ${Math.max(barHeight, 2)}px; background: ${isProfit ? '#37b24d' : '#fa5252'}; border-radius: 1px;"></div>
+                        <div style="font-size: 0.6em; color: #868e96; margin-top: 4px;">${day.day}</div>
+                    </div>
+        `;
+    });
+    
+    html += `
+                </div>
+            </div>
+            
+            <div style="display:flex;justify-content:space-between;margin-top:8px;">
+                <div style="font-size:0.65em;color:#868e96;font-weight:300;">Anfang</div>
+                <div style="font-size:0.65em;color:#868e96;font-weight:300;">Ende</div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
 // --- DAY DETAILS VIEW ---
 function renderDayDetails(d) {
     selDate = d;
@@ -1355,7 +1580,7 @@ function renderDayDetails(d) {
         <div class="waterfall-container">
             <div class="chart-title">Intraday Verlauf (Waterfall)</div>
             <div class="waterfall-chart">
-                <svg style="width: ${chartWidth}px; margin: 0 auto;" preserveAspectRatio="none">${svgContent}</svg>
+                <svg style="width: ${chartWidth}px; min-width: 100%;" preserveAspectRatio="none">${svgContent}</svg>
             </div>
         </div>`;
     }
