@@ -636,7 +636,7 @@ body{
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version 02c</h1>
+<h1>Trade Log / Version 02d</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -1086,70 +1086,49 @@ async function runSync(dirHandle) {
 
 // --- ROBUST CSV PARSER V19 (STATE MACHINE) ---
 // --- ROBUST CSV PARSER (MIT MULTILINE SUPPORT) ---
+// --- SMART IMPORT LOGIC ---
 function parseCSV(csvText) {
+    // 1. Erkennung: Ist es eine TradingView/IBKR Datei?
+    // Merkmal: Header enthält "Symbol" und "Side" und "Fill Price"
+    const firstLine = csvText.split('\n')[0];
+    if (firstLine.includes('Symbol') && firstLine.includes('Fill Price') && firstLine.includes('Commission')) {
+        return parseTradingViewCSV(csvText);
+    }
+
+    // 2. Fallback: Unser normales Format
+    return parseStandardCSV(csvText);
+}
+
+// Dies ist deine ALTE parseCSV Funktion, nur umbenannt
+function parseStandardCSV(csvText) {
     const rows = [];
     let currentRow = [];
     let currentVal = '';
     let inQuote = false;
-
-    // 1. Line Endings normalisieren (Windows \r\n zu Unix \n)
-    // Das verhindert Chaos beim Import
     const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     for (let i = 0; i < text.length; i++) {
         let char = text[i];
         let nextChar = text[i+1];
-
         if (inQuote) {
-            // Wenn wir in Anführungszeichen sind...
-            if (char === '"' && nextChar === '"') {
-                currentVal += '"'; // Doppelte Anführungszeichen = ein echtes Anführungszeichen
-                i++; 
-            } else if (char === '"') {
-                inQuote = false; // Ende der Zelle
-            } else {
-                // WICHTIG: Hier werden auch Zeilenumbrüche (\n) als Teil des Textes gespeichert!
-                currentVal += char;
-            }
+            if (char === '"' && nextChar === '"') { currentVal += '"'; i++; } 
+            else if (char === '"') { inQuote = false; } 
+            else { currentVal += char; }
         } else {
-            // Wenn wir NICHT in Anführungszeichen sind...
-            if (char === '"') {
-                inQuote = true; // Start der Zelle
-            } else if (char === ',' || char === ';') { 
-                // Neues Feld
-                currentRow.push(currentVal); 
-                currentVal = '';
-            } else if (char === '\n') {
-                // Neue Zeile
-                currentRow.push(currentVal);
-                rows.push(currentRow);
-                currentRow = [];
-                currentVal = '';
-            } else {
-                currentVal += char;
-            }
+            if (char === '"') { inQuote = true; } 
+            else if (char === ',' || char === ';') { currentRow.push(currentVal); currentVal = ''; } 
+            else if (char === '\n') { currentRow.push(currentVal); rows.push(currentRow); currentRow = []; currentVal = ''; } 
+            else { currentVal += char; }
         }
     }
-    // Letzten Rest speichern
-    if (currentVal || currentRow.length > 0) {
-        currentRow.push(currentVal);
-        rows.push(currentRow);
-    }
+    if (currentVal || currentRow.length > 0) { currentRow.push(currentVal); rows.push(currentRow); }
 
     const result = {};
     rows.forEach((parts, i) => {
-        if (i === 0 || parts.length < 2) return; // Header überspringen
-
+        if (i === 0 || parts.length < 2) return;
         let dateStr = parts[0].trim();
         let valStr = parts[1].trim();
-        // Hier trimmen wir NICHT zu aggressiv, um Formatierung zu behalten
         let note = parts[2] ? parts[2] : ""; 
-        
-        // CSV Notizen haben oft extra Anführungszeichen am Anfang/Ende durch Excel Export,
-        // aber unser Parser oben entfernt die äußeren Quotes schon.
-        // Wir müssen nur sicherstellen, dass wir keine unnötigen Leerzeichen haben,
-        // aber die Zeilenumbrüche behalten.
-        
         let details = parts[3] ? parts[3].trim() : "";
         let screensStr = parts[4] ? parts[4].trim() : "";
 
@@ -1163,20 +1142,119 @@ function parseCSV(csvText) {
             const key = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
             const val = parseFloat(valStr);
             if (!isNaN(val)) {
-                let trades = [];
-                let screenshots = [];
+                let trades = []; let screenshots = [];
                 try { if(details) trades = JSON.parse(details); } catch(e){}
                 try { if(screensStr) screenshots = JSON.parse(screensStr); } catch(e){}
-                
-                result[key] = { 
-                    total: val, 
-                    trades: trades, 
-                    note: note, // Hier ist jetzt die formatierte Notiz drin
-                    screenshots: screenshots 
-                };
+                result[key] = { total: val, trades: trades, note: note, screenshots: screenshots };
             }
         }
     });
+    return result;
+}
+
+// --- NEUER PARSER FÜR TRADINGVIEW / IBKR ---
+// --- INTELLIGENTER PARSER (NETTO PNL) ---
+function parseTradingViewCSV(csvText) {
+    const rows = csvText.split('\n').map(r => r.trim()).filter(r => r);
+    const idxSym = 0; // Symbol
+    const idxSide = 1; // Side
+    const idxQty = 2; // Qty
+    const idxPrice = 3; // Fill Price
+    const idxTime = 4; // Time
+    const idxNet = 5; // Net Amount
+    const idxComm = 6; // Commission (Gebühren)
+    
+    const fills = [];
+    
+    for(let i=1; i<rows.length; i++) {
+        const cols = rows[i].split(',');
+        if(cols.length < 5) continue;
+        
+        const symbol = cols[idxSym];
+        const side = cols[idxSide]; 
+        const qty = parseFloat(cols[idxQty]);
+        const price = parseFloat(cols[idxPrice]);
+        const netAmount = parseFloat(cols[idxNet]);
+        const timeStr = cols[idxTime];
+        const comm = parseFloat(cols[idxComm]); // Gebühr für diesen Fill
+        
+        const dt = new Date(timeStr);
+        if(isNaN(dt.getTime())) continue;
+        
+        let multiplier = 1;
+        if (price > 0 && qty > 0 && netAmount > 0) {
+            multiplier = Math.round(netAmount / (price * qty));
+        }
+        
+        fills.push({
+            time: dt,
+            symbol: symbol,
+            side: side,
+            qty: qty,
+            price: price,
+            multiplier: multiplier,
+            comm: comm // Wir speichern die Gebühr
+        });
+    }
+    
+    fills.sort((a,b) => a.time - b.time);
+    
+    const result = {}; 
+    const openPositions = []; 
+
+    fills.forEach(fill => {
+        const dateKey = dk(fill.time);
+        if(!result[dateKey]) result[dateKey] = { total: 0, trades: [] };
+        
+        for(let q=0; q < fill.qty; q++) {
+            const matchIndex = openPositions.findIndex(p => p.side !== fill.side && p.symbol === fill.symbol);
+            
+            if(matchIndex !== -1) {
+                const openPos = openPositions[matchIndex];
+                openPositions.splice(matchIndex, 1); 
+                
+                let pnl = 0;
+                
+                // Brutto PnL berechnen
+                if(openPos.side === 'Buy') {
+                    pnl = (fill.price - openPos.price) * fill.multiplier;
+                } else {
+                    pnl = (openPos.price - fill.price) * fill.multiplier;
+                }
+                
+                // --- KORREKTUR: NETTO PNL BERECHNEN ---
+                // Wir ziehen die Gebühr vom Entry UND vom Exit ab.
+                // Da fill.comm die Gebühr für den ganzen Block ist, teilen wir durch qty.
+                const exitComm = fill.comm / fill.qty;
+                const entryComm = openPos.comm; // Wurde beim Entry schon durch qty geteilt gespeichert (siehe unten)
+                
+                pnl = pnl - exitComm - entryComm;
+                // --------------------------------------
+
+                const tradeEntry = {
+                    pnl: parseFloat(pnl.toFixed(2)),
+                    start: openPos.time.toTimeString().slice(0,5),
+                    end: fill.time.toTimeString().slice(0,5),
+                    inst: fill.symbol.split(' ')[0], 
+                    qty: 1
+                };
+                
+                result[dateKey].trades.push(tradeEntry);
+                result[dateKey].total += pnl; 
+                
+            } else {
+                openPositions.push({
+                    side: fill.side,
+                    price: fill.price,
+                    time: fill.time,
+                    symbol: fill.symbol,
+                    // Wir speichern die Gebühr pro einzelnem Kontrakt für später
+                    comm: fill.comm / fill.qty 
+                });
+            }
+        }
+    });
+    
     return result;
 }
 
@@ -2543,18 +2621,58 @@ document.getElementById('zipFile').onchange = async function(e) {
         e.target.value = ''; // Input zurücksetzen
     }
 };
-document.getElementById('csvFile').onchange=function(e){
-    const file=e.target.files[0];
-    if(!file)return;
-    const reader=new FileReader();
-    reader.onload=function(ev){
-        try{
-            const res = parseCSV(ev.target.result);
-            data = {...data, ...res};
-            save(); alert(`✓ Daten importiert!`); updateDataInfo(); renderCal();
-        }catch(err){console.log(err); alert('Import-Fehler!')}
+// --- IMPORT EVENT HANDLER (MIT MERGE-LOGIK) ---
+document.getElementById('csvFile').onchange = function(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            // 1. Neue Daten parsen
+            const importedData = parseCSV(ev.target.result);
+            
+            // 2. MERGE LOGIC: Vorhandene Notizen/Bilder retten
+            Object.keys(importedData).forEach(dateKey => {
+                // Wenn wir für diesen Tag schon Daten haben...
+                if (data[dateKey]) {
+                    // ...dann behalten wir Notiz und Screenshots bei!
+                    // Wir überschreiben nur PnL und Trades (da die aus dem Import genauer sind)
+                    
+                    if (data[dateKey].note) {
+                        importedData[dateKey].note = data[dateKey].note;
+                    }
+                    if (data[dateKey].screenshots && data[dateKey].screenshots.length > 0) {
+                        importedData[dateKey].screenshots = data[dateKey].screenshots;
+                    }
+                    
+                    // Optional: Wenn im Import keine Trades sind (z.B. manuelles CSV Backup),
+                    // aber wir lokal welche haben, behalten wir die lokalen?
+                    // Nein, Import hat hier Vorrang (Backup Wiederherstellung).
+                }
+            });
+
+            // 3. Daten zusammenfügen
+            data = { ...data, ...importedData };
+            
+            save(); 
+            alert(`✓ Import erfolgreich!\nNotizen und Bilder wurden beibehalten.`); 
+            
+            // UI aktualisieren
+            updateDataInfo(); 
+            renderCal();
+            
+            // Falls wir gerade "Heute" anschauen, neu laden
+            if(document.getElementById('today').classList.contains('active')) init();
+            
+        } catch(err) {
+            console.error(err); 
+            alert('Import-Fehler! Ist die CSV Datei korrekt?');
+        }
     };
     reader.readAsText(file);
+    // Reset Input, damit man die gleiche Datei nochmal wählen kann
+    e.target.value = '';
 };
 
 function updateDataInfo(){
