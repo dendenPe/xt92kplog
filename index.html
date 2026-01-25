@@ -527,7 +527,19 @@ body{
     color: #e67700;
 }
 
-.info-box{background:#e7f5ff;color:#1971c2;padding:15px;border-radius:8px;margin-bottom:15px;font-size:.9em}
+/* --- FORMATIERUNG BEIBEHALTEN --- */
+.info-box {
+    background: #e7f5ff;
+    color: #1971c2;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    /* DAS IST NEU UND WICHTIG: */
+    white-space: pre-wrap; /* Behält Zeilenumbrüche bei */
+    line-height: 1.5;      /* Besserer Zeilenabstand für Listen */
+    font-family: inherit;  /* Schriftart beibehalten */
+}
 
 /* TODAY TAB STYLES - BREITER */
 .today-container { max-width: 800px; margin: 0 auto; width: 100%; }
@@ -625,7 +637,7 @@ body{
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version 02b</h1>
+<h1>Trade Log / Version 02c</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -1129,13 +1141,15 @@ async function runSync(dirHandle) {
 }
 
 // --- ROBUST CSV PARSER V19 (STATE MACHINE) ---
+// --- ROBUST CSV PARSER (MIT MULTILINE SUPPORT) ---
 function parseCSV(csvText) {
     const rows = [];
     let currentRow = [];
     let currentVal = '';
     let inQuote = false;
 
-    // Normalize line endings
+    // 1. Line Endings normalisieren (Windows \r\n zu Unix \n)
+    // Das verhindert Chaos beim Import
     const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     for (let i = 0; i < text.length; i++) {
@@ -1143,21 +1157,26 @@ function parseCSV(csvText) {
         let nextChar = text[i+1];
 
         if (inQuote) {
+            // Wenn wir in Anführungszeichen sind...
             if (char === '"' && nextChar === '"') {
-                currentVal += '"'; 
+                currentVal += '"'; // Doppelte Anführungszeichen = ein echtes Anführungszeichen
                 i++; 
             } else if (char === '"') {
-                inQuote = false; 
+                inQuote = false; // Ende der Zelle
             } else {
+                // WICHTIG: Hier werden auch Zeilenumbrüche (\n) als Teil des Textes gespeichert!
                 currentVal += char;
             }
         } else {
+            // Wenn wir NICHT in Anführungszeichen sind...
             if (char === '"') {
-                inQuote = true; 
+                inQuote = true; // Start der Zelle
             } else if (char === ',' || char === ';') { 
+                // Neues Feld
                 currentRow.push(currentVal); 
                 currentVal = '';
             } else if (char === '\n') {
+                // Neue Zeile
                 currentRow.push(currentVal);
                 rows.push(currentRow);
                 currentRow = [];
@@ -1167,6 +1186,7 @@ function parseCSV(csvText) {
             }
         }
     }
+    // Letzten Rest speichern
     if (currentVal || currentRow.length > 0) {
         currentRow.push(currentVal);
         rows.push(currentRow);
@@ -1174,13 +1194,19 @@ function parseCSV(csvText) {
 
     const result = {};
     rows.forEach((parts, i) => {
-        if (i === 0 || parts.length < 2) return; // Skip Header
+        if (i === 0 || parts.length < 2) return; // Header überspringen
 
         let dateStr = parts[0].trim();
         let valStr = parts[1].trim();
-        let note = parts[2] ? parts[2].trim() : "";
+        // Hier trimmen wir NICHT zu aggressiv, um Formatierung zu behalten
+        let note = parts[2] ? parts[2] : ""; 
+        
+        // CSV Notizen haben oft extra Anführungszeichen am Anfang/Ende durch Excel Export,
+        // aber unser Parser oben entfernt die äußeren Quotes schon.
+        // Wir müssen nur sicherstellen, dass wir keine unnötigen Leerzeichen haben,
+        // aber die Zeilenumbrüche behalten.
+        
         let details = parts[3] ? parts[3].trim() : "";
-        // NEU: 5. Spalte lesen
         let screensStr = parts[4] ? parts[4].trim() : "";
 
         if (valStr.includes(',') && valStr.includes('.')) {
@@ -1196,14 +1222,13 @@ function parseCSV(csvText) {
                 let trades = [];
                 let screenshots = [];
                 try { if(details) trades = JSON.parse(details); } catch(e){}
-                // NEU: Screenshots parsen
                 try { if(screensStr) screenshots = JSON.parse(screensStr); } catch(e){}
                 
                 result[key] = { 
                     total: val, 
                     trades: trades, 
-                    note: note,
-                    screenshots: screenshots // Speichern
+                    note: note, // Hier ist jetzt die formatierte Notiz drin
+                    screenshots: screenshots 
                 };
             }
         }
