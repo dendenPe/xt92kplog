@@ -559,7 +559,18 @@ body{
         width: 100vw !important;
         height: 100vh !important;
     }
-} /* <--- DIESE KLAMMER HAT GEFEHLT! */
+
+} 
+.strategy-select {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.85em;
+    background: #fff;
+    margin-top: 5px;
+    font-weight: 500;
+}
 
 /* --- SCREENSHOT STYLES (STABIL) --- */
 .screenshot-container { 
@@ -789,9 +800,15 @@ body{
 <button onclick="changeStatsMonth(1)">→</button>
 </div>
 <div class="stats" id="statsOverview"></div>
+
 <div class="chart-container">
 <div class="chart-title">📈 Vermögensentwicklung (Kumuliert)</div>
 <div class="line-chart" id="lineChart"></div>
+</div>
+<!-- STRATEGIE STATS -->
+<div class="chart-container">
+    <div class="chart-title">🧠 Strategie Performance</div>
+    <div id="strategyStats"></div>
 </div>
 <div class="chart-container">
 <div class="chart-title">💸 Broker Gebühren</div>
@@ -916,6 +933,13 @@ body{
 </div>
 
 <script>
+    const STRATEGIES = [
+    { id: '', label: '---' },
+    { id: 'rev-long', label: 'Reversal Long 🟢' },
+    { id: 'rev-short', label: 'Reversal Short 🔴' },
+    { id: 'cont-long', label: 'Cont. Long 🟢' },
+    { id: 'cont-short', label: 'Cont. Short 🔴' }
+];
 let calMonth=new Date(),statsMonth=new Date(),data={},selDate=null,dataCount=0,cachedDirHandle=null;
 let currentTrades = [];
 let todayTrades = [];
@@ -1384,24 +1408,35 @@ function renderTodayTradesList() {
     const list = document.getElementById('todayTradesList');
     list.innerHTML = '';
     todayTrades.forEach((t, i) => {
+        // Dropdown HTML generieren
+        let strategyOptions = STRATEGIES.map(s => 
+            `<option value="${s.id}" ${t.tag === s.id ? 'selected' : ''}>${s.label}</option>`
+        ).join('');
+
         const div = document.createElement('div');
         div.className = 'trade-list-item';
         div.innerHTML = `
             <div class="trade-inputs-row" style="display:flex; gap:10px;">
                 <input type="number" inputmode="decimal" placeholder="PnL" value="${t.pnl}" onchange="updateTodayTrade(${i}, 'pnl', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:8px; width:100%">
             </div>
-            <div class="trade-inputs-row" style="display:flex; gap:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-top:5px;">
                 <select style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:70%" onchange="updateTodayTrade(${i}, 'inst', this.value)">
                     <option value="ES" ${(!t.inst || t.inst==='ES')?'selected':''}>ES</option>
                     <option value="NQ" ${t.inst==='NQ'?'selected':''}>NQ</option>
                     <option value="MES" ${t.inst==='MES'?'selected':''}>MES</option>
+                    <option value="Mar20" ${t.inst==='Mar20'?'selected':''}>Mar20</option>
                 </select>
                 <input type="number" placeholder="Anz." value="${t.qty||1}" onchange="updateTodayTrade(${i}, 'qty', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:30%">
             </div>
-            <div class="trade-inputs-row" style="display:flex; gap:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-top:5px;">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.start||''}" onchange="updateTodayTrade(${i}, 'start', this.value)">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.end||''}" onchange="updateTodayTrade(${i}, 'end', this.value)">
             </div>
+            <!-- NEU: STRATEGIE TAG -->
+            <select class="strategy-select" onchange="updateTodayTrade(${i}, 'tag', this.value)">
+                ${strategyOptions}
+            </select>
+            
             <button class="btn-delete-small" onclick="removeTodayTrade(${i})">Löschen</button>
         `;
         list.appendChild(div);
@@ -1894,10 +1929,15 @@ async function renderDayDetails(d) {
         ${screenshotsHtml}
     `;
 
-    // --- TRADES LISTE RENDERN (unverändert) ---
+    // --- TRADES LISTE RENDERN ---
     const list = document.getElementById('dayTradesList');
     const maxAbs = Math.max(...trades.map(t => Math.abs(t.pnl))) || 1;
+    
     trades.forEach(t => {
+        // Strategie Label finden
+        const strat = STRATEGIES.find(s => s.id === t.tag);
+        const stratLabel = strat && strat.id !== '' ? `<div style="font-size:0.7em;color:#666;margin-top:2px;font-style:italic;">${strat.label}</div>` : '';
+
         let durationStr = "-";
         if(t.start && t.end) {
             const s = new Date(`2000-01-01T${t.start}`);
@@ -1910,7 +1950,11 @@ async function renderDayDetails(d) {
         const row = document.createElement('div');
         row.className = 'trade-row';
         row.innerHTML = `
-            <div class="trade-time"><strong>${t.start || '--:--'}</strong><span>${durationStr}</span></div>
+            <div class="trade-time">
+                <strong>${t.start || '--:--'}</strong>
+                <span>${durationStr}</span>
+                ${stratLabel} <!-- HIER IST DAS LABEL -->
+            </div>
             <div class="trade-bar-container"><div class="trade-bar-fill ${t.pnl>=0?'profit':'loss'}" style="width: ${widthPct}%"></div></div>
             <div class="trade-pnl ${t.pnl>=0?'profit':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(0)}</div>
         `;
@@ -2034,24 +2078,35 @@ function renderTradesList() {
     const list = document.getElementById('tradesList');
     list.innerHTML = '';
     currentTrades.forEach((t, i) => {
+        let strategyOptions = STRATEGIES.map(s => 
+            `<option value="${s.id}" ${t.tag === s.id ? 'selected' : ''}>${s.label}</option>`
+        ).join('');
+
         const div = document.createElement('div');
         div.className = 'trade-list-item';
         div.innerHTML = `
             <div class="trade-inputs-row" style="display:flex; gap:10px;">
                 <input type="number" inputmode="decimal" placeholder="PnL" value="${t.pnl}" onchange="updateTrade(${i}, 'pnl', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:8px; width:100%">
             </div>
-            <div class="trade-inputs-row" style="display:flex; gap:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-top:5px;">
                 <select style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:70%" onchange="updateTrade(${i}, 'inst', this.value)">
                     <option value="ES" ${(!t.inst || t.inst==='ES')?'selected':''}>ES</option>
                     <option value="NQ" ${t.inst==='NQ'?'selected':''}>NQ</option>
                     <option value="MES" ${t.inst==='MES'?'selected':''}>MES</option>
+                    <option value="Mar20" ${t.inst==='Mar20'?'selected':''}>Mar20</option>
                 </select>
                 <input type="number" placeholder="Anz." value="${t.qty||1}" onchange="updateTrade(${i}, 'qty', this.value)" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:30%">
             </div>
-            <div class="trade-inputs-row" style="display:flex; gap:5px;">
+            <div class="trade-inputs-row" style="display:flex; gap:5px; margin-top:5px;">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.start||''}" onchange="updateTrade(${i}, 'start', this.value)">
                 <input type="time" style="border:1px solid #ced4da;border-radius:4px;padding:4px; width:100%" value="${t.end||''}" onchange="updateTrade(${i}, 'end', this.value)">
             </div>
+            
+            <!-- NEU: STRATEGIE TAG -->
+            <select class="strategy-select" onchange="updateTrade(${i}, 'tag', this.value)">
+                ${strategyOptions}
+            </select>
+            
             <button class="btn-delete-small" onclick="removeTrade(${i})">Löschen</button>
         `;
         list.appendChild(div);
@@ -2404,6 +2459,56 @@ function renderStats(){
     document.getElementById('streak').innerHTML=`<div class="stat-row"><span class="stat-row-label">Win Streak</span><span class="stat-row-value profit">${mws}</span></div><div class="stat-row"><span class="stat-row-label">Loss Streak</span><span class="stat-row-value loss">${mls}</span></div><div class="stat-row"><span class="stat-row-label">Gewinn Tage</span><span class="stat-row-value">${p}</span></div><div class="stat-row"><span class="stat-row-label">Verlust Tage</span><span class="stat-row-value">${lc}</span></div>`;
     document.getElementById('perf').innerHTML=`<div class="stat-row"><span class="stat-row-label">Max Drawdown</span><span class="stat-row-value loss">${maxDD.toFixed(2)}</span></div><div class="stat-row"><span class="stat-row-label">Max Gewinn</span><span class="stat-row-value profit">${w.length?Math.max(...w).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Max Verlust</span><span class="stat-row-value loss">${l.length?Math.min(...l).toFixed(2):0}</span></div>`;
     document.getElementById('insights').innerHTML=`<div class="stat-row"><span class="stat-row-label">Ø PnL/Trade</span><span class="stat-row-value" style="color:${t/md.length>=0?'#37b24d':'#fa5252'}">${md.length?(t/md.length).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Ø Holding Time</span><span class="stat-row-value">${avgHold}</span></div><div class="stat-row"><span class="stat-row-label">Profit Factor</span><span class="stat-row-value">${Math.abs(l.reduce((a,b)=>a+b,0))?(w.reduce((a,b)=>a+b,0)/Math.abs(l.reduce((a,b)=>a+b,0))).toFixed(2):'∞'}</span></div>`;
+    // --- STRATEGY STATS ---
+    const stratStats = {};
+    // Init mit 0
+    STRATEGIES.forEach(s => {
+        if(s.id) stratStats[s.id] = { pnl: 0, wins: 0, count: 0, label: s.label };
+    });
+    
+    // Daten sammeln (aus ALLEN Trades, nicht nur dieser Monat, oder?)
+    // Wenn du nur den aktuellen Monat willst, nimm "me" (monthEntries).
+    // Wenn du ALLE willst, nimm Object.values(data)
+    // Wir nehmen hier ALLE Trades für maximale Aussagekraft:
+    
+    Object.values(data).forEach(day => {
+        if(day.trades) {
+            day.trades.forEach(t => {
+                if(t.tag && stratStats[t.tag]) {
+                    stratStats[t.tag].pnl += (t.pnl || 0);
+                    stratStats[t.tag].count++;
+                    if((t.pnl || 0) > 0) stratStats[t.tag].wins++;
+                }
+            });
+        }
+    });
+
+    // HTML bauen
+    let stratHTML = '<table style="width:100%;font-size:0.85em;border-collapse:collapse;">';
+    stratHTML += '<tr style="border-bottom:1px solid #eee;text-align:left;"><th style="padding:4px">Strategie</th><th style="text-align:right">#</th><th style="text-align:right">Win%</th><th style="text-align:right">PnL</th></tr>';
+    
+    // Sortieren nach PnL
+    const sortedStrats = Object.values(stratStats).sort((a,b) => b.pnl - a.pnl);
+    
+    sortedStrats.forEach(s => {
+        if(s.count === 0) return; // Leere Strategien ausblenden
+        const wr = ((s.wins / s.count) * 100).toFixed(0);
+        stratHTML += `
+            <tr style="border-bottom:1px solid #f8f9fa;">
+                <td style="padding:8px 4px;">${s.label}</td>
+                <td style="text-align:right;font-weight:600;">${s.count}</td>
+                <td style="text-align:right;color:${wr>=50?'#37b24d':'#fa5252'}">${wr}%</td>
+                <td style="text-align:right;font-weight:700;color:${s.pnl>=0?'#37b24d':'#fa5252'}">${s.pnl.toFixed(0)}</td>
+            </tr>
+        `;
+    });
+    stratHTML += '</table>';
+    
+    const stEl = document.getElementById('strategyStats');
+    if(stEl) {
+        if(sortedStrats.filter(s=>s.count>0).length === 0) stEl.innerHTML = '<p style="text-align:center;color:#ccc;padding:10px;">Noch keine Tags gesetzt</p>';
+        else stEl.innerHTML = stratHTML;
+    }
 }
 
 // **UPDATED: ASYNC EXPORT WITH DIRECT FILE ACCESS (Desktop only)**
