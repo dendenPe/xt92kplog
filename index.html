@@ -51,15 +51,15 @@ body{
     }
 }
 
-.header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;text-align:center;border-radius:20px 20px 0 0; flex-shrink: 0;}
+.header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:10px 15px;text-align:center;border-radius:20px 20px 0 0; flex-shrink: 0;}
 @media(max-width: 768px) { .header { border-radius: 0; padding-top: 20px; } }
 
-.header h1{font-size:1.0em;margin-bottom:8px}
+.header h1{font-size:1.0em;margin-bottom:4px}
 .backup-status{font-size:.75em;opacity:.9;margin-top:8px; display:inline-block; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:10px;}
 
 /* NAVIGATION - BREITER */
 .nav{display:flex;background:#f8f9fa;border-bottom:2px solid #e9ecef;overflow-x:auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; position: sticky; top: 0; z-index: 100;}
-.nav-btn{flex:1;min-width:100px;padding:18px 12px;background:none;border:none;cursor:pointer;font-size:1em;font-weight:600;color:#495057;white-space:nowrap; transition: background 0.2s;}
+.nav-btn{flex:1;min-width:100px;padding:10px 5px;background:none;border:none;cursor:pointer;font-size:0.9em;font-weight:600;color:#495057;white-space:nowrap; transition: background 0.2s;}
 .nav-btn.active{background:white;color:#667eea;border-bottom:3px solid #667eea}
 
 @media(max-width: 768px) {
@@ -71,7 +71,7 @@ body{
 }
 
 /* CONTENT - MIT SCROLL INNERHALB DER KARTE */
-.content{padding:20px; flex-grow: 1; overflow-y: auto; height: calc(100% - 140px);}
+.content{padding:20px; flex-grow: 1; overflow-y: auto; height: calc(100% - 100px);}
 @media(max-width: 768px) { .content { background: #f2f2f7; height: calc(100% - 120px); padding: 15px; } }
 .view{display:none; animation: fadeIn 0.2s ease; height: 100%;}
 .view.active{display:flex; flex-direction: column;}
@@ -324,7 +324,6 @@ body{
 .calendar-day.profit{background:linear-gradient(135deg,#51cf66 0%,#37b24d 100%);color:white}
 .calendar-day.loss{background:linear-gradient(135deg,#ff6b6b 0%,#fa5252 100%);color:white}
 .calendar-day.weekend-hidden { visibility: hidden; pointer-events: none; }
-.calendar-day.macro-event { border: 2px solid #fa5252; }
 .note-icon { position: absolute; top: 4px; right: 4px; font-size: 0.8em; opacity: 0.8; }
 .day-number{font-size:.85em;margin-bottom:4px}
 .day-pnl{font-size:.75em;font-weight:700}
@@ -747,11 +746,6 @@ body{
                     }
                     </script>
                 </div>
-                
-                <div class="widget-info">
-                    🔴 Hoch | 🟡 Mittel | 🟢 Niedrig<br>
-                    Datenquelle: TradingView Economic Calendar
-                </div>
             </div>
             
             <!-- Untere Karte: Monats-Statistiken -->
@@ -991,56 +985,6 @@ async function getImageFromDB(id) {
     });
 }
 
-// --- WICHTIGE MAKRO-EVENTS (für Kalender-Markierungen) ---
-const importantMacroEvents = [
-    'Non-Farm Payrolls',
-    'CPI',
-    'PPI',
-    'FOMC',
-    'Federal Funds Rate',
-    'ISM Manufacturing',
-    'ISM Services',
-    'GDP',
-    'Retail Sales',
-    'Unemployment Rate',
-    'Initial Jobless Claims',
-    'Consumer Confidence',
-    'Housing Starts',
-    'Building Permits',
-    'Existing Home Sales',
-    'New Home Sales',
-    'Durable Goods Orders',
-    'Trade Balance',
-    'Factory Orders',
-    'Business Inventories',
-    'Chicago PMI',
-    'Philadelphia Fed Manufacturing Index',
-    'Leading Economic Index',
-    'Personal Income',
-    'Personal Spending',
-    'PCE Price Index',
-    'Core PCE Price Index',
-    'Industrial Production',
-    'Capacity Utilization',
-    'Consumer Credit',
-    'Wholesale Inventories',
-    'Export Price Index',
-    'Import Price Index'
-];
-
-// Funktion, um zu prüfen, ob ein Tag ein Makro-Event-Tag ist
-function isMacroEventDay(date) {
-    // Diese Funktion könnte erweitert werden, um mit einer API zu prüfen,
-    // ob an einem bestimmten Tag wichtige Makro-Events stattfinden
-    // Für jetzt geben wir zufällige Tage zurück (für Demo-Zwecke)
-    const day = date.getDate();
-    const month = date.getMonth();
-    
-    // Einfache Logik für Demo: 5., 10., 15., 20., 25., 30. sind Makro-Tage
-    // In einer echten Implementierung würdest du hier eine API abfragen
-    const macroDays = [5, 10, 15, 20, 25, 30];
-    return macroDays.includes(day);
-}
 
 // --- SYNC LOGIC (DESKTOP ONLY) ---
 async function saveDirHandle(handle) {
@@ -1579,10 +1523,6 @@ function renderCal(){
         dv.className='calendar-day';
         if((dow===0||dow===6) && !data[k]) dv.classList.add('weekend-hidden');
         
-        // Markiere Makro-Event-Tage
-        if(isMacroEventDay(dt)) {
-            dv.classList.add('macro-event');
-        }
 
         dv.innerHTML = `<div class="day-number">${day}</div>`;
         
@@ -2109,6 +2049,7 @@ async function saveModal(){
 }
 
 function closeModal(){
+    clearAllPreviews(); // <--- ZWANGS-LÖSCHUNG
     document.getElementById('modal').classList.remove('active');
     if(!document.getElementById('day-details').classList.contains('active')) selDate = null;
 }
@@ -2695,6 +2636,7 @@ function renderScreenshots() {
 }
 
 function removeScreenshot(index) {
+    clearAllPreviews(); // <--- ZWANGS-LÖSCHUNG
     todayScreenshots.splice(index, 1);
     renderScreenshots();
 }
@@ -2719,6 +2661,7 @@ function processModalFiles(files) {
 }
 
 function removeModalScreenshot(index) {
+    clearAllPreviews(); // <--- ZWANGS-LÖSCHUNG
     currentModalScreenshots.splice(index, 1);
     renderModalScreenshots();
 }
@@ -2790,11 +2733,18 @@ function renderModalScreenshots() {
 }
 // --- HOVER EFFECT HELPER ---
 // --- HOVER EFFECT HELPER (VERGRÖSSERT) ---
+// --- HOVER EFFECT HELPER (MIT CLEANUP KLASSE) ---
 function addHoverPreview(targetDiv, imgSrc) {
     let previewDiv = null;
 
     targetDiv.addEventListener('mouseenter', () => {
+        // Erstmal aufräumen, falls noch alte Popups da sind
+        clearAllPreviews();
+
         previewDiv = document.createElement('div');
+        // WICHTIG: Wir geben dem Ding eine Klasse!
+        previewDiv.className = 'hover-preview-overlay'; 
+        
         previewDiv.style.cssText = `
             position: fixed;
             z-index: 10000;
@@ -2804,8 +2754,8 @@ function addHoverPreview(targetDiv, imgSrc) {
             padding: 5px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.6);
             pointer-events: none;
-            width: 400px;  /* VORHER: 300px */
-            height: 400px; /* VORHER: 300px */
+            width: 400px;
+            height: 400px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -2820,24 +2770,11 @@ function addHoverPreview(targetDiv, imgSrc) {
 
         // Position berechnen
         const rect = targetDiv.getBoundingClientRect();
-        
-        // Standard: Rechts daneben (mit etwas mehr Abstand)
         let leftPos = rect.right + 20;
         let topPos = rect.top;
         
-        // Check: Passt es noch rechts auf den Bildschirm? (400px Breite + 20px Puffer)
-        if (leftPos + 420 > window.innerWidth) {
-            // Wenn nicht, dann LINKS anzeigen
-            leftPos = rect.left - 425; 
-        }
-        
-        // Check: Passt es unten noch hin?
-        if (topPos + 420 > window.innerHeight) {
-            // Wenn nicht, nach oben schieben
-            topPos = window.innerHeight - 420;
-        }
-
-        // Sicherheitscheck: Nicht oben aus dem Bild rutschen lassen
+        if (leftPos + 420 > window.innerWidth) leftPos = rect.left - 425; 
+        if (topPos + 420 > window.innerHeight) topPos = window.innerHeight - 420;
         if (topPos < 10) topPos = 10;
 
         previewDiv.style.left = leftPos + 'px';
@@ -2851,7 +2788,57 @@ function addHoverPreview(targetDiv, imgSrc) {
         }
     });
 }
+
+// NEUE HILFSFUNKTION: Löscht alle Popups gewaltsam
+function clearAllPreviews() {
+    const existing = document.querySelectorAll('.hover-preview-overlay');
+    existing.forEach(el => el.remove());
+}
 load();
+// --- PASTE SUPPORT (STRG+V / CMD+V) ---
+document.addEventListener('paste', function(e) {
+    // 1. Inhalt der Zwischenablage prüfen
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    const files = [];
+
+    // Nach Bildern suchen
+    for (let i = 0; i < items.length; i++) {
+        // Wenn es ein Bild ist...
+        if (items[i].type.indexOf("image") !== -1) {
+            const blob = items[i].getAsFile();
+            files.push(blob);
+        }
+    }
+
+    // Wenn keine Bilder gefunden wurden, brechen wir ab 
+    // (damit du weiterhin Text in deine Notizen pasten kannst!)
+    if (files.length === 0) return;
+
+    // 2. Prüfen: Wo befinden wir uns gerade?
+    const modal = document.getElementById('modal');
+    const todayView = document.getElementById('today');
+    const todayNotesTab = document.getElementById('today-notes');
+
+    // FALL A: Das Bearbeiten-Fenster (Modal) ist offen
+    if (modal && modal.classList.contains('active')) {
+        // Wir prüfen, ob der Notiz-Tab im Modal sichtbar ist (optional, aber sauberer)
+        const modalNotesTab = document.getElementById('tab-notes');
+        if(modalNotesTab && modalNotesTab.style.display !== 'none') {
+            e.preventDefault(); // Verhindert, dass der Browser versucht, das Bild ins Textfeld zu quetschen
+            processModalFiles(files); // Ab in die Modal-Logik
+            return;
+        }
+    }
+
+    // FALL B: Wir sind in der "Heute"-Ansicht
+    if (todayView && todayView.classList.contains('active')) {
+        // Wir prüfen, ob der Notiz-Tab aktiv ist
+        if (todayNotesTab && todayNotesTab.classList.contains('active')) {
+            e.preventDefault();
+            processFiles(files); // Ab in die Heute-Logik
+        }
+    }
+});
 </script>
 </body>
 </html>
