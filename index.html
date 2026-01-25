@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Trade Log</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -53,7 +54,7 @@ body{
 .header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:20px;text-align:center;border-radius:20px 20px 0 0; flex-shrink: 0;}
 @media(max-width: 768px) { .header { border-radius: 0; padding-top: 20px; } }
 
-.header h1{font-size:1.5em;margin-bottom:8px}
+.header h1{font-size:1.0em;margin-bottom:8px}
 .backup-status{font-size:.75em;opacity:.9;margin-top:8px; display:inline-block; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:10px;}
 
 /* NAVIGATION - BREITER */
@@ -547,6 +548,76 @@ body{
         width: 100vw !important;
         height: 100vh !important;
     }
+} /* <--- DIESE KLAMMER HAT GEFEHLT! */
+
+/* --- SCREENSHOT STYLES (STABIL) --- */
+.screenshot-container { 
+    margin-top: 20px; 
+    border-top: 1px solid #e9ecef; 
+    padding-top: 15px; 
+}
+
+.screenshot-dropzone {
+    border: 2px dashed #cbd5e0;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    color: #718096;
+    background: #f8f9fa;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+.screenshot-dropzone:hover, .screenshot-dropzone.dragover {
+    background: #e7f5ff;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* HIER WAR DAS PROBLEM: Wir nutzen jetzt Flexbox statt Grid */
+.preview-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* FESTE GRÖSSE ERZWINGEN (100x100 Pixel) */
+.preview-item {
+    position: relative;
+    width: 100px;        /* Festgenagelt */
+    height: 100px;       /* Festgenagelt */
+    border-radius: 8px;
+    overflow: hidden;    /* Alles was übersteht abschneiden */
+    border: 1px solid #e9ecef;
+    background: #fff;
+    flex-shrink: 0;      /* Nicht zusammendrücken lassen */
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;   /* Bild füllt das Quadrat aus */
+    display: block;
+    cursor: pointer;
+}
+
+.btn-remove-img {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 100; /* Sicherstellen, dass es über dem Bild liegt */
 }
 </style>
 </head>
@@ -554,8 +625,7 @@ body{
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>📊 Trade Log</h1>
-<p>Version 04 - Mit echtem US-Finanzkalender</p>
+<h1>Trade Log / Version 02b</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -597,10 +667,29 @@ body{
 </div>
 
 <div id="today-notes" class="today-tab-content">
-<div class="form-group">
-<label>Tagesnotizen</label>
-<textarea id="todayNote" rows="6" placeholder="Marktbedingungen, Psychologie, Learnings..."></textarea>
-</div>
+    <div class="form-group">
+        <label>📝 Tagesnotizen</label>
+        <textarea id="todayNote" rows="6" placeholder="Marktbedingungen, Psychologie, Learnings..."></textarea>
+    </div>
+  
+    <!-- NEUER BEREICH FÜR BILDER -->
+    <div class="screenshot-container">
+        <label style="display:block;margin-bottom:8px;font-weight:600;color:#495057;font-size:0.85em;text-transform:uppercase;">
+            📸 Screenshots (Max 5)
+        </label>
+        
+        <input type="file" id="screenshotInput" accept="image/jpeg, image/png, image/jpg" multiple style="display:none">
+        
+        <div class="screenshot-dropzone" id="screenshotDropzone">
+            <span style="font-size: 2em; display: block; margin-bottom: 5px;">☁️</span>
+            Bilder hier reinziehen oder klicken<br>
+            <span style="font-size: 0.8em; opacity: 0.7;">(JPEG/PNG)</span>
+        </div>
+
+        <div id="screenshotPreviews" class="preview-grid">
+            <!-- Hier erscheinen die Bilder -->
+        </div>
+    </div>
 </div>
 
 <button class="btn btn-primary" onclick="saveToday()">Speichern</button>
@@ -737,10 +826,16 @@ body{
 <div id="export" class="view">
 <div style="max-width:800px;margin:0 auto; width: 100%;">
 <h2 style="text-align:center;margin-bottom:15px;color:#495057">📥 Import / Export</h2>
-<div class="info-box"><strong>💾 CSV Import:</strong> Lade deine gesicherten PnL-Daten!</div>
+
+<!-- NEU: ZIP Export Button (Hervorgehoben) -->
+<button class="btn btn-primary" onclick="exportZIP()" style="margin-bottom:20px; py-3;">📦 ZIP Backup erstellen (Alles)</button>
+
+<div class="info-box"><strong>💾 Import:</strong> Lade deine gesicherten Daten (ZIP mit Bildern oder nur CSV)</div>
 <input type="file" id="csvFile" accept=".csv" style="display:none">
-<button class="btn btn-info" onclick="document.getElementById('csvFile').click()">📥 Datei manuell importieren</button>
-<button class="btn btn-success" onclick="exportCSV()">📤 CSV Exportieren</button>
+<input type="file" id="zipFile" accept=".zip" style="display:none">
+<button class="btn btn-info" onclick="document.getElementById('zipFile').click()">📦 ZIP Backup importieren</button>
+<button class="btn btn-info" onclick="document.getElementById('csvFile').click()">📥 Nur CSV importieren</button>
+<button class="btn btn-success" onclick="exportCSV()">📤 Nur CSV Exportieren</button>
 
 <div style="margin-top:30px;padding-top:20px;border-top:2px dashed #e9ecef" id="desktopSyncSection">
 <h3 style="text-align:center;margin-bottom:10px;color:#495057">🔄 Automatischer Sync</h3>
@@ -783,10 +878,27 @@ body{
 <button class="btn btn-sm btn-info" onclick="addTradeRow()">+ Trade hinzufügen</button>
 </div>
 <div id="tab-notes" style="display:none">
-<div class="form-group">
-<label>Tagesnotizen</label>
-<textarea id="modalNote" rows="6" placeholder="Marktbedingungen, Psychologie..."></textarea>
-</div>
+    <div class="form-group">
+        <label>Tagesnotizen</label>
+        <textarea id="modalNote" rows="6" placeholder="Marktbedingungen, Psychologie..."></textarea>
+    </div>
+    
+    <!-- HIER KOMMT DER NEUE BEREICH -->
+    <div class="screenshot-container">
+        <label style="display:block;margin-bottom:8px;font-weight:600;color:#495057;font-size:0.85em;text-transform:uppercase;">
+            📸 Screenshots (Nachtrag)
+        </label>
+        
+        <input type="file" id="modalScreenshotInput" accept="image/jpeg, image/png, image/jpg" multiple style="display:none">
+        
+        <div class="screenshot-dropzone" id="modalScreenshotDropzone">
+            <span style="font-size: 2em; display: block; margin-bottom: 5px;">☁️</span>
+            Bilder hier reinziehen<br>
+            <span style="font-size: 0.8em; opacity: 0.7;">(JPEG/PNG)</span>
+        </div>
+
+        <div id="modalScreenshotPreviews" class="preview-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;"></div>
+    </div>
 </div>
 </div>
 <div class="modal-footer">
@@ -801,6 +913,7 @@ body{
 let calMonth=new Date(),statsMonth=new Date(),data={},selDate=null,dataCount=0,cachedDirHandle=null;
 let currentTrades = [];
 let todayTrades = [];
+let todayScreenshots = []; // Neue Variable für die Bilder
 
 // --- HELPER ---
 function getEntry(key) {
@@ -821,15 +934,48 @@ function getComm(inst, qty) {
     return 0;
 }
 
+// --- DATABASE SETUP (UPDATED FOR IMAGES) ---
 const DB_NAME = 'TradingPnL_DB';
-const STORE_NAME = 'settings';
+const DB_VERSION = 2; // WICHTIG: Version erhöht!
+const STORE_SETTINGS = 'settings';
+const STORE_IMAGES = 'images'; // Neuer Speicherort für Bilder
 
 function openDB() {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = (e) => { e.target.result.createObjectStore(STORE_NAME); };
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            // Settings Store (existiert schon, aber wir prüfen sicherheitshalber)
+            if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
+                db.createObjectStore(STORE_SETTINGS);
+            }
+            // Images Store (NEU)
+            if (!db.objectStoreNames.contains(STORE_IMAGES)) {
+                db.createObjectStore(STORE_IMAGES);
+            }
+        };
+        
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
+    });
+}
+
+// Hilfsfunktionen für Bilder
+async function saveImageToDB(id, blob) {
+    const db = await openDB();
+    const tx = db.transaction(STORE_IMAGES, 'readwrite');
+    tx.objectStore(STORE_IMAGES).put(blob, id);
+    return tx.complete;
+}
+
+async function getImageFromDB(id) {
+    const db = await openDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE_IMAGES, 'readonly');
+        const req = tx.objectStore(STORE_IMAGES).get(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
     });
 }
 
@@ -998,16 +1144,16 @@ function parseCSV(csvText) {
 
         if (inQuote) {
             if (char === '"' && nextChar === '"') {
-                currentVal += '"'; // Handle escaped quote
-                i++; // Skip next quote
+                currentVal += '"'; 
+                i++; 
             } else if (char === '"') {
-                inQuote = false; // End of quote
+                inQuote = false; 
             } else {
-                currentVal += char; // Regular char inside quote (including newlines)
+                currentVal += char;
             }
         } else {
             if (char === '"') {
-                inQuote = true; // Start of quote
+                inQuote = true; 
             } else if (char === ',' || char === ';') { 
                 currentRow.push(currentVal); 
                 currentVal = '';
@@ -1028,12 +1174,14 @@ function parseCSV(csvText) {
 
     const result = {};
     rows.forEach((parts, i) => {
-        if (i === 0 || parts.length < 2) return;
+        if (i === 0 || parts.length < 2) return; // Skip Header
 
         let dateStr = parts[0].trim();
         let valStr = parts[1].trim();
         let note = parts[2] ? parts[2].trim() : "";
         let details = parts[3] ? parts[3].trim() : "";
+        // NEU: 5. Spalte lesen
+        let screensStr = parts[4] ? parts[4].trim() : "";
 
         if (valStr.includes(',') && valStr.includes('.')) {
             if (valStr.lastIndexOf('.') > valStr.lastIndexOf(',')) valStr = valStr.replace(/,/g, '');
@@ -1046,8 +1194,17 @@ function parseCSV(csvText) {
             const val = parseFloat(valStr);
             if (!isNaN(val)) {
                 let trades = [];
+                let screenshots = [];
                 try { if(details) trades = JSON.parse(details); } catch(e){}
-                result[key] = { total: val, trades: trades, note: note };
+                // NEU: Screenshots parsen
+                try { if(screensStr) screenshots = JSON.parse(screensStr); } catch(e){}
+                
+                result[key] = { 
+                    total: val, 
+                    trades: trades, 
+                    note: note,
+                    screenshots: screenshots // Speichern
+                };
             }
         }
     });
@@ -1092,12 +1249,13 @@ function load(){
     }catch(e){console.error(e);init()}
 }
 
-function init(){
+async function init(){
     const t=new Date();
     document.getElementById('todayDate').value=fd(t);
     const k=dk(t);
     const entry = getEntry(k);
     
+    // 1. Textdaten laden
     if(data[k]) {
         document.getElementById('todayPnL').value = entry.total;
         document.getElementById('todayNote').value = entry.note || '';
@@ -1108,9 +1266,54 @@ function init(){
         todayTrades = [];
     }
     
+    // 2. Bilder laden (NEU)
+    todayScreenshots = []; // Reset
+    const savedFiles = entry.screenshots || [];
+    
+    if (savedFiles.length > 0) {
+        for (const filename of savedFiles) {
+            // Bild aus IndexedDB holen
+            const blob = await getImageFromDB(filename);
+            if (blob) {
+                // Wir pushen das Blob direkt, renderScreenshots() kümmert sich um die Anzeige
+                todayScreenshots.push(blob);
+            } else {
+                console.warn("Bild nicht gefunden:", filename);
+                // Wenn Bild fehlt, zeigen wir den Dateinamen als Platzhalter (oder löschen es)
+                // todayScreenshots.push(filename); 
+            }
+        }
+    }
+    
     renderTodayTradesList();
+    renderScreenshots(); // Bilder anzeigen
     updateDataInfo();
     updateStatus();
+
+    // Event Listener neu setzen (unser Fix von vorhin)
+    const dropzone = document.getElementById('screenshotDropzone');
+    const fileInput = document.getElementById('screenshotInput');
+    const previewContainer = document.getElementById('screenshotPreviews');
+    
+    if(dropzone && fileInput && !dropzone.classList.contains('listening')) {
+        dropzone.classList.add('listening');
+        dropzone.onclick = () => fileInput.click();
+        fileInput.onchange = handleFileSelect;
+        
+        const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, prevent, false);
+        });
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, () => dropzone.classList.add('dragover'), false);
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, () => dropzone.classList.remove('dragover'), false);
+        });
+        dropzone.addEventListener('drop', (e) => {
+            processFiles(e.dataTransfer.files);
+        }, false);
+    }
 }
 
 // --- TODAY TAB FUNCTIONS ---
@@ -1182,28 +1385,65 @@ function recalcTodayTotal() {
     } 
 }
 
-function saveToday(){
-    const t=new Date();
-    const v=document.getElementById('todayPnL').value;
-    const note=document.getElementById('todayNote').value;
+async function saveToday() {
+    const t = new Date();
+    const v = document.getElementById('todayPnL').value;
+    const note = document.getElementById('todayNote').value;
     
-    if(!v && todayTrades.length === 0){
-        alert('Bitte PnL oder Trades eingeben');
+    // Einfache Validierung
+    if(!v && todayTrades.length === 0 && todayScreenshots.length === 0){
+        alert('Bitte PnL, Trades oder einen Screenshot eingeben');
         return;
     }
     
-    const k = dk(t);
+    // 1. Bilder verarbeiten
+    const savedFilenames = [];
+    const dateStr = dk(t); // "2024-01-24"
+
+    for (let i = 0; i < todayScreenshots.length; i++) {
+        const file = todayScreenshots[i];
+        
+        if (file instanceof File || file instanceof Blob) {
+            // Es ist eine neue Datei -> Speichern
+            // Erstelle eindeutigen Namen: img_2024-01-24_1706123456_0.jpg
+            const timestamp = new Date().getTime();
+            const ext = file.type === 'image/png' ? 'png' : 'jpg';
+            const filename = `img_${dateStr}_${timestamp}_${i}.${ext}`;
+            
+            try {
+                await saveImageToDB(filename, file);
+                savedFilenames.push(filename);
+            } catch (e) {
+                console.error("Bild konnte nicht gespeichert werden:", e);
+                alert("Fehler beim Speichern eines Bildes!");
+            }
+        } else if (typeof file === 'string') {
+            // Es ist schon ein Dateiname (wurde heute schon geladen) -> Behalten
+            savedFilenames.push(file);
+        }
+    }
+
+    // 2. Daten zusammenstellen
     const pnlVal = parseFloat(v) || 0;
     
-    data[k] = { 
+    data[dateStr] = { 
         total: pnlVal, 
         trades: todayTrades.length > 0 ? todayTrades : [], 
-        note: note 
+        note: note,
+        screenshots: savedFilenames // Hier speichern wir die Liste der Dateinamen
     };
     
-    save();
-    document.getElementById('msg').style.display='block';
-    setTimeout(()=>document.getElementById('msg').style.display='none',3000);
+    // 3. Alles speichern
+    save(); // Speichert CSV/LocalStorage
+    
+    // UI Feedback
+    const msg = document.getElementById('msg');
+    msg.textContent = "Gespeichert (+ Bilder) ✓";
+    msg.style.display='block';
+    setTimeout(()=>msg.style.display='none',3000);
+    
+    // Aktualisieren, damit die neuen Dateinamen geladen werden
+    init(); 
 }
 
 // --- NAVIGATION & SWIPE ---
@@ -1331,11 +1571,13 @@ function renderCal(){
         
         dv.onclick=()=>{
             const entry = getEntry(k);
-            if(entry.trades && entry.trades.length > 0) {
-                renderDayDetails(dt);
-            } else {
-                openModal(dt);
-            }
+            // NEUE VERSION:
+// Zeige Details, wenn Trades ODER Screenshots da sind
+if((entry.trades && entry.trades.length > 0) || (entry.screenshots && entry.screenshots.length > 0)) {
+    renderDayDetails(dt);
+} else {
+    openModal(dt);
+}
         };
         g.appendChild(dv);
     }
@@ -1482,7 +1724,8 @@ function renderMonthStatsCard(monthData, year, month) {
     container.innerHTML = html;
 }
 // --- DAY DETAILS VIEW ---
-function renderDayDetails(d) {
+// WICHTIG: async hinzufügen!
+async function renderDayDetails(d) {
     selDate = d;
     const k = dk(d);
     const entry = getEntry(k);
@@ -1491,6 +1734,7 @@ function renderDayDetails(d) {
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('day-details').classList.add('active');
     
+    // --- Stats Berechnung (unverändert) ---
     const totalPnL = entry.total;
     const wins = trades.filter(t => t.pnl > 0).length;
     const winRate = trades.length ? ((wins / trades.length) * 100).toFixed(0) + '%' : '0%';
@@ -1500,7 +1744,7 @@ function renderDayDetails(d) {
     const avgPnL = trades.length ? (totalPnL / trades.length).toFixed(2) : 0;
     
     let totalMins = 0; let counted = 0;
-    let dayFees = 0; // Calculate Fees
+    let dayFees = 0;
     trades.forEach(t => {
         dayFees += getComm(t.inst, t.qty);
         if(t.start && t.end) {
@@ -1513,8 +1757,18 @@ function renderDayDetails(d) {
     });
     const avgHold = counted ? (totalMins / counted).toFixed(0) + ' min' : '-';
 
-    // WATERFALL CHART GENERATION (Fixed Width + Scroll)
+    // --- Waterfall (unverändert) ---
     let waterfallHtml = '';
+    // (Den Waterfall Code hier verkürzt dargestellt - du kannst deinen bestehenden Block behalten oder diesen nehmen)
+    if(trades.length > 0) {
+        // ... (Dein Waterfall Code bleibt gleich) ...
+        // Falls du den Code nicht kopieren willst, lass deinen Waterfall Block einfach drin!
+        // Ich füge hier nur der Vollständigkeit halber einen Platzhalter ein, 
+        // nimm bitte deinen existierenden Waterfall-Code aus der alten Funktion!
+        waterfallHtml = `<div class="info-box">Waterfall Chart (Code hier einfügen oder bestehenden lassen)</div>`; 
+        // HINWEIS: Kopiere deinen alten Waterfall-Code hier rein, ich wollte den Post nicht zu lang machen.
+    }
+    // Ich kopiere deinen exakten Waterfall Code hier rein, damit du Copy-Paste machen kannst:
     if(trades.length > 0) {
         let runningTotal = 0;
         let points = [{val: 0, pnl: 0}];
@@ -1523,7 +1777,6 @@ function renderDayDetails(d) {
             runningTotal += p;
             points.push({ val: runningTotal, pnl: p });
         });
-
         const maxVal = Math.max(...points.map(p => p.val));
         const minVal = Math.min(...points.map(p => p.val));
         const range = Math.max(maxVal - minVal, 10); 
@@ -1531,43 +1784,27 @@ function renderDayDetails(d) {
         const drawMin = minVal - padding;
         const drawMax = maxVal + padding;
         const drawRange = drawMax - drawMin;
-        
-        // Zero line Y-position
         const zeroY = 100 - ((0 - drawMin) / drawRange) * 100;
-
         let svgContent = '';
-        
-        // Zero Line
         if(drawMin < 0 && drawMax > 0) {
             svgContent += `<line x1="0" y1="${zeroY}%" x2="100%" y2="${zeroY}%" stroke="#ced4da" stroke-width="1" stroke-dasharray="4" vector-effect="non-scaling-stroke" />`;
         }
-        
-        // FIXED WIDTH LOGIC (Much thinner bars now)
         const unitWidth = 20; 
         const chartWidth = Math.max(trades.length * unitWidth, 300); 
         const barWidthPx = unitWidth * 0.8;
         const gapPx = unitWidth * 0.1;
-
         for(let i=0; i<trades.length; i++) {
             const startVal = points[i].val;
             const endVal = points[i+1].val;
             const pnl = points[i+1].pnl;
-            
             const yTopVal = Math.max(startVal, endVal);
             const yBottomVal = Math.min(startVal, endVal);
-            
             const yTop = 100 - ((yTopVal - drawMin) / drawRange) * 100;
             const yBottom = 100 - ((yBottomVal - drawMin) / drawRange) * 100;
             const height = Math.max(yBottom - yTop, 0.5); 
-
             const color = pnl >= 0 ? '#37b24d' : '#fa5252';
-            
-            // X position in pixels
             const xPos = (i * unitWidth) + gapPx;
-            
             svgContent += `<rect x="${xPos}" y="${yTop}%" width="${barWidthPx}" height="${height}%" fill="${color}" rx="2" />`;
-            
-            // Connecting thin lines
             if(i < trades.length - 1) {
                 const nextY = 100 - ((endVal - drawMin) / drawRange) * 100;
                 const lineX1 = xPos + barWidthPx;
@@ -1575,16 +1812,17 @@ function renderDayDetails(d) {
                 svgContent += `<line x1="${lineX1}" y1="${nextY}%" x2="${lineX2}" y2="${nextY}%" stroke="#adb5bd" stroke-width="1" vector-effect="non-scaling-stroke" />`;
             }
         }
-        
-        waterfallHtml = `
-        <div class="waterfall-container">
-            <div class="chart-title">Intraday Verlauf (Waterfall)</div>
-            <div class="waterfall-chart">
-                <svg style="width: ${chartWidth}px; min-width: 100%;" preserveAspectRatio="none">${svgContent}</svg>
-            </div>
-        </div>`;
+        waterfallHtml = `<div class="waterfall-container"><div class="chart-title">Intraday Verlauf</div><div class="waterfall-chart"><svg style="width: ${chartWidth}px; min-width: 100%;" preserveAspectRatio="none">${svgContent}</svg></div></div>`;
     }
 
+
+    // --- BILDER LADEN (NEU) ---
+    let screenshotsHtml = '';
+    if (entry.screenshots && entry.screenshots.length > 0) {
+        screenshotsHtml = `<div class="chart-container"><div class="chart-title">📸 Screenshots</div><div class="preview-grid" id="detailScreenshots">Lade Bilder...</div></div>`;
+    }
+
+    // --- HTML ZUSAMMENBAUEN ---
     const content = document.getElementById('dayDetailContent');
     content.innerHTML = `
         <div class="day-detail-header">
@@ -1599,17 +1837,23 @@ function renderDayDetails(d) {
             <div class="detail-card"><div class="detail-label">Gebühren</div><div class="detail-value loss">-${dayFees.toFixed(2)}</div></div>
         </div>
         ${waterfallHtml}
+        
+        <!-- TRADES LISTE (jetzt oben) -->
         <div class="chart-container">
             <div class="chart-title">Trades (${trades.length})</div>
             <div id="dayTradesList"></div>
         </div>
+
+        <!-- NOTIZ -->
         ${entry.note ? `<div class="info-box"><strong>📝 Notiz:</strong><br>${entry.note}</div>` : ''}
-        ${isMacroEventDay(d) ? `<div class="warning-msg" style="display:block">⚠️ Heute finden wichtige US-Makrodaten statt!</div>` : ''}
+        
+        <!-- SCREENSHOTS (jetzt ganz unten) -->
+        ${screenshotsHtml}
     `;
 
+    // --- TRADES LISTE RENDERN (unverändert) ---
     const list = document.getElementById('dayTradesList');
     const maxAbs = Math.max(...trades.map(t => Math.abs(t.pnl))) || 1;
-    
     trades.forEach(t => {
         let durationStr = "-";
         if(t.start && t.end) {
@@ -1629,11 +1873,52 @@ function renderDayDetails(d) {
         `;
         list.appendChild(row);
     });
+
+    // --- BILDER NACHLADEN (NEU) ---
+    if (entry.screenshots && entry.screenshots.length > 0) {
+        const imgContainer = document.getElementById('detailScreenshots');
+        imgContainer.innerHTML = ''; // "Lade Bilder..." entfernen
+        
+        for (const filename of entry.screenshots) {
+            const blob = await getImageFromDB(filename);
+            if (blob) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(blob);
+                
+                // Styles direkt setzen (Stabilität!)
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.style.width = '100px';
+                div.style.height = '100px';
+                div.style.position = 'relative';
+                div.style.overflow = 'hidden';
+                div.style.borderRadius = '8px';
+                div.style.border = '1px solid #e9ecef';
+                div.style.flexShrink = '0';
+                
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.cursor = 'pointer';
+                
+                // Doppelklick zum Vergrößern
+                img.ondblclick = () => {
+                    const newTab = window.open();
+                    if(newTab) newTab.document.write(`<html><body style="margin:0;background:#222;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${img.src}" style="max-width:100%;max-height:100%"></body></html>`);
+                };
+                
+                div.appendChild(img);
+                imgContainer.appendChild(div);
+                addHoverPreview(div, img.src);
+            }
+        }
+    }
 }
 
 function editCurrentDay() { if(selDate) openModal(selDate); }
 
-function openModal(d){
+// WICHTIG: async hinzufügen!
+async function openModal(d){
     selDate = d;
     const k = dk(d);
     const entry = getEntry(k);
@@ -1645,6 +1930,49 @@ function openModal(d){
     currentTrades = entry.trades ? JSON.parse(JSON.stringify(entry.trades)) : [];
     renderTradesList();
     
+    // --- BILDER LADEN (NEU) ---
+    currentModalScreenshots = [];
+    const savedFiles = entry.screenshots || [];
+    
+    // Bestehende Bilder aus DB holen
+    if (savedFiles.length > 0) {
+        for (const filename of savedFiles) {
+            const blob = await getImageFromDB(filename);
+            if (blob) currentModalScreenshots.push(blob);
+        }
+    }
+    renderModalScreenshots(); // Anzeigen
+    
+    // --- EVENT LISTENER SETZEN (NEU - Damit Klick & Drag funktioniert) ---
+    const dropzone = document.getElementById('modalScreenshotDropzone');
+    const input = document.getElementById('modalScreenshotInput');
+    
+    if(dropzone && input) {
+        // Klick aktivieren
+        dropzone.onclick = () => input.click();
+        input.onchange = handleModalFileSelect;
+        
+        // Drag & Drop aktivieren
+        const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, prevent, false);
+        });
+        
+        // Visuelles Feedback
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, () => dropzone.classList.add('dragover'), false);
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, () => dropzone.classList.remove('dragover'), false);
+        });
+        
+        // Drop Aktion
+        dropzone.ondrop = (e) => {
+            e.preventDefault();
+            processModalFiles(e.dataTransfer.files);
+        };
+    }
+
     document.getElementById('delBtn').style.display = data[k] ? 'block' : 'none';
     
     switchModalTab('simple');
@@ -1696,16 +2024,62 @@ function updateTrade(i, field, val) {
 }
 function recalcTotalFromTrades() { if(currentTrades.length > 0) { const sum = currentTrades.reduce((a, b) => a + (b.pnl || 0), 0); document.getElementById('modalPnL').value = sum; } }
 
-function saveModal(){
+// WICHTIG: async davor schreiben!
+async function saveModal(){
     if(!selDate) return;
-    const k = dk(selDate);
+    const k = dk(selDate); // Das Datum, z.B. "2026-01-24"
+    
+    // Werte aus den Feldern holen
     const pnlVal = parseFloat(document.getElementById('modalPnL').value) || 0;
     const note = document.getElementById('modalNote').value;
-    data[k] = { total: pnlVal, trades: currentTrades, note: note };
+    
+    // --- BILDER SPEICHERN ---
+    const savedFilenames = [];
+    
+    // Wir gehen alle Bilder durch, die gerade in der Box sind
+    for (let i = 0; i < currentModalScreenshots.length; i++) {
+        const file = currentModalScreenshots[i];
+        
+        // Wir erstellen für jedes Bild einen neuen, eindeutigen Namen
+        // (img_DATUM_ZEITSTEMPEL_NUMMER.jpg)
+        const timestamp = new Date().getTime();
+        let ext = 'jpg';
+        if(file.type === 'image/png') ext = 'png';
+        
+        const filename = `img_${k}_${timestamp}_${i}.${ext}`;
+        
+        try {
+            // Ab in die Datenbank damit!
+            await saveImageToDB(filename, file);
+            // Namen merken für die CSV
+            savedFilenames.push(filename);
+        } catch (e) {
+            console.error("Fehler beim Speichern:", e);
+        }
+    }
+    
+    // Daten aktualisieren
+    data[k] = { 
+        total: pnlVal, 
+        trades: currentTrades, 
+        note: note,
+        screenshots: savedFilenames // Die Liste der Dateinamen
+    };
+    
+    // Speichern & Schließen
     save();
     closeModal();
-    if(document.getElementById('day-details').classList.contains('active')) renderDayDetails(selDate); 
-    else renderCal();
+    
+    // Ansicht aktualisieren
+    // Falls wir gerade in der Detail-Ansicht sind -> neu laden
+    if(document.getElementById('day-details').classList.contains('active')) {
+        renderDayDetails(selDate); 
+    } else {
+        // Falls wir im Kalender sind -> Kalender neu malen
+        renderCal();
+    }
+    
+    // Falls wir zufällig "Heute" bearbeitet haben, auch den Heute-Tab aktualisieren
     if(dk(new Date()) === k) init();
 }
 
@@ -1990,37 +2364,40 @@ function renderStats(){
 
 // **UPDATED: ASYNC EXPORT WITH DIRECT FILE ACCESS (Desktop only)**
 async function exportCSV() {
-    let csv = '\uFEFFDatum,PnL,Notiz,Details_JSON\n';
+    // 1. Header erweitern um "Screenshots"
+    let csv = '\uFEFFDatum,PnL,Notiz,Details_JSON,Screenshots\n';
+    
     Object.keys(data).sort().forEach(k => {
         const [y, m, d] = k.split('-');
         const entry = getEntry(k);
+        
         const note = (entry.note || "").replace(/"/g, '""');
         const json = JSON.stringify(entry.trades || []).replace(/"/g, '""');
+        // NEU: Screenshots Liste als JSON String
+        const screens = JSON.stringify(entry.screenshots || []).replace(/"/g, '""');
+        
         const total = (entry.total || 0).toFixed(2);
-        csv += `${d}.${m}.${y},${total},"${note}","${json}"\n`;
+        
+        // 2. Zeile schreiben mit 5. Spalte
+        csv += `${d}.${m}.${y},${total},"${note}","${json}","${screens}"\n`;
     });
 
     const filename = `pnl_${new Date().toISOString().slice(0, 10)}.csv`;
 
+    // ... (Rest bleibt gleich, hier nur der Speicher-Teil) ...
     if (cachedDirHandle) {
         try {
             const opts = { mode: 'readwrite' };
             if ((await cachedDirHandle.queryPermission(opts)) !== 'granted') {
-                if ((await cachedDirHandle.requestPermission(opts)) !== 'granted') {
-                    throw new Error('Permission denied');
-                }
+                if ((await cachedDirHandle.requestPermission(opts)) !== 'granted') throw new Error('Permission denied');
             }
-            
             const fileHandle = await cachedDirHandle.getFileHandle(filename, { create: true });
             const writable = await fileHandle.createWritable();
             await writable.write(csv);
             await writable.close();
-            
             alert(`✅ Gespeichert im Backup-Ordner:\n${filename}`);
             return;
-        } catch (e) {
-            console.warn("Direkt-Speichern fehlgeschlagen, Fallback zu Download...", e);
-        }
+        } catch (e) { console.warn("Fallback...", e); }
     }
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -2033,7 +2410,173 @@ async function exportCSV() {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
 }
+// --- ZIP EXPORT LOGIC ---
+async function exportZIP() {
+    // 1. Button Feedback geben (dauert bei vielen Bildern kurz)
+    const btn = document.querySelector('button[onclick="exportZIP()"]');
+    const oldText = btn ? btn.textContent : "Export";
+    if(btn) {
+        btn.textContent = "⏳ Erstelle ZIP... (bitte warten)";
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+    }
 
+    try {
+        const zip = new JSZip();
+
+        // --- TEIL A: CSV ERSTELLEN ---
+        let csv = '\uFEFFDatum,PnL,Notiz,Details_JSON,Screenshots\n';
+        
+        // Wir sortieren die Daten, damit die CSV schön chronologisch ist
+        const keys = Object.keys(data).sort();
+        
+        for (const k of keys) {
+            const [y, m, d] = k.split('-');
+            const entry = getEntry(k);
+            
+            const note = (entry.note || "").replace(/"/g, '""');
+            const json = JSON.stringify(entry.trades || []).replace(/"/g, '""');
+            const screens = JSON.stringify(entry.screenshots || []).replace(/"/g, '""');
+            const total = (entry.total || 0).toFixed(2);
+            
+            csv += `${d}.${m}.${y},${total},"${note}","${json}","${screens}"\n`;
+        }
+        
+        // CSV in das ZIP legen
+        zip.file("pnl_data.csv", csv);
+
+        // --- TEIL B: BILDER HINZUFÜGEN ---
+        const imgFolder = zip.folder("screenshots");
+        let imgCount = 0;
+
+        for (const k of keys) {
+            const entry = data[k];
+            // Wenn der Eintrag Screenshots hat...
+            if (entry.screenshots && entry.screenshots.length > 0) {
+                for (const filename of entry.screenshots) {
+                    // ... holen wir das Blob aus der Datenbank
+                    const blob = await getImageFromDB(filename);
+                    if (blob) {
+                        // ... und packen es in den screenshots/ Ordner im ZIP
+                        imgFolder.file(filename, blob);
+                        imgCount++;
+                    }
+                }
+            }
+        }
+
+        // --- TEIL C: ZIP GENERIEREN & DOWNLOAD ---
+        // Generiert die ZIP Datei als Blob
+        const zipContent = await zip.generateAsync({type:"blob"});
+        
+        // Download auslösen
+        const url = URL.createObjectURL(zipContent);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `trade_backup_${dateStr}.zip`; // Name: trade_backup_2024-01-24.zip
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+
+        // Erfolgsmeldung
+        alert(`✅ Backup erfolgreich!\nEnthält CSV und ${imgCount} Bilder.`);
+
+    } catch (e) {
+        console.error(e);
+        alert("Fehler beim ZIP Export: " + e.message);
+    } finally {
+        // Button zurücksetzen
+        if(btn) {
+            btn.textContent = oldText;
+            btn.disabled = false;
+            btn.style.opacity = "1";
+        }
+    }
+}
+// --- ZIP IMPORT LOGIC ---
+document.getElementById('zipFile').onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Button Feedback
+    const btn = document.querySelector('button[onclick="document.getElementById(\'zipFile\').click()"]');
+    const oldText = btn ? btn.textContent : "";
+    if(btn) {
+        btn.textContent = "⏳ Importiere ZIP...";
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+    }
+    
+    try {
+        // 1. ZIP laden
+        const zipData = await JSZip.loadAsync(file);
+        
+        // 2. CSV finden und einlesen
+        let csvContent = null;
+        const csvFile = zipData.file("pnl_data.csv");
+        if (csvFile) {
+            csvContent = await csvFile.async("text");
+        } else {
+            // Fallback: Suche nach beliebiger CSV
+            const csvFiles = Object.keys(zipData.files).filter(name => name.endsWith('.csv'));
+            if (csvFiles.length > 0) {
+                csvContent = await zipData.file(csvFiles[0]).async("text");
+            }
+        }
+        
+        if (!csvContent) {
+            alert("❌ Keine CSV-Datei im ZIP gefunden!");
+            return;
+        }
+        
+        // 3. CSV parsen (nutzt deine existierende Funktion)
+        const importedData = parseCSV(csvContent);
+        
+        // 4. Bilder aus dem screenshots/ Ordner einlesen
+        let imageCount = 0;
+        const screenshotsFolder = zipData.folder("screenshots");
+        
+        if (screenshotsFolder) {
+            // Gehe durch alle Dateien im screenshots Ordner
+            for (const filename in zipData.files) {
+                if (filename.startsWith("screenshots/") && !zipData.files[filename].dir) {
+                    const imgFilename = filename.replace("screenshots/", "");
+                    
+                    // Blob aus ZIP holen
+                    const blob = await zipData.file(filename).async("blob");
+                    
+                    // In IndexedDB speichern
+                    await saveImageToDB(imgFilename, blob);
+                    imageCount++;
+                }
+            }
+        }
+        
+        // 5. Daten zusammenführen (merge statt überschreiben)
+        data = {...data, ...importedData};
+        
+        // 6. Speichern und UI aktualisieren
+        save();
+        updateDataInfo();
+        renderCal();
+        
+        alert(`✅ Import erfolgreich!\n${Object.keys(importedData).length} Einträge und ${imageCount} Bilder importiert.`);
+        
+    } catch (err) {
+        console.error(err);
+        alert('❌ ZIP-Import fehlgeschlagen: ' + err.message);
+    } finally {
+        // Button zurücksetzen
+        if(btn) {
+            btn.textContent = oldText;
+            btn.disabled = false;
+            btn.style.opacity = "1";
+        }
+        e.target.value = ''; // Input zurücksetzen
+    }
+};
 document.getElementById('csvFile').onchange=function(e){
     const file=e.target.files[0];
     if(!file)return;
@@ -2059,6 +2602,230 @@ function updateDataInfo(){
 document.getElementById('modal').onclick=function(e){if(e.target===this)closeModal()};
 window.onbeforeunload=save;
 setInterval(save,30000);
+// --- SCREENSHOT LOGIC (NEU) ---
+
+function handleFileSelect(e) {
+    const files = e.target.files;
+    processFiles(files);
+    e.target.value = ''; // Reset input
+}
+
+function processFiles(files) {
+    if (todayScreenshots.length + files.length > 5) {
+        alert("Maximal 5 Screenshots erlaubt!");
+        return;
+    }
+
+    Array.from(files).forEach(file => {
+        if (!file.type.match('image.*')) {
+            alert("Nur Bilder (JPEG/PNG) erlaubt!");
+            return;
+        }
+        todayScreenshots.push(file);
+    });
+
+    renderScreenshots();
+}
+
+function renderScreenshots() {
+    const container = document.getElementById('screenshotPreviews');
+    if(!container) return;
+    container.innerHTML = '';
+    
+    // CSS-Safety
+    container.style.display = 'flex'; container.style.flexWrap = 'wrap'; container.style.gap = '10px'; container.style.marginTop = '10px';
+
+    todayScreenshots.forEach((file, index) => {
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        div.style.width = '100px'; div.style.height = '100px'; div.style.position = 'relative'; 
+        div.style.overflow = 'hidden'; div.style.borderRadius = '8px'; div.style.border = '1px solid #e9ecef'; div.style.flexShrink = '0';
+
+        const btn = document.createElement('div');
+        btn.className = 'btn-remove-img';
+        btn.innerHTML = '✕';
+        btn.style.position = 'absolute'; btn.style.top = '2px'; btn.style.right = '2px'; btn.style.width = '20px'; btn.style.height = '20px'; btn.style.background = 'rgba(255,0,0,0.8)'; btn.style.color = 'white'; btn.style.borderRadius = '50%'; btn.style.textAlign = 'center'; btn.style.lineHeight = '20px'; btn.style.cursor = 'pointer'; btn.style.fontSize = '12px'; btn.style.zIndex = '10';
+        
+        btn.onclick = (e) => { e.stopPropagation(); removeScreenshot(index); };
+        
+        const img = document.createElement('img');
+        if (file instanceof File || file instanceof Blob) {
+            img.src = URL.createObjectURL(file);
+        }
+        img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block';
+
+        // Doppelklick
+        img.ondblclick = () => {
+            const newTab = window.open();
+            if(newTab) newTab.document.write(`<html><body style="margin:0;background:#222;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${img.src}" style="max-width:100%;max-height:100%"></body></html>`);
+        };
+
+        div.appendChild(img);
+        div.appendChild(btn);
+        container.appendChild(div);
+
+        // --- HIER IST DER HOVER AUFRUF ---
+        addHoverPreview(div, img.src);
+    });
+}
+
+function removeScreenshot(index) {
+    todayScreenshots.splice(index, 1);
+    renderScreenshots();
+}
+// --- MODAL SCREENSHOT LOGIC (NEU) ---
+let currentModalScreenshots = [];
+
+function handleModalFileSelect(e) {
+    processModalFiles(e.target.files);
+    e.target.value = '';
+}
+
+function processModalFiles(files) {
+    if (currentModalScreenshots.length + files.length > 5) {
+        alert("Maximal 5 Screenshots erlaubt!");
+        return;
+    }
+    Array.from(files).forEach(file => {
+        if (!file.type.match('image.*')) { alert("Nur Bilder!"); return; }
+        currentModalScreenshots.push(file);
+    });
+    renderModalScreenshots();
+}
+
+function removeModalScreenshot(index) {
+    currentModalScreenshots.splice(index, 1);
+    renderModalScreenshots();
+}
+
+function renderModalScreenshots() {
+    const container = document.getElementById('modalScreenshotPreviews');
+    if(!container) return;
+    container.innerHTML = '';
+
+    // Erzwinge Flex-Layout wie bei der Hauptseite
+    container.style.display = 'flex';
+    container.style.flexWrap = 'wrap';
+    container.style.gap = '10px';
+    container.style.marginTop = '10px';
+
+    currentModalScreenshots.forEach((file, index) => {
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        // Styles direkt setzen (Stabilität!)
+        div.style.width = '100px'; 
+        div.style.height = '100px'; 
+        div.style.position = 'relative';
+        div.style.overflow = 'hidden'; 
+        div.style.borderRadius = '8px'; 
+        div.style.border = '1px solid #e9ecef'; 
+        div.style.flexShrink = '0';
+        div.style.background = '#fff';
+
+        const btn = document.createElement('div');
+        btn.className = 'btn-remove-img';
+        btn.innerHTML = '✕';
+        btn.style.position = 'absolute'; 
+        btn.style.top = '2px'; 
+        btn.style.right = '2px';
+        btn.style.width = '20px'; 
+        btn.style.height = '20px'; 
+        btn.style.background = 'rgba(255,0,0,0.8)';
+        btn.style.color = 'white'; 
+        btn.style.borderRadius = '50%'; 
+        btn.style.textAlign = 'center'; 
+        btn.style.lineHeight = '20px'; 
+        btn.style.cursor = 'pointer'; 
+        btn.style.fontSize = '12px'; 
+        btn.style.zIndex = '10';
+        
+        btn.onclick = (e) => { e.stopPropagation(); removeModalScreenshot(index); };
+
+        const img = document.createElement('img');
+        if (file instanceof File || file instanceof Blob) {
+            img.src = URL.createObjectURL(file);
+        }
+        
+        img.style.width = '100%'; 
+        img.style.height = '100%'; 
+        img.style.objectFit = 'cover'; 
+        img.style.display = 'block';
+        
+        img.ondblclick = () => {
+            const newTab = window.open();
+            if(newTab) newTab.document.write(`<html><body style="margin:0;background:#222;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${img.src}" style="max-width:100%;max-height:100%"></body></html>`);
+        };
+
+        div.appendChild(img);
+        div.appendChild(btn);
+        container.appendChild(div);
+        // --- HIER IST DER HOVER AUFRUF ---
+        addHoverPreview(div, img.src);
+    });
+}
+// --- HOVER EFFECT HELPER ---
+// --- HOVER EFFECT HELPER (VERGRÖSSERT) ---
+function addHoverPreview(targetDiv, imgSrc) {
+    let previewDiv = null;
+
+    targetDiv.addEventListener('mouseenter', () => {
+        previewDiv = document.createElement('div');
+        previewDiv.style.cssText = `
+            position: fixed;
+            z-index: 10000;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 5px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            pointer-events: none;
+            width: 400px;  /* VORHER: 300px */
+            height: 400px; /* VORHER: 300px */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        `;
+        
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.style.cssText = "max-width:100%; max-height:100%; object-fit:contain; border-radius:4px;";
+        
+        previewDiv.appendChild(img);
+        document.body.appendChild(previewDiv);
+
+        // Position berechnen
+        const rect = targetDiv.getBoundingClientRect();
+        
+        // Standard: Rechts daneben (mit etwas mehr Abstand)
+        let leftPos = rect.right + 20;
+        let topPos = rect.top;
+        
+        // Check: Passt es noch rechts auf den Bildschirm? (400px Breite + 20px Puffer)
+        if (leftPos + 420 > window.innerWidth) {
+            // Wenn nicht, dann LINKS anzeigen
+            leftPos = rect.left - 425; 
+        }
+        
+        // Check: Passt es unten noch hin?
+        if (topPos + 420 > window.innerHeight) {
+            // Wenn nicht, nach oben schieben
+            topPos = window.innerHeight - 420;
+        }
+
+        // Sicherheitscheck: Nicht oben aus dem Bild rutschen lassen
+        if (topPos < 10) topPos = 10;
+
+        previewDiv.style.left = leftPos + 'px';
+        previewDiv.style.top = topPos + 'px';
+    });
+
+    targetDiv.addEventListener('mouseleave', () => {
+        if (previewDiv) {
+            previewDiv.remove();
+            previewDiv = null;
+        }
+    });
+}
 load();
 </script>
 </body>
