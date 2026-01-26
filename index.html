@@ -6,6 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Trade Log</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -125,7 +128,7 @@ body{
 
 .calendar-top-card {
     flex: 1.2; /* Etwas größer für den Finanzkalender */
-	min-height: 548px; /* Mindesthöhe */
+    min-height: 548px; /* Mindesthöhe */
 }
 
 .calendar-bottom-card {
@@ -641,13 +644,25 @@ body{
     cursor: pointer;
     z-index: 100; /* Sicherstellen, dass es über dem Bild liegt */
 }
+
+/* --- STEUER VIEW STYLES --- */
+.tax-subview { display: none; animation: fadeIn 0.3s ease; }
+.tax-subview.active { display: block; }
+
+.tax-nav-btn.active {
+    background: #e7f5ff !important;
+    color: #1971c2 !important;
+    font-weight: bold;
+    border: 1px solid #1971c2 !important;
+}
+
 </style>
 </head>
 <body>
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version 02e</h1>
+<h1>Trade Log / Version 02i</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -655,6 +670,7 @@ body{
 <button class="nav-btn" onclick="showView('calendar')">Kalender</button>
 <button class="nav-btn" onclick="showView('wealth')">Vermögen</button>
 <button class="nav-btn" onclick="showView('statistics')">Statistiken</button>
+<button class="nav-btn" onclick="showView('tax')">Steuern</button>
 <button class="nav-btn" onclick="showView('export')">Im/Export</button>
 </div>
 <div class="content">
@@ -843,6 +859,99 @@ body{
 <div class="chart-title">📈 Insights</div>
 <div id="insights"></div>
 </div>
+</div>
+
+<!-- === STEUER VIEW (NEU) === -->
+<div id="tax" class="view">
+    <h2 style="text-align:center;margin-bottom:15px;color:#2c3e50">🇨🇭 Steuererklärung (Schaffhausen)</h2>
+    
+    <!-- Navigation innerhalb des Steuer-Tabs -->
+    <div style="display:flex; background:#f8f9fa; border-radius:8px; margin-bottom:20px; padding:5px; gap:5px;">
+        <button class="btn-sm btn-outline tax-nav-btn active" onclick="switchTaxSubView('overview')" style="flex:1; border:none;">Übersicht</button>
+        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('personal')" style="flex:1; border:none;">Persönlich</button>
+        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('expenses')" style="flex:1; border:none;">Ausgaben</button>
+        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('balances')" style="flex:1; border:none;">Kontostand</button>
+        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('export')" style="flex:1; border:none;">PDF Export</button>
+    </div>
+
+    <!-- 1. ÜBERSICHT -->
+    <div id="tax-overview" class="tax-subview active">
+        <div class="chart-container">
+            <div class="chart-title">📊 Jahres-Zusammenfassung</div>
+            <div id="taxOverviewContent">Lade Daten...</div>
+        </div>
+    </div>
+
+    <!-- 2. PERSÖNLICHE DATEN -->
+    <div id="tax-personal" class="tax-subview">
+        <div class="chart-container">
+            <div class="chart-title">👤 Persönliche Angaben</div>
+            <div class="info-box">Diese Daten werden für den PDF-Kopf benötigt und nur lokal gespeichert.</div>
+            
+            <div class="form-group"><label>Vorname Nachname</label><input type="text" id="taxName" placeholder="Max Mustermann"></div>
+            <div class="form-group"><label>Strasse Nr.</label><input type="text" id="taxAddress" placeholder="Musterstrasse 1"></div>
+            <div style="display:flex;gap:10px;">
+                <div class="form-group" style="flex:1"><label>PLZ</label><input type="text" id="taxZip" placeholder="8200"></div>
+                <div class="form-group" style="flex:2"><label>Ort</label><input type="text" id="taxCity" placeholder="Schaffhausen"></div>
+            </div>
+            <div class="form-group"><label>Steuer-ID / PID</label><input type="text" id="taxId" placeholder="123.456.789"></div>
+            
+            <button class="btn btn-primary" onclick="saveTaxData()">💾 Daten speichern</button>
+        </div>
+    </div>
+
+    <!-- 3. KONTOSTÄNDE -->
+    <div id="tax-balances" class="tax-subview">
+        <div class="chart-container">
+            <div class="chart-title">💰 Vermögensnachweis (CHF)</div>
+            <div class="info-box">Bitte gib hier die Kontostände per 01.01. und 31.12. ein (für die Vermögenssteuer).</div>
+            <div id="balanceEntries"></div>
+            <button class="btn btn-info" onclick="addBalanceYear()" style="margin-top:10px;">+ Jahr hinzufügen</button>
+        </div>
+    </div>
+
+<!-- 3. AUSGABEN (NEU) -->
+   <!-- 3. AUSGABEN (MIT SPEICHER-BUTTON) -->
+    <div id="tax-expenses" class="tax-subview">
+        <div class="chart-container">
+            <div class="chart-title">💸 Betriebsausgaben & Abzüge (CHF)</div>
+            <div class="info-box">
+                Hier Kosten erfassen (z.B. Software, Hardware, Büro).<br>
+                Diese werden im PDF separat aufgelistet.
+            </div>
+            
+            <div id="expenseEntries"></div>
+            
+            <div style="display:flex; gap:10px; margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+                <button class="btn btn-info" onclick="addExpenseItem()">+ Neue Zeile</button>
+                <button class="btn btn-primary" onclick="saveTaxData(false)">💾 Ausgaben Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. EXPORT -->
+    <div id="tax-export" class="tax-subview">
+        <div class="chart-container">
+            <div class="chart-title">📄 PDF Erstellen</div>
+            
+            <div class="form-group">
+                <label>Steuerjahr auswählen</label>
+                <select id="taxYearSelect" style="width:100%;padding:12px;border-radius:8px;"><option>Bitte wählen...</option></select>
+            </div>
+            
+            <div class="form-group">
+                <label>USD/CHF Jahresmittelkurs (ESTV)</label>
+                <input type="number" step="0.0001" id="taxExchangeRate" value="0.8500" placeholder="z.B. 0.8500">
+                <small style="color:#666">Den offiziellen Kurs findest du bei der ESTV.</small>
+            <div class="form-group">
+                <label>EUR/CHF Mittelkurs (ESTV)</label>
+                <input type="number" step="0.0001" id="taxExchangeRateEUR" value="0.9400">
+            </div>
+            </div>
+            
+            <button class="btn btn-success" onclick="generateTaxPDF()">🚀 PDF Generieren (Schaffhausen)</button>
+        </div>
+    </div>
 </div>
 
 <!-- EXPORT VIEW -->
@@ -1176,17 +1285,19 @@ function parseStandardCSV(csvText) {
     return result;
 }
 
-// --- NEUER PARSER FÜR TRADINGVIEW / IBKR ---
-// --- INTELLIGENTER PARSER (NETTO PNL) ---
+// --- INTELLIGENTER PARSER (NUR FUTURES + NETTO PNL) ---
 function parseTradingViewCSV(csvText) {
     const rows = csvText.split('\n').map(r => r.trim()).filter(r => r);
-    const idxSym = 0; // Symbol
-    const idxSide = 1; // Side
-    const idxQty = 2; // Qty
-    const idxPrice = 3; // Fill Price
-    const idxTime = 4; // Time
-    const idxNet = 5; // Net Amount
-    const idxComm = 6; // Commission (Gebühren)
+    const header = rows[0].split(',');
+    
+    // Spalten-Indexe finden
+    let idxComm = -1;
+    header.forEach((h, i) => {
+        if(h.toLowerCase().includes('commission') || h.toLowerCase().includes('comm')) idxComm = i;
+    });
+    if(idxComm === -1) idxComm = 6; 
+
+    const idxSym=0, idxSide=1, idxQty=2, idxPrice=3, idxTime=4, idxNet=5;
     
     const fills = [];
     
@@ -1194,30 +1305,45 @@ function parseTradingViewCSV(csvText) {
         const cols = rows[i].split(',');
         if(cols.length < 5) continue;
         
-        const symbol = cols[idxSym];
-        const side = cols[idxSide]; 
-        const qty = parseFloat(cols[idxQty]);
-        const price = parseFloat(cols[idxPrice]);
+        const symbol = cols[idxSym]; // z.B. "Mar20 '26" oder "EVO"
         const netAmount = parseFloat(cols[idxNet]);
-        const timeStr = cols[idxTime];
-        const comm = parseFloat(cols[idxComm]); // Gebühr für diesen Fill
+        const price = parseFloat(cols[idxPrice]);
+        const qty = parseFloat(cols[idxQty]);
         
-        const dt = new Date(timeStr);
-        if(isNaN(dt.getTime())) continue;
-        
-        let multiplier = 1;
-        if (price > 0 && qty > 0 && netAmount > 0) {
-            multiplier = Math.round(netAmount / (price * qty));
+        let commVal = 0;
+        if(cols[idxComm]) {
+            commVal = parseFloat(cols[idxComm]);
+            if(isNaN(commVal)) commVal = 0;
         }
         
+        // Multiplier Auto-Detect
+        let multiplier = 1;
+        if (price > 0 && qty > 0 && netAmount !== 0) {
+            multiplier = Math.round(Math.abs(netAmount) / (price * qty));
+        }
+        
+        // ====================================================
+        // FILTER: NUR FUTURES ERLAUBEN (ES, NQ, MES...)
+        // ====================================================
+        // Logik: Futures haben im IBKR-Export meist ein Jahr im Namen (z.B. '26) 
+        // UND einen Multiplier != 1 (z.B. 5 oder 50).
+        // Aktien (EVO) haben Multiplier 1 und meist keine Zahlen im Symbol.
+        
+        if (multiplier === 1 && !symbol.match(/\d/)) {
+            // Wenn Multiplier 1 ist UND keine Zahl im Symbol vorkommt -> Es ist eine Aktie (EVO)
+            console.log("Ignoriere Aktie/Non-Future:", symbol);
+            continue; // Überspringen!
+        }
+        // ====================================================
+        
         fills.push({
-            time: dt,
+            time: new Date(cols[idxTime]),
             symbol: symbol,
-            side: side,
+            side: cols[idxSide],
             qty: qty,
             price: price,
             multiplier: multiplier,
-            comm: comm // Wir speichern die Gebühr
+            comm: commVal 
         });
     }
     
@@ -1228,7 +1354,9 @@ function parseTradingViewCSV(csvText) {
 
     fills.forEach(fill => {
         const dateKey = dk(fill.time);
-        if(!result[dateKey]) result[dateKey] = { total: 0, trades: [] };
+        if(!result[dateKey]) result[dateKey] = { total: 0, fees: 0, trades: [] };
+        
+        result[dateKey].fees += fill.comm;
         
         for(let q=0; q < fill.qty; q++) {
             const matchIndex = openPositions.findIndex(p => p.side !== fill.side && p.symbol === fill.symbol);
@@ -1238,33 +1366,25 @@ function parseTradingViewCSV(csvText) {
                 openPositions.splice(matchIndex, 1); 
                 
                 let pnl = 0;
-                
-                // Brutto PnL berechnen
                 if(openPos.side === 'Buy') {
                     pnl = (fill.price - openPos.price) * fill.multiplier;
                 } else {
                     pnl = (openPos.price - fill.price) * fill.multiplier;
                 }
                 
-                // --- KORREKTUR: NETTO PNL BERECHNEN ---
-                // Wir ziehen die Gebühr vom Entry UND vom Exit ab.
-                // Da fill.comm die Gebühr für den ganzen Block ist, teilen wir durch qty.
                 const exitComm = fill.comm / fill.qty;
-                const entryComm = openPos.comm; // Wurde beim Entry schon durch qty geteilt gespeichert (siehe unten)
-                
+                const entryComm = openPos.comm; 
                 pnl = pnl - exitComm - entryComm;
-                // --------------------------------------
 
                 const tradeEntry = {
                     pnl: parseFloat(pnl.toFixed(2)),
                     start: openPos.time.toTimeString().slice(0,5),
                     end: fill.time.toTimeString().slice(0,5),
                     inst: fill.symbol.split(' ')[0], 
-                    qty: 1
+                    qty: 1,
+                    tag: ''
                 };
-                
                 result[dateKey].trades.push(tradeEntry);
-                result[dateKey].total += pnl; 
                 
             } else {
                 openPositions.push({
@@ -1272,12 +1392,17 @@ function parseTradingViewCSV(csvText) {
                     price: fill.price,
                     time: fill.time,
                     symbol: fill.symbol,
-                    // Wir speichern die Gebühr pro einzelnem Kontrakt für später
                     comm: fill.comm / fill.qty 
                 });
             }
         }
     });
+    
+    for (const key in result) {
+        const grossPnL = result[key].trades.reduce((sum, t) => sum + t.pnl, 0);
+        result[key].total = parseFloat(grossPnL.toFixed(2));
+        result[key].fees = parseFloat(result[key].fees.toFixed(2));
+    }
     
     return result;
 }
@@ -1529,7 +1654,7 @@ async function saveToday() {
 }
 
 // --- NAVIGATION & SWIPE ---
-const viewIds = ['today', 'calendar', 'wealth', 'statistics', 'export'];
+const viewIds = ['today', 'calendar', 'wealth', 'statistics', 'tax', 'export'];
 
 function showView(n){
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -1547,6 +1672,10 @@ function showView(n){
     else if(n==='wealth')renderWealth();
     else if(n==='statistics')renderStats();
     else if(n==='export')updateDataInfo();
+    else if(n==='tax') {
+        loadTaxData(); // Daten laden
+        switchTaxSubView('overview'); // Ersten Unter-Tab öffnen
+    }
     else if(n==='today')init();
 }
 
@@ -1722,12 +1851,19 @@ function renderMonthStatsCard(monthData, year, month) {
     let worstDay = null;
     
     monthData.forEach(day => {
-        // Brokergebühren berechnen
-        if (day.trades && day.trades.length > 0) {
+        let dailyFee = 0;
+        
+        // FIX: Gespeicherte Gebühren zuerst nehmen!
+        const entry = getEntry(day.date); // Hilfreich um Zugriff auf fees zu haben
+        
+        if (entry.fees && entry.fees > 0) {
+            dailyFee = entry.fees;
+        } else if (day.trades && day.trades.length > 0) {
             day.trades.forEach(t => {
-                monthFees += getComm(t.inst, t.qty || 1);
+                dailyFee += getComm(t.inst, t.qty || 1);
             });
         }
+        monthFees += dailyFee;
         
         // Bester/schlechtester Tag finden
         if (!bestDay || day.total > bestDay.total) bestDay = day;
@@ -1801,8 +1937,8 @@ function renderMonthStatsCard(monthData, year, month) {
     
     container.innerHTML = html;
 }
-// --- DAY DETAILS VIEW ---
-// WICHTIG: async hinzufügen!
+
+// --- DAY DETAILS VIEW (MIT KORREKTEN GEBÜHREN) ---
 async function renderDayDetails(d) {
     selDate = d;
     const k = dk(d);
@@ -1812,7 +1948,7 @@ async function renderDayDetails(d) {
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('day-details').classList.add('active');
     
-    // --- Stats Berechnung (unverändert) ---
+    // --- Stats Berechnung ---
     const totalPnL = entry.total;
     const wins = trades.filter(t => t.pnl > 0).length;
     const winRate = trades.length ? ((wins / trades.length) * 100).toFixed(0) + '%' : '0%';
@@ -1822,9 +1958,23 @@ async function renderDayDetails(d) {
     const avgPnL = trades.length ? (totalPnL / trades.length).toFixed(2) : 0;
     
     let totalMins = 0; let counted = 0;
+    
+    // --- FIX: GEBÜHREN ---
     let dayFees = 0;
+    
+    // 1. Priorität: Gespeicherte Gebühren vom Import
+    if (entry.fees && entry.fees > 0) {
+        dayFees = entry.fees;
+    } 
+    // 2. Fallback: Selbst berechnen (für alte Tage oder manuelle Einträge)
+    else if (trades.length > 0) {
+        trades.forEach(t => {
+            dayFees += getComm(t.inst, t.qty);
+        });
+    }
+    
+    // Restliche Schleife für Dauer-Berechnung
     trades.forEach(t => {
-        dayFees += getComm(t.inst, t.qty);
         if(t.start && t.end) {
             const s = new Date(`2000-01-01T${t.start}`);
             const e = new Date(`2000-01-01T${t.end}`);
@@ -2291,10 +2441,15 @@ function renderStats(){
     const mn=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
     document.getElementById('statsTitle').textContent=`${mn[m]} ${y}`;
     
-    // Global Loop for Lifetime Fees
+    // --- FIX: LIFETIME FEES BERECHNUNG ---
     let lifetimeFees = 0;
     Object.values(data).forEach(entry => {
-        if(entry.trades) {
+        // Priorität: Gespeicherte Gebühren (vom Import)
+        if (entry.fees && entry.fees > 0) {
+            lifetimeFees += entry.fees;
+        } 
+        // Fallback: Wenn keine Fees gespeichert sind, berechnen wir sie aus den Trades
+        else if (entry.trades) {
             entry.trades.forEach(t => lifetimeFees += getComm(t.inst, t.qty));
         }
     });
@@ -2304,19 +2459,27 @@ function renderStats(){
         const[y2,m2]=k.split('-'); return parseInt(y2)===y&&parseInt(m2)===m+1;
     }).sort().map(k=>({d:parseInt(k.split('-')[2]), v:getEntry(k).total, k:k, entry:getEntry(k)}));
     
-    // Month Fees & Fee Chart
+    // --- FIX: MONATS FEES & CHART ---
     let monthFees = 0;
     const feeChartData = [];
     me.forEach(dayObj => {
         let dailyFee = 0;
-        if(dayObj.entry.trades) {
+        
+        // Priorität: Gespeicherte Gebühren
+        if (dayObj.entry.fees && dayObj.entry.fees > 0) {
+            dailyFee = dayObj.entry.fees;
+        } 
+        // Fallback: Berechnen
+        else if (dayObj.entry.trades) {
             dayObj.entry.trades.forEach(t => dailyFee += getComm(t.inst, t.qty));
         }
+        
         monthFees += dailyFee;
         if(dailyFee > 0) feeChartData.push({ day: dayObj.d, fee: dailyFee });
     });
     document.getElementById('monthFees').textContent = '-' + monthFees.toFixed(2);
     
+    // ... (AB HIER BLEIBT DER REST DER FUNKTION GLEICH: const fc = ...)
     const fc = document.getElementById('feeBarChart'); fc.innerHTML = '';
     if(feeChartData.length) {
         const maxFee = Math.max(...feeChartData.map(d => d.fee));
@@ -2347,7 +2510,6 @@ function renderStats(){
         });
     } else { bc.innerHTML='<p style="text-align:center;color:#868e96;padding:50px">Keine Daten</p>'; }
 
-    // UPDATED SINGLE TRADE CHART (TRUE ZERO LINE CENTERED)
     const tcWrapper = document.getElementById('tradeChartWrapper');
     tcWrapper.innerHTML = '';
     const tStatsRow = document.getElementById('tradeStatsRow');
@@ -2375,24 +2537,14 @@ function renderStats(){
         allTrades.forEach(t => {
             const wrapper = document.createElement('div');
             wrapper.className = 'trade-bar-wrapper';
-            
-            // pct is relative to 50% height (half the container)
             const pct = (Math.abs(t.pnl) / absMax) * 45; 
-            
             const line = document.createElement('div');
             line.className = `trade-bar-line ${t.pnl >= 0 ? 'profit' : 'loss'}`;
             line.style.height = `${Math.max(pct, 1)}%`;
-            
-            if(t.pnl >= 0) {
-                line.style.bottom = '50%'; // Start at middle, grow up
-            } else {
-                line.style.top = '50%'; // Start at middle, grow down
-            }
-            
+            if(t.pnl >= 0) { line.style.bottom = '50%'; } else { line.style.top = '50%'; }
             wrapper.appendChild(line);
             container.appendChild(wrapper);
         });
-        
         tcWrapper.appendChild(container);
 
         const wins = allTrades.filter(t => t.pnl > 0);
@@ -2459,18 +2611,10 @@ function renderStats(){
     document.getElementById('streak').innerHTML=`<div class="stat-row"><span class="stat-row-label">Win Streak</span><span class="stat-row-value profit">${mws}</span></div><div class="stat-row"><span class="stat-row-label">Loss Streak</span><span class="stat-row-value loss">${mls}</span></div><div class="stat-row"><span class="stat-row-label">Gewinn Tage</span><span class="stat-row-value">${p}</span></div><div class="stat-row"><span class="stat-row-label">Verlust Tage</span><span class="stat-row-value">${lc}</span></div>`;
     document.getElementById('perf').innerHTML=`<div class="stat-row"><span class="stat-row-label">Max Drawdown</span><span class="stat-row-value loss">${maxDD.toFixed(2)}</span></div><div class="stat-row"><span class="stat-row-label">Max Gewinn</span><span class="stat-row-value profit">${w.length?Math.max(...w).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Max Verlust</span><span class="stat-row-value loss">${l.length?Math.min(...l).toFixed(2):0}</span></div>`;
     document.getElementById('insights').innerHTML=`<div class="stat-row"><span class="stat-row-label">Ø PnL/Trade</span><span class="stat-row-value" style="color:${t/md.length>=0?'#37b24d':'#fa5252'}">${md.length?(t/md.length).toFixed(2):0}</span></div><div class="stat-row"><span class="stat-row-label">Ø Holding Time</span><span class="stat-row-value">${avgHold}</span></div><div class="stat-row"><span class="stat-row-label">Profit Factor</span><span class="stat-row-value">${Math.abs(l.reduce((a,b)=>a+b,0))?(w.reduce((a,b)=>a+b,0)/Math.abs(l.reduce((a,b)=>a+b,0))).toFixed(2):'∞'}</span></div>`;
-    // --- STRATEGY STATS ---
+    
+    // Strategie Stats (bleibt gleich)
     const stratStats = {};
-    // Init mit 0
-    STRATEGIES.forEach(s => {
-        if(s.id) stratStats[s.id] = { pnl: 0, wins: 0, count: 0, label: s.label };
-    });
-    
-    // Daten sammeln (aus ALLEN Trades, nicht nur dieser Monat, oder?)
-    // Wenn du nur den aktuellen Monat willst, nimm "me" (monthEntries).
-    // Wenn du ALLE willst, nimm Object.values(data)
-    // Wir nehmen hier ALLE Trades für maximale Aussagekraft:
-    
+    STRATEGIES.forEach(s => { if(s.id) stratStats[s.id] = { pnl: 0, wins: 0, count: 0, label: s.label }; });
     Object.values(data).forEach(day => {
         if(day.trades) {
             day.trades.forEach(t => {
@@ -2482,28 +2626,15 @@ function renderStats(){
             });
         }
     });
-
-    // HTML bauen
     let stratHTML = '<table style="width:100%;font-size:0.85em;border-collapse:collapse;">';
     stratHTML += '<tr style="border-bottom:1px solid #eee;text-align:left;"><th style="padding:4px">Strategie</th><th style="text-align:right">#</th><th style="text-align:right">Win%</th><th style="text-align:right">PnL</th></tr>';
-    
-    // Sortieren nach PnL
     const sortedStrats = Object.values(stratStats).sort((a,b) => b.pnl - a.pnl);
-    
     sortedStrats.forEach(s => {
-        if(s.count === 0) return; // Leere Strategien ausblenden
+        if(s.count === 0) return; 
         const wr = ((s.wins / s.count) * 100).toFixed(0);
-        stratHTML += `
-            <tr style="border-bottom:1px solid #f8f9fa;">
-                <td style="padding:8px 4px;">${s.label}</td>
-                <td style="text-align:right;font-weight:600;">${s.count}</td>
-                <td style="text-align:right;color:${wr>=50?'#37b24d':'#fa5252'}">${wr}%</td>
-                <td style="text-align:right;font-weight:700;color:${s.pnl>=0?'#37b24d':'#fa5252'}">${s.pnl.toFixed(0)}</td>
-            </tr>
-        `;
+        stratHTML += `<tr style="border-bottom:1px solid #f8f9fa;"><td style="padding:8px 4px;">${s.label}</td><td style="text-align:right;font-weight:600;">${s.count}</td><td style="text-align:right;color:${wr>=50?'#37b24d':'#fa5252'}">${wr}%</td><td style="text-align:right;font-weight:700;color:${s.pnl>=0?'#37b24d':'#fa5252'}">${s.pnl.toFixed(0)}</td></tr>`;
     });
     stratHTML += '</table>';
-    
     const stEl = document.getElementById('strategyStats');
     if(stEl) {
         if(sortedStrats.filter(s=>s.count>0).length === 0) stEl.innerHTML = '<p style="text-align:center;color:#ccc;padding:10px;">Noch keine Tags gesetzt</p>';
@@ -2644,7 +2775,63 @@ async function exportZIP() {
         }
     }
 }
-// --- ZIP IMPORT LOGIC ---
+
+// ===========================================
+// === SICHERE IMPORT LOGIK (NEU) ===
+// ===========================================
+
+// --- SICHERE MERGE LOGIK ---
+function mergeData(newData) {
+    let count = 0;
+    
+    for (const k in newData) {
+        const newEntry = newData[k];
+        const oldEntry = data[k];
+
+        if (!oldEntry) {
+            // Tag existiert noch nicht -> Neu anlegen
+            data[k] = newEntry;
+        } else {
+            // Tag existiert schon -> Vorsichtig zusammenfügen
+            
+            // 1. PnL & Trades übernehmen (IBKR ist hier die Wahrheit)
+            if(newEntry.trades && newEntry.trades.length > 0) {
+                data[k].trades = newEntry.trades;
+                data[k].total = newEntry.total;
+            }
+
+            // 2. Notizen schützen
+            // Wenn Import leer ist, behalte alte Notiz. Wenn Import Text hat, nimm Import.
+            if (newEntry.note && newEntry.note.trim() !== "") {
+                data[k].note = newEntry.note;
+            }
+
+            // 3. Screenshots zusammenführen
+            const oldS = oldEntry.screenshots || [];
+            const newS = newEntry.screenshots || [];
+            data[k].screenshots = [...new Set([...oldS, ...newS])];
+
+            // 4. GEBÜHREN SCHÜTZEN (Der Fix!)
+            // Fall A: Import hat Gebühren (> 0) -> Wir nehmen die neuen (wahrscheinlich genauer)
+            if (newEntry.fees && newEntry.fees > 0) {
+                data[k].fees = newEntry.fees;
+            }
+            // Fall B: Import hat 0 oder keine Gebühren, aber wir haben alte -> ALTE BEHALTEN!
+            else if (oldEntry.fees && oldEntry.fees > 0) {
+                // Wir tun NICHTS. data[k].fees bleibt, wie es war.
+            }
+            // Fall C: Weder noch -> Bleibt 0.
+        }
+        count++;
+    }
+    
+    save();
+    init();
+    renderCal();
+    alert(`✅ Import erfolgreich!\n${count} Tage aktualisiert.\nGebühren von nicht betroffenen Tagen wurden geschützt.`);
+}
+
+// 2. ZIP IMPORT LISTENER (REPARIERT)
 document.getElementById('zipFile').onchange = async function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -2652,81 +2839,61 @@ document.getElementById('zipFile').onchange = async function(e) {
     // Button Feedback
     const btn = document.querySelector('button[onclick="document.getElementById(\'zipFile\').click()"]');
     const oldText = btn ? btn.textContent : "";
-    if(btn) {
-        btn.textContent = "⏳ Importiere ZIP...";
-        btn.disabled = true;
-        btn.style.opacity = "0.7";
-    }
+    if(btn) { btn.textContent = "⏳ Importiere ZIP..."; btn.disabled = true; }
     
     try {
-        // 1. ZIP laden
-        const zipData = await JSZip.loadAsync(file);
+        const zip = await JSZip.loadAsync(file);
+        let csvText = null;
         
-        // 2. CSV finden und einlesen
-        let csvContent = null;
-        const csvFile = zipData.file("pnl_data.csv");
-        if (csvFile) {
-            csvContent = await csvFile.async("text");
+        // CSV suchen
+        if(zip.file("pnl_data.csv")) {
+            csvText = await zip.file("pnl_data.csv").async("text");
         } else {
-            // Fallback: Suche nach beliebiger CSV
-            const csvFiles = Object.keys(zipData.files).filter(name => name.endsWith('.csv'));
-            if (csvFiles.length > 0) {
-                csvContent = await zipData.file(csvFiles[0]).async("text");
+            // Fallback
+            for (const f in zip.files) {
+                if (f.endsWith('.csv')) { csvText = await zip.file(f).async("text"); break; }
             }
         }
         
-        if (!csvContent) {
-            alert("❌ Keine CSV-Datei im ZIP gefunden!");
-            return;
-        }
-        
-        // 3. CSV parsen (nutzt deine existierende Funktion)
-        const importedData = parseCSV(csvContent);
-        
-        // 4. Bilder aus dem screenshots/ Ordner einlesen
-        let imageCount = 0;
-        const screenshotsFolder = zipData.folder("screenshots");
-        
-        if (screenshotsFolder) {
-            // Gehe durch alle Dateien im screenshots Ordner
-            for (const filename in zipData.files) {
-                if (filename.startsWith("screenshots/") && !zipData.files[filename].dir) {
-                    const imgFilename = filename.replace("screenshots/", "");
+        if (!csvText) throw new Error("Keine CSV im ZIP gefunden!");
+
+        // Daten parsen
+        const newData = parseCSV(csvText);
+
+        // --- BILDER IMPORT (FIXED) ---
+        // Wir gehen alle Dateien im ZIP durch und prüfen den Pfad manuell
+        // Das ist stabiler als zip.folder()
+        for (const filename in zip.files) {
+            // Wir suchen Dateien, die im Ordner "screenshots/" liegen und keine Ordner sind
+            if (filename.startsWith("screenshots/") && !zip.files[filename].dir) {
+                
+                // Datei aus dem Haupt-Objekt holen (sicherer Zugriff)
+                const fileObj = zip.file(filename);
+                
+                if (fileObj) {
+                    const blob = await fileObj.async("blob");
+                    // Dateinamen bereinigen: "screenshots/meinbild.jpg" -> "meinbild.jpg"
+                    const cleanName = filename.split('/').pop();
                     
-                    // Blob aus ZIP holen
-                    const blob = await zipData.file(filename).async("blob");
-                    
-                    // In IndexedDB speichern
-                    await saveImageToDB(imgFilename, blob);
-                    imageCount++;
+                    if (cleanName) {
+                        await saveImageToDB(cleanName, blob);
+                    }
                 }
             }
         }
         
-        // 5. Daten zusammenführen (merge statt überschreiben)
-        data = {...data, ...importedData};
-        
-        // 6. Speichern und UI aktualisieren
-        save();
-        updateDataInfo();
-        renderCal();
-        
-        alert(`✅ Import erfolgreich!\n${Object.keys(importedData).length} Einträge und ${imageCount} Bilder importiert.`);
+        mergeData(newData);
         
     } catch (err) {
         console.error(err);
-        alert('❌ ZIP-Import fehlgeschlagen: ' + err.message);
+        alert('❌ ZIP Fehler: ' + err.message);
     } finally {
-        // Button zurücksetzen
-        if(btn) {
-            btn.textContent = oldText;
-            btn.disabled = false;
-            btn.style.opacity = "1";
-        }
-        e.target.value = ''; // Input zurücksetzen
+        if(btn) { btn.textContent = oldText; btn.disabled = false; }
+        e.target.value = '';
     }
 };
-// --- IMPORT EVENT HANDLER (MIT MERGE-LOGIK) ---
+
+// 3. CSV IMPORT LISTENER
 document.getElementById('csvFile').onchange = function(e) {
     const file = e.target.files[0];
     if(!file) return;
@@ -2734,49 +2901,14 @@ document.getElementById('csvFile').onchange = function(e) {
     const reader = new FileReader();
     reader.onload = function(ev) {
         try {
-            // 1. Neue Daten parsen
-            const importedData = parseCSV(ev.target.result);
-            
-            // 2. MERGE LOGIC: Vorhandene Notizen/Bilder retten
-            Object.keys(importedData).forEach(dateKey => {
-                // Wenn wir für diesen Tag schon Daten haben...
-                if (data[dateKey]) {
-                    // ...dann behalten wir Notiz und Screenshots bei!
-                    // Wir überschreiben nur PnL und Trades (da die aus dem Import genauer sind)
-                    
-                    if (data[dateKey].note) {
-                        importedData[dateKey].note = data[dateKey].note;
-                    }
-                    if (data[dateKey].screenshots && data[dateKey].screenshots.length > 0) {
-                        importedData[dateKey].screenshots = data[dateKey].screenshots;
-                    }
-                    
-                    // Optional: Wenn im Import keine Trades sind (z.B. manuelles CSV Backup),
-                    // aber wir lokal welche haben, behalten wir die lokalen?
-                    // Nein, Import hat hier Vorrang (Backup Wiederherstellung).
-                }
-            });
-
-            // 3. Daten zusammenfügen
-            data = { ...data, ...importedData };
-            
-            save(); 
-            alert(`✓ Import erfolgreich!\nNotizen und Bilder wurden beibehalten.`); 
-            
-            // UI aktualisieren
-            updateDataInfo(); 
-            renderCal();
-            
-            // Falls wir gerade "Heute" anschauen, neu laden
-            if(document.getElementById('today').classList.contains('active')) init();
-            
+            const newData = parseCSV(ev.target.result);
+            mergeData(newData);
         } catch(err) {
             console.error(err); 
-            alert('Import-Fehler! Ist die CSV Datei korrekt?');
+            alert('❌ CSV Fehler: Ist das Format korrekt?');
         }
     };
     reader.readAsText(file);
-    // Reset Input, damit man die gleiche Datei nochmal wählen kann
     e.target.value = '';
 };
 
@@ -3017,6 +3149,404 @@ function clearAllPreviews() {
     const existing = document.querySelectorAll('.hover-preview-overlay');
     existing.forEach(el => el.remove());
 }
+
+// ==========================================
+// === STEUER & PDF LOGIK (SCHAFFHAUSEN) ===
+// ==========================================
+
+let taxData = { personal: {}, balances: {} };
+
+// 1. Laden und Speichern der Steuerdaten (separat von Trading-Daten)
+function loadTaxData() {
+    const l = localStorage.getItem('tradeLog_tax');
+    if(l) taxData = JSON.parse(l);
+    
+    // Felder füllen
+    if(document.getElementById('taxName')) {
+        document.getElementById('taxName').value = taxData.personal.name || '';
+        document.getElementById('taxAddress').value = taxData.personal.address || '';
+        document.getElementById('taxZip').value = taxData.personal.zip || '';
+        document.getElementById('taxCity').value = taxData.personal.city || '';
+        document.getElementById('taxId').value = taxData.personal.id || '';
+    }
+}
+
+// Speicher-Funktion mit "Stumm-Schaltung"
+function saveTaxData(silent = false) {
+    taxData.personal = {
+        name: document.getElementById('taxName').value,
+        address: document.getElementById('taxAddress').value,
+        zip: document.getElementById('taxZip').value,
+        city: document.getElementById('taxCity').value,
+        id: document.getElementById('taxId').value
+    };
+    
+    // In LocalStorage speichern
+    localStorage.setItem('tradeLog_tax', JSON.stringify(taxData));
+    
+    // In IndexedDB speichern (für Backup)
+    openDB().then(db => {
+        const tx = db.transaction(STORE_SETTINGS, 'readwrite');
+        tx.objectStore(STORE_SETTINGS).put(taxData, 'taxData');
+    });
+
+    // Nur Meldung zeigen, wenn NICHT stummgeschaltet
+    if (!silent) {
+        alert("Daten gespeichert! ✓");
+    }
+}
+
+// 2. Navigation im Steuer-Tab
+function switchTaxSubView(view) {
+    // 1. Views umschalten
+    document.querySelectorAll('.tax-subview').forEach(e => e.classList.remove('active'));
+    document.getElementById('tax-' + view).classList.add('active');
+    
+    // 2. Buttons färben (Robuste Methode)
+    document.querySelectorAll('.tax-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+        // Wir prüfen, ob im "onclick" Text der Name des Views vorkommt
+        // z.B. onclick="switchTaxSubView('overview')" enthält 'overview'
+        if(btn.getAttribute('onclick').includes(`'${view}'`)) {
+            btn.classList.add('active');
+        }
+    });
+
+    if(view === 'overview') renderTaxOverview();
+    if(view === 'balances') renderBalances();
+    if(view === 'expenses') renderExpenses();
+    if(view === 'export') renderTaxExport();
+}
+
+// --- STEUER ÜBERSICHT (MIT INTELLIGENTER GEBÜHREN-BERECHNUNG) ---
+function renderTaxOverview() {
+    const div = document.getElementById('taxOverviewContent');
+    const years = new Set();
+    Object.keys(data).forEach(k => years.add(k.split('-')[0]));
+    
+    let html = '<table style="width:100%; border-collapse:collapse; font-size:0.9em;">';
+    html += '<tr style="background:#f1f3f5; text-align:left;"> <th style="padding:8px;">Jahr</th> <th style="text-align:right">Netto (USD)</th> <th style="text-align:right">Gebühren (USD)</th> </tr>';
+    
+    Array.from(years).sort().reverse().forEach(y => {
+        let net = 0, fees = 0;
+        
+        Object.keys(data).filter(k => k.startsWith(y)).forEach(k => {
+            const d = data[k];
+            net += d.total || 0;
+            
+            // INTELLIGENTE GEBÜHREN-LOGIK:
+            let dailyFees = 0;
+            if (d.fees && d.fees > 0) {
+                // A) Wir haben echte Import-Daten
+                dailyFees = d.fees;
+            } else if (d.trades && d.trades.length > 0) {
+                // B) Keine Daten? Wir schätzen anhand der Trades (wie in Statistik)
+                d.trades.forEach(t => dailyFees += getComm(t.inst, t.qty));
+            }
+            fees += dailyFees;
+        });
+        
+        html += `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:8px; font-weight:bold;">${y}</td>
+                <td style="text-align:right; color:${net >= 0 ? '#2b8a3e' : '#c92a2a'}">${net.toFixed(2)}</td>
+                <td style="text-align:right; color:#e67700">-${fees.toFixed(2)}</td>
+            </tr>`;
+    });
+    html += '</table>';
+    div.innerHTML = html;
+}
+
+// 4. Vermögen (Kontostände)
+function renderBalances() {
+    const div = document.getElementById('balanceEntries');
+    div.innerHTML = '';
+    
+    // Wir nehmen die Jahre aus den Trading-Daten als Basis
+    const years = new Set(); 
+    Object.keys(data).forEach(k => years.add(k.split('-')[0]));
+    // Plus evtl. schon gespeicherte Jahre
+    Object.keys(taxData.balances).forEach(y => years.add(y));
+    
+    Array.from(years).sort().reverse().forEach(y => {
+        const bal = taxData.balances[y] || { start: 0, end: 0 };
+        
+        const row = document.createElement('div');
+        row.className = 'form-group';
+        row.innerHTML = `
+            <label style="color:#1971c2">Steuerjahr ${y}</label>
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1">
+                    <small>01.01. (CHF)</small>
+                    <input type="number" step="0.01" value="${bal.start}" onchange="updateBalance('${y}', 'start', this.value)">
+                </div>
+                <div style="flex:1">
+                    <small>31.12. (CHF)</small>
+                    <input type="number" step="0.01" value="${bal.end}" onchange="updateBalance('${y}', 'end', this.value)">
+                </div>
+            </div>
+        `;
+        div.appendChild(row);
+    });
+}
+
+function updateBalance(year, type, val) {
+    if(!taxData.balances[year]) taxData.balances[year] = { start: 0, end: 0 };
+    taxData.balances[year][type] = parseFloat(val) || 0;
+    localStorage.setItem('tradeLog_tax', JSON.stringify(taxData));
+}
+
+function addBalanceYear() {
+    const y = prompt("Welches Jahr hinzufügen? (z.B. 2026)");
+    if(y && y.length === 4) {
+        if(!taxData.balances[y]) taxData.balances[y] = { start: 0, end: 0 };
+        renderBalances();
+    }
+}
+
+// 5. Export Vorbereitung
+function renderTaxExport() {
+    const select = document.getElementById('taxYearSelect');
+    select.innerHTML = '<option value="">Bitte Jahr wählen...</option>';
+    const years = new Set();
+    Object.keys(data).forEach(k => years.add(k.split('-')[0]));
+    
+    Array.from(years).sort().reverse().forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.text = y;
+        select.add(opt);
+    });
+}
+
+// --- PDF GENERATOR (MIT DETAILLIERTEM JOURNAL) ---
+async function generateTaxPDF() {
+    const year = document.getElementById('taxYearSelect').value;
+    if(!year || year.length < 4) return alert("Bitte wähle zuerst ein Steuerjahr aus.");
+    
+    const rate = parseFloat(document.getElementById('taxExchangeRate').value);
+    if(!rate || rate <= 0) return alert("Bitte gib einen gültigen Wechselkurs ein.");
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const p = taxData.personal;
+
+    // ==========================================
+    // SEITE 1: DECKBLATT & ZUSAMMENFASSUNG
+    // ==========================================
+
+    // Header
+    doc.setFontSize(22); doc.setTextColor(44, 62, 80);
+    doc.text("Jahresabschluss Trading", 105, 20, { align: 'center' });
+    doc.setFontSize(12); doc.setTextColor(100);
+    doc.text(`Steuerperiode ${year} | Kanton Schaffhausen`, 105, 28, { align: 'center' });
+    
+    // Stammdaten
+    doc.setDrawColor(200); doc.line(20, 35, 190, 35);
+    doc.setFontSize(10); doc.setTextColor(0);
+    doc.text(`Name: ${p.name || '-'}`, 20, 45);
+    doc.text(`PID: ${p.id || '-'}`, 120, 45);
+    doc.text(`Adresse: ${p.address || '-'}, ${p.zip || ''} ${p.city || '-'}`, 20, 50);
+
+    // --- BERECHNUNG GESAMTSUMMEN ---
+    let netPnL_USD = 0;
+    let totalFees_USD = 0;
+    
+    // Wir sortieren die Tage für später gleich mit
+    const sortedDays = Object.keys(data).filter(k => k.startsWith(year)).sort();
+
+    sortedDays.forEach(k => {
+        const d = data[k];
+        netPnL_USD += d.total || 0; // Das ist der Netto-Gewinn
+        
+        let dailyFees = 0;
+        if (d.fees && d.fees > 0) dailyFees = d.fees;
+        else if (d.trades) d.trades.forEach(t => dailyFees += getComm(t.inst, t.qty));
+        totalFees_USD += dailyFees;
+    });
+    
+    const grossPnL_USD = netPnL_USD + totalFees_USD;
+    const grossCHF = grossPnL_USD * rate;
+    const feesCHF = totalFees_USD * rate;
+    const netCHF = netPnL_USD * rate;
+
+    // 1. ERFOLGSRECHNUNG
+    doc.setFont(undefined, 'bold');
+    doc.text("1. Handelsergebnis (Wertschriftenhandel)", 20, 65);
+    
+    const tradeBody = [
+        ['Brutto-Handelsgewinn', grossPnL_USD.toFixed(2) + ' USD', grossCHF.toFixed(2) + ' CHF'],
+        ['./. Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
+        ['= NETTO HANDELSGEWINN', netPnL_USD.toFixed(2) + ' USD', netCHF.toFixed(2) + ' CHF']
+    ];
+    
+    doc.autoTable({
+        startY: 70,
+        head: [['Position', 'Betrag (Orig.)', 'Betrag (CHF)']],
+        body: tradeBody,
+        theme: 'grid',
+        headStyles: { fillColor: [44, 62, 80] },
+        foot: [['Kurs: 1 USD = ' + rate + ' CHF (ESTV Jahresmittel)', '', '']],
+        footStyles: { fillColor: [240, 240, 240], textColor: [50], fontStyle: 'italic' }
+    });
+
+    // 2. AUSGABEN
+    let finalY = doc.lastAutoTable.finalY + 15;
+    const rateEUR = parseFloat(document.getElementById('taxExchangeRateEUR')?.value) || 0.94;
+    const expenses = (taxData.expenses || []).filter(e => e.year === year);
+    
+    if (expenses.length > 0) {
+        doc.setFont(undefined, 'bold');
+        doc.text("2. Geltend gemachte Aufwendungen", 20, finalY);
+        
+        let totalExpCHF = 0;
+        const expBody = expenses.map(e => {
+            const r = e.rate || 1.00;
+            const amountCHF = e.amount * r;
+            totalExpCHF += amountCHF;
+            
+            // Währungssymbol
+            const curr = e.currency || 'CHF';
+            const rateInfo = curr !== 'CHF' ? `(@ ${r})` : '';
+
+            return [
+                e.cat + ` (${e.desc})`,
+                `${e.amount.toFixed(2)} ${curr} ${rateInfo}`,
+                '-' + amountCHF.toFixed(2) + ' CHF'
+            ];
+        });
+        
+        expBody.push(['Total Aufwendungen', '', '-' + totalExpCHF.toFixed(2) + ' CHF']);
+        
+        // REINGEWINN BERECHNEN
+        const finalProfitCHF = netCHF - totalExpCHF;
+        expBody.push(['', '', '']); // Leerzeile
+        expBody.push(['REINGEWINN (zu versteuern)', '', finalProfitCHF.toFixed(2) + ' CHF']);
+        
+        doc.autoTable({
+            startY: finalY + 5,
+            head: [['Position', 'Original', 'Betrag (CHF)']],
+            body: expBody,
+            theme: 'striped',
+            headStyles: { fillColor: [100, 100, 100] }, // Grau
+            columnStyles: { 2: { halign: 'right', fontStyle: 'bold' }, 1: { halign: 'right' } }
+        });
+        finalY = doc.lastAutoTable.finalY + 15;
+    } else {
+        doc.setFontSize(10); doc.setFont(undefined, 'italic');
+        doc.text("(Keine weiteren Aufwendungen geltend gemacht)", 20, finalY);
+        finalY += 10;
+    }
+
+    // 3. VERMÖGEN
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text("3. Vermögensstatus", 20, finalY);
+    const bal = taxData.balances[year] || { start: 0, end: 0 };
+    doc.autoTable({
+        startY: finalY + 5,
+        body: [
+            ['Kontostand 01.01.' + year, bal.start.toFixed(2) + ' CHF'],
+            ['Kontostand 31.12.' + year, bal.end.toFixed(2) + ' CHF']
+        ],
+        theme: 'plain'
+    });
+
+    // ==========================================
+    // SEITE 2+: DETAILLIERTES JOURNAL
+    // ==========================================
+    
+    doc.addPage(); // Neue Seite erzwingen
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text("4. Detailliertes Trading-Journal (Nachweis)", 20, 20);
+    
+    const journalBody = [];
+    
+    // Daten aufbereiten
+    sortedDays.forEach(k => {
+        const d = data[k];
+        
+        // Netto PnL (haben wir gespeichert)
+        const net = d.total || 0;
+        
+        // Gebühren (holen oder berechnen)
+        let fees = 0;
+        if (d.fees && d.fees > 0) fees = d.fees;
+        else if (d.trades) d.trades.forEach(t => fees += getComm(t.inst, t.qty));
+        
+        // Brutto zurückrechnen
+        const gross = net + fees;
+        
+        // Nur Tage mit Aktivität anzeigen
+        if (Math.abs(gross) < 0.01 && Math.abs(fees) < 0.01) return;
+        
+        // Datum formatieren
+        const [y, m, day] = k.split('-');
+        
+        journalBody.push([
+            `${day}.${m}.${y}`,
+            gross.toFixed(2),
+            '-' + fees.toFixed(2),
+            net.toFixed(2)
+        ]);
+    });
+    
+    // Summenzeile für Journal
+    journalBody.push([
+        'TOTAL JAHR (USD)',
+        grossPnL_USD.toFixed(2),
+        '-' + totalFees_USD.toFixed(2),
+        netPnL_USD.toFixed(2)
+    ]);
+
+    doc.autoTable({
+        startY: 25,
+        head: [['Datum', 'Brutto PnL (USD)', 'Gebühren (USD)', 'Netto PnL (USD)']],
+        body: journalBody,
+        theme: 'grid',
+        headStyles: { fillColor: [50, 50, 50] },
+        columnStyles: {
+            1: { halign: 'right' },
+            2: { halign: 'right', textColor: [200, 0, 0] },
+            3: { halign: 'right', fontStyle: 'bold' }
+        },
+        // Die letzte Zeile (Total) hervorheben
+        didParseCell: function (data) {
+            if (data.row.index === journalBody.length - 1) {
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fillColor = [220, 220, 220];
+            }
+        }
+    });
+
+    // ==========================================
+    // UNTERSCHRIFT
+    // ==========================================
+    
+    // Wir schauen, wo die Tabelle aufgehört hat
+    let signY = doc.lastAutoTable.finalY + 30;
+    
+    // Falls wir am Ende der Seite sind, neue Seite für Unterschrift
+    if (signY > 250) {
+        doc.addPage();
+        signY = 40;
+    }
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text("Ort, Datum: ___________________________________", 20, signY);
+    doc.text("Unterschrift: ___________________________________", 110, signY);
+
+    // Speichern
+    const safeName = (p.name || 'Steuer').replace(/[^a-z0-9]/gi, '_');
+    doc.save(`Steuerreport_${year}_${safeName}.pdf`);
+}
+
+// Initialisierung auch für Steuerdaten aufrufen
+const originalInit = window.onload; // Falls vorhanden
+// Wir packen den Load-Aufruf in den bestehenden Init-Flow oder rufen ihn manuell auf.
+// Da du "load()" am Ende des Scripts hast, fügen wir "loadTaxData()" dort hinzu.
+// Siehe Schritt 5.
+
 load();
 // --- PASTE SUPPORT (STRG+V / CMD+V) ---
 document.addEventListener('paste', function(e) {
@@ -3062,6 +3592,153 @@ document.addEventListener('paste', function(e) {
         }
     }
 });
+
+// --- AUSGABEN LOGIC (LIVE UPDATE FIX) ---
+function renderExpenses() {
+    const container = document.getElementById('expenseEntries');
+    if(!container) return;
+    container.innerHTML = '';
+    
+    if(!taxData.expenses) taxData.expenses = [];
+    
+    taxData.expenses.forEach((ex, i) => {
+        if(!ex.currency) ex.currency = 'CHF';
+        // Wenn kein Kurs da ist (oder 0), Standard auf 1
+        if(ex.rate === undefined || ex.rate === null || ex.rate === '') ex.rate = 1.00;
+
+        const div = document.createElement('div');
+        div.style.marginBottom = "15px";
+        div.style.padding = "15px";
+        div.style.background = "#fff";
+        div.style.borderRadius = "8px";
+        div.style.border = "1px solid #e9ecef";
+        div.style.borderLeft = "5px solid #17a2b8";
+
+        // Sofortige Berechnung für die Anzeige
+        const amount = parseFloat(ex.amount) || 0;
+        const rate = parseFloat(ex.rate) || 0;
+        const totalCHF = (amount * rate).toFixed(2);
+
+        div.innerHTML = `
+            <!-- ZEILE 1: Beschreibung & Jahr -->
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:2">
+                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Beschreibung</label>
+                    <input type="text" value="${ex.desc}" 
+                           oninput="updateExp(${i},'desc',this.value)" 
+                           style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Steuerjahr</label>
+                    <select onchange="updateExp(${i},'year',this.value)" 
+                            style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;">
+                        <option value="2025" ${ex.year==='2025'?'selected':''}>2025</option>
+                        <option value="2026" ${ex.year==='2026'?'selected':''}>2026</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- ZEILE 2: Kategorie -->
+            <div style="margin-bottom:10px;">
+                <label style="font-size:0.75em; color:#666; font-weight:bold;">Kategorie</label>
+                <select style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;" 
+                        onchange="updateExp(${i},'cat',this.value)">
+                    <option value="Software/Daten" ${ex.cat==='Software/Daten'?'selected':''}>Software / Daten</option>
+                    <option value="Hardware" ${ex.cat==='Hardware'?'selected':''}>Hardware / Büro</option>
+                    <option value="Bildung" ${ex.cat==='Bildung'?'selected':''}>Bildung / Kurse</option>
+                    <option value="Säule 3a" ${ex.cat==='Säule 3a'?'selected':''}>Säule 3a</option>
+                    <option value="Krankenkasse" ${ex.cat==='Krankenkasse'?'selected':''}>Krankenkasse</option>
+                    <option value="Werbung" ${ex.cat==='Werbung'?'selected':''}>Werbekosten</option>
+                    <option value="Sonstiges" ${ex.cat==='Sonstiges'?'selected':''}>Sonstiges</option>
+                </select>
+            </div>
+
+            <!-- ZEILE 3: Betrag, Währung, Kurs, Löschen -->
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+                
+                <!-- Betrag -->
+                <div style="flex:2">
+                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Betrag</label>
+                    <input type="number" step="0.01" value="${ex.amount}" 
+                           oninput="updateExp(${i},'amount',this.value)" 
+                           style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
+                </div>
+                
+                <!-- Währung -->
+                <div style="width:80px">
+                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Währung</label>
+                    <select style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;" 
+                            onchange="updateExp(${i},'currency',this.value)">
+                        <option value="CHF" ${ex.currency==='CHF'?'selected':''}>CHF</option>
+                        <option value="USD" ${ex.currency==='USD'?'selected':''}>USD</option>
+                        <option value="EUR" ${ex.currency==='EUR'?'selected':''}>EUR</option>
+                    </select>
+                </div>
+
+                <!-- Kurs -->
+                <div style="flex:1">
+                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Kurs zu CHF</label>
+                    <input type="number" step="0.0001" value="${ex.rate}" 
+                           oninput="updateExp(${i},'rate',this.value)" 
+                           style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
+                </div>
+                
+                <!-- Löschen Button -->
+                <button onclick="removeExp(${i})" 
+                        style="width:40px; height:38px; background:#fa5252; color:white; border:none; border-radius:4px; cursor:pointer; flex-shrink:0; margin-bottom:1px;">
+                    ✕
+                </button>
+            </div>
+            
+            <!-- Live Vorschau (Mit ID für Update) -->
+            <div id="preview_${i}" style="text-align:right; font-size:0.9em; color:#1971c2; margin-top:8px; font-weight:bold; padding-top:5px; border-top:1px dashed #eee;">
+                = ${totalCHF} CHF
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function updateExp(i, field, val) {
+    // 1. Daten im Hintergrund-Objekt aktualisieren
+    // Wir speichern den Wert direkt (auch als String), damit das Eingabefeld nicht springt (z.B. bei "10.")
+    taxData.expenses[i][field] = val;
+
+    // 2. Spezialfall: Währung auf CHF geändert -> Kurs auf 1 setzen
+    if(field === 'currency' && val === 'CHF') {
+        taxData.expenses[i].rate = 1.00;
+        renderExpenses(); // Hier müssen wir neu rendern, um das Kurs-Feld zu aktualisieren
+        return;
+    }
+
+    // 3. LIVE UPDATE DES TEXTES (Ohne Re-Render!)
+    // Wir suchen nur das blaue Textfeld für diese Zeile
+    const previewEl = document.getElementById('preview_' + i);
+    if (previewEl) {
+        const amount = parseFloat(taxData.expenses[i].amount) || 0;
+        const rate = parseFloat(taxData.expenses[i].rate) || 0;
+        const total = (amount * rate).toFixed(2);
+        
+        previewEl.innerHTML = `= ${total} CHF`;
+    }
+}
+
+function addExpenseItem() {
+    if(!taxData.expenses) taxData.expenses = [];
+    taxData.expenses.push({ 
+        desc: '', amount: 0, year: new Date().getFullYear().toString(), 
+        cat: 'Software/Daten', currency: 'CHF', rate: 1.00 
+    });
+    // Nur beim Hinzufügen rendern wir neu
+    renderExpenses();
+}
+
+function removeExp(i) {
+    taxData.expenses.splice(i, 1);
+    // Beim Löschen rendern wir neu
+    renderExpenses();
+}
+
 </script>
 </body>
 </html>
