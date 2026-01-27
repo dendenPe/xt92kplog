@@ -3376,7 +3376,7 @@ async function generateTaxPDF() {
     
     const tradeBody = [
         ['Brutto-Handelsgewinn', grossPnL_USD.toFixed(2) + ' USD', grossCHF.toFixed(2) + ' CHF'],
-        ['./. Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
+        ['Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
         ['= NETTO HANDELSGEWINN', netPnL_USD.toFixed(2) + ' USD', netCHF.toFixed(2) + ' CHF']
     ];
     
@@ -3452,71 +3452,119 @@ async function generateTaxPDF() {
     });
 
     // ==========================================
-    // SEITE 2+: DETAILLIERTES JOURNAL
-    // ==========================================
-    
-    doc.addPage(); // Neue Seite erzwingen
-    doc.setFontSize(12); doc.setFont(undefined, 'bold');
-    doc.text("4. Detailliertes Trading-Journal (Nachweis)", 20, 20);
-    
-    const journalBody = [];
-    
-    // Daten aufbereiten
-    sortedDays.forEach(k => {
-        const d = data[k];
-        
-        // Netto PnL (haben wir gespeichert)
-        const net = d.total || 0;
-        
-        // Gebühren (holen oder berechnen)
-        let fees = 0;
-        if (d.fees && d.fees > 0) fees = d.fees;
-        else if (d.trades) d.trades.forEach(t => fees += getComm(t.inst, t.qty));
-        
-        // Brutto zurückrechnen
-        const gross = net + fees;
-        
-        // Nur Tage mit Aktivität anzeigen
-        if (Math.abs(gross) < 0.01 && Math.abs(fees) < 0.01) return;
-        
-        // Datum formatieren
-        const [y, m, day] = k.split('-');
-        
-        journalBody.push([
-            `${day}.${m}.${y}`,
-            gross.toFixed(2),
-            '-' + fees.toFixed(2),
-            net.toFixed(2)
-        ]);
-    });
-    
-    // Summenzeile für Journal
-    journalBody.push([
-        'TOTAL JAHR (USD)',
-        grossPnL_USD.toFixed(2),
-        '-' + totalFees_USD.toFixed(2),
-        netPnL_USD.toFixed(2)
-    ]);
+// SEITE 2+: DETAILLIERTES JOURNAL (MIT CHF)
+// ==========================================
 
-    doc.autoTable({
-        startY: 25,
-        head: [['Datum', 'Brutto PnL (USD)', 'Gebühren (USD)', 'Netto PnL (USD)']],
-        body: journalBody,
-        theme: 'grid',
-        headStyles: { fillColor: [50, 50, 50] },
-        columnStyles: {
-            1: { halign: 'right' },
-            2: { halign: 'right', textColor: [200, 0, 0] },
-            3: { halign: 'right', fontStyle: 'bold' }
-        },
-        // Die letzte Zeile (Total) hervorheben
-        didParseCell: function (data) {
-            if (data.row.index === journalBody.length - 1) {
-                data.cell.styles.fontStyle = 'bold';
-                data.cell.styles.fillColor = [220, 220, 220];
-            }
+doc.addPage();
+doc.setFontSize(12);
+doc.setFont(undefined, 'bold');
+doc.text("4. Detailliertes Trading-Journal (Nachweis)", 20, 20);
+
+const journalBody = [];
+
+// ------------------------------------------
+// Daten aufbereiten
+// ------------------------------------------
+sortedDays.forEach(k => {
+    const d = data[k];
+
+    const net = d.total || 0;
+
+    let fees = 0;
+    if (d.fees && d.fees > 0) fees = d.fees;
+    else if (d.trades) d.trades.forEach(t => fees += getComm(t.inst, t.qty));
+
+    const gross = net + fees;
+
+    if (Math.abs(gross) < 0.01 && Math.abs(fees) < 0.01) return;
+
+    const [y, m, day] = k.split('-');
+
+    journalBody.push([
+        `${day}.${m}.${y}`,
+        gross.toFixed(2) + ' USD',
+        //(gross * rate).toFixed(2) + ' CHF',
+        '-' + fees.toFixed(2) + ' USD',
+        //'-' + (fees * rate).toFixed(2) + ' CHF',
+        net.toFixed(2) + ' USD',
+        //(net * rate).toFixed(2) + ' CHF'
+    ]);
+});
+
+// ------------------------------------------
+// TOTAL-ZEILE (wie Erfolgsrechnung)
+// ------------------------------------------
+journalBody.push([
+    'TOTAL JAHR',
+    grossPnL_USD.toFixed(2) + ' USD',
+    //grossCHF.toFixed(2) + ' CHF',
+
+    '-' + totalFees_USD.toFixed(2) + ' USD',
+    //'-' + feesCHF.toFixed(2) + ' CHF',
+
+    netPnL_USD.toFixed(2) + ' USD',
+    //netCHF.toFixed(2) + ' CHF'
+]);
+
+journalBody.push([
+    'UMRECHNUNG CHF',
+    grossCHF.toFixed(2) + ' CHF',
+    '-' + feesCHF.toFixed(2) + ' CHF',
+    netCHF.toFixed(2) + ' CHF'
+]);
+
+// ------------------------------------------
+// Tabelle rendern
+// ------------------------------------------
+doc.autoTable({
+    startY: 25,
+    head: [[
+        'Datum',
+        'Brutto (USD)',// 'Brutto (CHF)',
+        'Gebühren (USD)',// 'Gebühren (CHF)',
+        'Netto (USD)',// 'Netto (CHF)'
+    ]],
+    body: journalBody,
+    theme: 'grid',
+    styles: {
+        fontSize: 8  
+    },
+    headStyles: { fillColor: [50, 50, 50] },
+    columnStyles: {
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+        3: { halign: 'right', textColor: [200, 0, 0] },
+        4: { halign: 'right', textColor: [200, 0, 0] },
+        5: { halign: 'right', fontStyle: 'bold' },
+        6: { halign: 'right', fontStyle: 'bold' }
+    },
+    didParseCell: function (data) {
+        if (data.row.index >= journalBody.length - 2) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [220, 220, 220];
         }
-    });
+        // Nur oberer Rand dicker für die CHF-Zeile
+        if (data.row.index === journalBody.length - 1) {
+            data.cell.styles.lineWidth = {
+                top: 1.0,
+                right: 0.1,
+                bottom: 0.1,
+                left: 0.1
+            };
+        }
+    },
+
+    foot: [[
+        'Kurs:',
+        `1 USD = ${rate} CHF (ESTV Jahresmittel)`,
+        '', '', '', '', ''
+    ]],
+    footStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [50],
+        fontStyle: 'italic'
+    }
+});
 
     // ==========================================
     // UNTERSCHRIFT
