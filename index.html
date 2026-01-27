@@ -3319,274 +3319,221 @@ function renderTaxExport() {
     });
 }
 
-// --- PDF GENERATOR (MIT DETAILLIERTEM JOURNAL) ---
+// --- PDF GENERATOR (MIT CHF JOURNAL & FEHLER-ANZEIGE) ---
 async function generateTaxPDF() {
-    const year = document.getElementById('taxYearSelect').value;
-    if(!year || year.length < 4) return alert("Bitte wähle zuerst ein Steuerjahr aus.");
-    
-    const rate = parseFloat(document.getElementById('taxExchangeRate').value);
-    if(!rate || rate <= 0) return alert("Bitte gib einen gültigen Wechselkurs ein.");
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const p = taxData.personal;
-
-    // ==========================================
-    // SEITE 1: DECKBLATT & ZUSAMMENFASSUNG
-    // ==========================================
-
-    // Header
-    doc.setFontSize(22); doc.setTextColor(44, 62, 80);
-    doc.text("Jahresabschluss Trading", 105, 20, { align: 'center' });
-    doc.setFontSize(12); doc.setTextColor(100);
-    doc.text(`Steuerperiode ${year} | Kanton Schaffhausen`, 105, 28, { align: 'center' });
-    
-    // Stammdaten
-    doc.setDrawColor(200); doc.line(20, 35, 190, 35);
-    doc.setFontSize(10); doc.setTextColor(0);
-    doc.text(`Name: ${p.name || '-'}`, 20, 45);
-    doc.text(`PID: ${p.id || '-'}`, 120, 45);
-    doc.text(`Adresse: ${p.address || '-'}, ${p.zip || ''} ${p.city || '-'}`, 20, 50);
-
-    // --- BERECHNUNG GESAMTSUMMEN ---
-    let netPnL_USD = 0;
-    let totalFees_USD = 0;
-    
-    // Wir sortieren die Tage für später gleich mit
-    const sortedDays = Object.keys(data).filter(k => k.startsWith(year)).sort();
-
-    sortedDays.forEach(k => {
-        const d = data[k];
-        netPnL_USD += d.total || 0; // Das ist der Netto-Gewinn
+    try {
+        // 1. INPUTS PRÜFEN
+        const year = document.getElementById('taxYearSelect').value;
+        if(!year || year.length < 4) throw new Error("Bitte wähle zuerst ein Steuerjahr aus.");
         
-        let dailyFees = 0;
-        if (d.fees && d.fees > 0) dailyFees = d.fees;
-        else if (d.trades) d.trades.forEach(t => dailyFees += getComm(t.inst, t.qty));
-        totalFees_USD += dailyFees;
-    });
-    
-    const grossPnL_USD = netPnL_USD + totalFees_USD;
-    const grossCHF = grossPnL_USD * rate;
-    const feesCHF = totalFees_USD * rate;
-    const netCHF = netPnL_USD * rate;
+        const rate = parseFloat(document.getElementById('taxExchangeRate').value);
+        if(!rate || rate <= 0) throw new Error("Bitte gib einen gültigen Wechselkurs ein.");
 
-    // 1. ERFOLGSRECHNUNG
-    doc.setFont(undefined, 'bold');
-    doc.text("1. Handelsergebnis (Wertschriftenhandel)", 20, 65);
-    
-    const tradeBody = [
-        ['Brutto-Handelsgewinn', grossPnL_USD.toFixed(2) + ' USD', grossCHF.toFixed(2) + ' CHF'],
-        ['Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
-        ['= NETTO HANDELSGEWINN', netPnL_USD.toFixed(2) + ' USD', netCHF.toFixed(2) + ' CHF']
-    ];
-    
-    doc.autoTable({
-        startY: 70,
-        head: [['Position', 'Betrag (Orig.)', 'Betrag (CHF)']],
-        body: tradeBody,
-        theme: 'grid',
-        headStyles: { fillColor: [44, 62, 80] },
-        foot: [['Kurs: 1 USD = ' + rate + ' CHF (ESTV Jahresmittel)', '', '']],
-        footStyles: { fillColor: [240, 240, 240], textColor: [50], fontStyle: 'italic' }
-    });
+        // 2. BIBLIOTHEK PRÜFEN (Wichtig für GitHub!)
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error("PDF-Bibliothek nicht geladen. Bitte Seite neu laden!");
+        }
 
-    // 2. AUSGABEN
-    let finalY = doc.lastAutoTable.finalY + 15;
-    const rateEUR = parseFloat(document.getElementById('taxExchangeRateEUR')?.value) || 0.94;
-    const expenses = (taxData.expenses || []).filter(e => e.year === year);
-    
-    if (expenses.length > 0) {
-        doc.setFont(undefined, 'bold');
-        doc.text("2. Geltend gemachte Aufwendungen", 20, finalY);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const p = taxData.personal;
+
+        // ==========================================
+        // SEITE 1: ZUSAMMENFASSUNG
+        // ==========================================
+
+        doc.setFontSize(22); doc.setTextColor(44, 62, 80);
+        doc.text("Jahresabschluss Trading", 105, 20, { align: 'center' });
+        doc.setFontSize(12); doc.setTextColor(100);
+        doc.text(`Steuerperiode ${year} | Kanton Schaffhausen`, 105, 28, { align: 'center' });
         
-        let totalExpCHF = 0;
-        const expBody = expenses.map(e => {
-            const r = e.rate || 1.00;
-            const amountCHF = e.amount * r;
-            totalExpCHF += amountCHF;
+        doc.setDrawColor(200); doc.line(20, 35, 190, 35);
+        doc.setFontSize(10); doc.setTextColor(0);
+        doc.text(`Name: ${p.name || '-'}`, 20, 45);
+        doc.text(`PID: ${p.id || '-'}`, 120, 45);
+        doc.text(`Adresse: ${p.address || '-'}, ${p.zip || ''} ${p.city || '-'}`, 20, 50);
+
+        // --- DATEN BERECHNEN ---
+        let netPnL_USD = 0;
+        let totalFees_USD = 0;
+        
+        const sortedDays = Object.keys(data).filter(k => k.startsWith(year)).sort();
+
+        sortedDays.forEach(k => {
+            const d = data[k];
+            netPnL_USD += d.total || 0; 
             
-            // Währungssymbol
-            const curr = e.currency || 'CHF';
-            const rateInfo = curr !== 'CHF' ? `(@ ${r})` : '';
-
-            return [
-                e.cat + ` (${e.desc})`,
-                `${e.amount.toFixed(2)} ${curr} ${rateInfo}`,
-                '-' + amountCHF.toFixed(2) + ' CHF'
-            ];
+            let dailyFees = 0;
+            if (d.fees && d.fees > 0) dailyFees = d.fees;
+            else if (d.trades) d.trades.forEach(t => dailyFees += getComm(t.inst, t.qty));
+            totalFees_USD += dailyFees;
         });
         
-        expBody.push(['Total Aufwendungen', '', '-' + totalExpCHF.toFixed(2) + ' CHF']);
+        const grossPnL_USD = netPnL_USD + totalFees_USD;
+        const grossCHF = grossPnL_USD * rate;
+        const feesCHF = totalFees_USD * rate;
+        const netCHF = netPnL_USD * rate;
+
+        // 1. ERFOLGSRECHNUNG
+        doc.setFont(undefined, 'bold');
+        doc.text("1. Handelsergebnis (Wertschriftenhandel)", 20, 65);
         
-        // REINGEWINN BERECHNEN
-        const finalProfitCHF = netCHF - totalExpCHF;
-        expBody.push(['', '', '']); // Leerzeile
-        expBody.push(['REINGEWINN (zu versteuern)', '', finalProfitCHF.toFixed(2) + ' CHF']);
+        const tradeBody = [
+            ['Brutto-Handelsgewinn', grossPnL_USD.toFixed(2) + ' USD', grossCHF.toFixed(2) + ' CHF'],
+            ['./. Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
+            ['= NETTO HANDELSGEWINN', netPnL_USD.toFixed(2) + ' USD', netCHF.toFixed(2) + ' CHF']
+        ];
         
         doc.autoTable({
-            startY: finalY + 5,
-            head: [['Position', 'Original', 'Betrag (CHF)']],
-            body: expBody,
-            theme: 'striped',
-            headStyles: { fillColor: [100, 100, 100] }, // Grau
-            columnStyles: { 2: { halign: 'right', fontStyle: 'bold' }, 1: { halign: 'right' } }
+            startY: 70,
+            head: [['Position', 'Betrag (Orig.)', 'Betrag (CHF)']],
+            body: tradeBody,
+            theme: 'grid',
+            headStyles: { fillColor: [44, 62, 80] },
+            foot: [['Kurs: 1 USD = ' + rate + ' CHF (ESTV Jahresmittel)', '', '']],
+            footStyles: { fillColor: [240, 240, 240], textColor: [50], fontStyle: 'italic' }
         });
-        finalY = doc.lastAutoTable.finalY + 15;
-    } else {
-        doc.setFontSize(10); doc.setFont(undefined, 'italic');
-        doc.text("(Keine weiteren Aufwendungen geltend gemacht)", 20, finalY);
-        finalY += 10;
-    }
 
-    // 3. VERMÖGEN
-    doc.setFontSize(12); doc.setFont(undefined, 'bold');
-    doc.text("3. Vermögensstatus", 20, finalY);
-    const bal = taxData.balances[year] || { start: 0, end: 0 };
-    doc.autoTable({
-        startY: finalY + 5,
-        body: [
-            ['Kontostand 01.01.' + year, bal.start.toFixed(2) + ' CHF'],
-            ['Kontostand 31.12.' + year, bal.end.toFixed(2) + ' CHF']
-        ],
-        theme: 'plain'
-    });
+        // 2. AUSGABEN
+        let finalY = doc.lastAutoTable.finalY + 15;
+        const rateEUR = parseFloat(document.getElementById('taxExchangeRateEUR')?.value) || 0.94;
+        const expenses = (taxData.expenses || []).filter(e => e.year === year);
+        
+        if (expenses.length > 0) {
+            doc.setFont(undefined, 'bold');
+            doc.text("2. Geltend gemachte Aufwendungen", 20, finalY);
+            
+            let totalExpCHF = 0;
+            const expBody = expenses.map(e => {
+                const r = e.rate || 1.00;
+                const amountCHF = e.amount * r;
+                totalExpCHF += amountCHF;
+                
+                // Fix für "undefined" Kategorie
+                const category = e.cat ? e.cat : 'Sonstiges';
+                const currency = e.currency || 'CHF';
+                const rateInfo = currency !== 'CHF' ? `(@ ${r})` : '';
 
-    // ==========================================
-// SEITE 2+: DETAILLIERTES JOURNAL (MIT CHF)
-// ==========================================
-
-doc.addPage();
-doc.setFontSize(12);
-doc.setFont(undefined, 'bold');
-doc.text("4. Detailliertes Trading-Journal (Nachweis)", 20, 20);
-
-const journalBody = [];
-
-// ------------------------------------------
-// Daten aufbereiten
-// ------------------------------------------
-sortedDays.forEach(k => {
-    const d = data[k];
-
-    const net = d.total || 0;
-
-    let fees = 0;
-    if (d.fees && d.fees > 0) fees = d.fees;
-    else if (d.trades) d.trades.forEach(t => fees += getComm(t.inst, t.qty));
-
-    const gross = net + fees;
-
-    if (Math.abs(gross) < 0.01 && Math.abs(fees) < 0.01) return;
-
-    const [y, m, day] = k.split('-');
-
-    journalBody.push([
-        `${day}.${m}.${y}`,
-        gross.toFixed(2) + ' USD',
-        //(gross * rate).toFixed(2) + ' CHF',
-        '-' + fees.toFixed(2) + ' USD',
-        //'-' + (fees * rate).toFixed(2) + ' CHF',
-        net.toFixed(2) + ' USD',
-        //(net * rate).toFixed(2) + ' CHF'
-    ]);
-});
-
-// ------------------------------------------
-// TOTAL-ZEILE (wie Erfolgsrechnung)
-// ------------------------------------------
-journalBody.push([
-    'TOTAL JAHR',
-    grossPnL_USD.toFixed(2) + ' USD',
-    //grossCHF.toFixed(2) + ' CHF',
-
-    '-' + totalFees_USD.toFixed(2) + ' USD',
-    //'-' + feesCHF.toFixed(2) + ' CHF',
-
-    netPnL_USD.toFixed(2) + ' USD',
-    //netCHF.toFixed(2) + ' CHF'
-]);
-
-journalBody.push([
-    'UMRECHNUNG CHF',
-    grossCHF.toFixed(2) + ' CHF',
-    '-' + feesCHF.toFixed(2) + ' CHF',
-    netCHF.toFixed(2) + ' CHF'
-]);
-
-// ------------------------------------------
-// Tabelle rendern
-// ------------------------------------------
-doc.autoTable({
-    startY: 25,
-    head: [[
-        'Datum',
-        'Brutto (USD)',// 'Brutto (CHF)',
-        'Gebühren (USD)',// 'Gebühren (CHF)',
-        'Netto (USD)',// 'Netto (CHF)'
-    ]],
-    body: journalBody,
-    theme: 'grid',
-    styles: {
-        fontSize: 8  
-    },
-    headStyles: { fillColor: [50, 50, 50] },
-    columnStyles: {
-        1: { halign: 'right' },
-        2: { halign: 'right' },
-        3: { halign: 'right', textColor: [200, 0, 0] },
-        4: { halign: 'right', textColor: [200, 0, 0] },
-        5: { halign: 'right', fontStyle: 'bold' },
-        6: { halign: 'right', fontStyle: 'bold' }
-    },
-    didParseCell: function (data) {
-        if (data.row.index >= journalBody.length - 2) {
-            data.cell.styles.fontStyle = 'bold';
-            data.cell.styles.fillColor = [220, 220, 220];
+                return [
+                    category + ` (${e.desc})`,
+                    `${e.amount.toFixed(2)} ${currency} ${rateInfo}`,
+                    '-' + amountCHF.toFixed(2) + ' CHF'
+                ];
+            });
+            
+            expBody.push(['Total Aufwendungen', '', '-' + totalExpCHF.toFixed(2) + ' CHF']);
+            
+            // REINGEWINN
+            const finalProfitCHF = netCHF - totalExpCHF;
+            expBody.push(['', '', '']); 
+            expBody.push(['REINGEWINN (zu versteuern)', '', finalProfitCHF.toFixed(2) + ' CHF']);
+            
+            doc.autoTable({
+                startY: finalY + 5,
+                head: [['Position', 'Original', 'Betrag (CHF)']],
+                body: expBody,
+                theme: 'striped',
+                headStyles: { fillColor: [100, 100, 100] },
+                columnStyles: { 2: { halign: 'right', fontStyle: 'bold' }, 1: { halign: 'right' } }
+            });
+            finalY = doc.lastAutoTable.finalY + 15;
+        } else {
+            doc.setFontSize(10); doc.setFont(undefined, 'italic');
+            doc.text("(Keine weiteren Aufwendungen geltend gemacht)", 20, finalY);
+            finalY += 10;
         }
-        // Nur oberer Rand dicker für die CHF-Zeile
-        if (data.row.index === journalBody.length - 1) {
-            data.cell.styles.lineWidth = {
-                top: 1.0,
-                right: 0.1,
-                bottom: 0.1,
-                left: 0.1
-            };
-        }
-    },
 
-    foot: [[
-        'Kurs:',
-        `1 USD = ${rate} CHF (ESTV Jahresmittel)`,
-        '', '', '', '', ''
-    ]],
-    footStyles: {
-        fillColor: [240, 240, 240],
-        textColor: [50],
-        fontStyle: 'italic'
-    }
-});
+        // 3. VERMÖGEN
+        doc.setFontSize(12); doc.setFont(undefined, 'bold');
+        doc.text("3. Vermögensstatus", 20, finalY);
+        const bal = taxData.balances[year] || { start: 0, end: 0 };
+        doc.autoTable({
+            startY: finalY + 5,
+            body: [
+                ['Kontostand 01.01.' + year, bal.start.toFixed(2) + ' CHF'],
+                ['Kontostand 31.12.' + year, bal.end.toFixed(2) + ' CHF']
+            ],
+            theme: 'plain'
+        });
 
-    // ==========================================
-    // UNTERSCHRIFT
-    // ==========================================
-    
-    // Wir schauen, wo die Tabelle aufgehört hat
-    let signY = doc.lastAutoTable.finalY + 30;
-    
-    // Falls wir am Ende der Seite sind, neue Seite für Unterschrift
-    if (signY > 250) {
+        // ==========================================
+        // SEITE 2: JOURNAL MIT CHF UMRECHNUNG
+        // ==========================================
+        
         doc.addPage();
-        signY = 40;
-    }
-    
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text("Ort, Datum: ___________________________________", 20, signY);
-    doc.text("Unterschrift: ___________________________________", 110, signY);
+        doc.setFontSize(12); doc.setFont(undefined, 'bold');
+        doc.text("4. Detailliertes Trading-Journal (Nachweis)", 20, 20);
+        
+        const journalBody = [];
+        
+        sortedDays.forEach(k => {
+            const d = data[k];
+            const net = d.total || 0;
+            let fees = 0;
+            if (d.fees && d.fees > 0) fees = d.fees;
+            else if (d.trades) d.trades.forEach(t => fees += getComm(t.inst, t.qty));
+            const gross = net + fees;
+            
+            if (Math.abs(gross) < 0.01 && Math.abs(fees) < 0.01) return;
+            
+            const [y, m, day] = k.split('-');
+            journalBody.push([`${day}.${m}.${y}`, gross.toFixed(2), '-' + fees.toFixed(2), net.toFixed(2)]);
+        });
+        
+        // Summenzeile USD
+        journalBody.push([
+            'TOTAL JAHR (USD)',
+            grossPnL_USD.toFixed(2),
+            '-' + totalFees_USD.toFixed(2),
+            netPnL_USD.toFixed(2)
+        ]);
 
-    // Speichern
-    const safeName = (p.name || 'Steuer').replace(/[^a-z0-9]/gi, '_');
-    doc.save(`Steuerreport_${year}_${safeName}.pdf`);
+        // NEU: Summenzeile CHF (Abgleich)
+        journalBody.push([
+            'TOTAL JAHR (CHF @ ' + rate + ')',
+            (grossPnL_USD * rate).toFixed(2),
+            '-' + (totalFees_USD * rate).toFixed(2),
+            (netPnL_USD * rate).toFixed(2) // Das muss = "Betrag (CHF)" Seite 1 sein
+        ]);
+
+        doc.autoTable({
+            startY: 25,
+            head: [['Datum', 'Brutto (USD)', 'Gebühren (USD)', 'Netto (USD)']],
+            body: journalBody,
+            theme: 'grid',
+            headStyles: { fillColor: [50, 50, 50] },
+            columnStyles: { 1: {halign:'right'}, 2: {halign:'right', textColor:[200,0,0]}, 3: {halign:'right', fontStyle:'bold'} },
+            // Styling für die letzten ZWEI Zeilen (Total USD und Total CHF)
+            didParseCell: function (data) {
+                const rows = journalBody.length;
+                if (data.row.index === rows - 2) { // Total USD
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [240, 240, 240];
+                }
+                if (data.row.index === rows - 1) { // Total CHF
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [220, 230, 240]; // Leicht bläulich zur Unterscheidung
+                    data.cell.styles.textColor = [0, 0, 0];
+                }
+            }
+        });
+
+        // Unterschrift
+        let signY = doc.lastAutoTable.finalY + 30;
+        if (signY > 250) { doc.addPage(); signY = 40; }
+        
+        doc.setFontSize(10); doc.setFont(undefined, 'normal');
+        doc.text("Ort, Datum: __________________________   Unterschrift: __________________________", 20, signY);
+
+        // Speichern
+        const safeName = (p.name || 'Steuer').replace(/[^a-z0-9]/gi, '_');
+        doc.save(`Steuerreport_${year}_${safeName}.pdf`);
+
+    } catch(e) {
+        // HIER FANGEN WIR DEN FEHLER AB UND ZEIGEN IHN AN!
+        console.error(e);
+        alert("❌ PDF Fehler: " + e.message + "\n\nTipp: Lade die Seite neu, damit die Bibliotheken laden können.");
+    }
 }
 
 // Initialisierung auch für Steuerdaten aufrufen
