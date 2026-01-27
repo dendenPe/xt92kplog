@@ -726,7 +726,7 @@ body{
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Kojote_002</h1>
+<h1>Trade Log / Version Kojote_v003</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -3700,7 +3700,7 @@ async function generateTaxPDF() {
                     head: [['Monat/Bez.', 'Zeitraum/Frequenz', 'Betrag (Orig.)', 'Betrag (CHF)']],
                     body: payRows,
                     theme: 'plain',
-                    styles: { cellPadding: 3, fontSize: 10 },
+                    styles: { cellPadding: 1., fontSize: 10 },
                     headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
                     columnStyles: { 3: { halign: 'right' } },
                     // Letzte Zeile fett
