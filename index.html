@@ -3380,7 +3380,7 @@ async function generateTaxPDF() {
         
         const tradeBody = [
             ['Brutto-Handelsgewinn', grossPnL_USD.toFixed(2) + ' USD', grossCHF.toFixed(2) + ' CHF'],
-            ['./. Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
+            ['Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
             ['= NETTO HANDELSGEWINN', netPnL_USD.toFixed(2) + ' USD', netCHF.toFixed(2) + ' CHF']
         ];
         
