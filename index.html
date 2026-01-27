@@ -3406,7 +3406,7 @@ async function generateTaxPDF() {
             let totalExpCHF = 0;
             const expBody = expenses.map(e => {
                 const r = e.rate || 1.00;
-                const amountCHF = e.amount * r;
+                const amountCHF = parseFloat(e.amount) * r;
                 totalExpCHF += amountCHF;
                 
                 // Fix für "undefined" Kategorie
@@ -3416,7 +3416,7 @@ async function generateTaxPDF() {
 
                 return [
                     category + ` (${e.desc})`,
-                    `${e.amount.toFixed(2)} ${currency} ${rateInfo}`,
+                    `${parseFloat(e.amount).toFixed(2)} ${currency} ${rateInfo}`,
                     '-' + amountCHF.toFixed(2) + ' CHF'
                 ];
             });
