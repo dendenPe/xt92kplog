@@ -726,7 +726,7 @@ body{
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version 02j</h1>
+<h1>Trade Log / Version Kojote_002</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -1116,26 +1116,43 @@ body{
             <div class="slds-grid">
                 <div>
                     <label class="slds-label">Zahlweise</label>
-                    <select id="detailFrequency" class="slds-input" onchange="calcDetailTotal()">
-                        <option value="12">Monatlich (x12)</option>
+                    <select id="detailFrequency" class="slds-input" onchange="toggleMonthlyTable()">
+                        <option value="12">Monatlich (fixer Betrag x12)</option>
                         <option value="1">Jährlich (Einmalig)</option>
+                        <option value="individual">Monatlich (individuell / variabel)</option> <!-- NEU -->
                     </select>
                 </div>
                 <div>
                     <label class="slds-label">Währung</label>
-                    <select id="detailCurrency" class="slds-input" onchange="calcDetailTotal()">
+                    <select id="detailCurrency" class="slds-input" onchange="updateDetailCurrency()">
                         <option value="CHF">CHF</option>
                         <option value="EUR">EUR</option>
                         <option value="USD">USD</option>
                     </select>
                 </div>
-                <div>
+                
+                <!-- Einfacher Betrag (sichtbar bei fix/jährlich) -->
+                <div id="simpleAmountContainer">
                     <label class="slds-label">Betrag (pro Zahlung)</label>
                     <input type="number" id="detailAmountInput" class="slds-input" oninput="calcDetailTotal()">
                 </div>
+                
+                <!-- Wechselkurs -->
                 <div>
                     <label class="slds-label">Wechselkurs (zu CHF)</label>
-                    <input type="number" id="detailRate" class="slds-input" step="0.0001" value="1.00" oninput="calcDetailTotal()">
+                    <input type="number" id="detailRate" class="slds-input" step="0.0001" value="1.00" oninput="recalcAllMonths()">
+                </div>
+            </div>
+
+            <!-- NEU: Monatstabelle (sichtbar bei individuell) -->
+            <div id="monthlyTableContainer" style="display:none; margin-top:10px; border:1px solid #e0e5ee; border-radius:6px; overflow:hidden;">
+                <div style="background:#f4f6f9; padding:8px 15px; font-size:0.8em; font-weight:bold; color:#54698d; display:flex;">
+                    <div style="width:40px;">Monat</div>
+                    <div style="flex:1;">Betrag (Original)</div>
+                    <div style="flex:1; text-align:right;">in CHF</div>
+                </div>
+                <div id="monthlyTableBody" style="max-height:200px; overflow-y:auto;">
+                    <!-- Hier werden per JS die 12 Monate generiert -->
                 </div>
             </div>
             
@@ -2238,14 +2255,18 @@ async function renderDayDetails(d) {
         list.appendChild(row);
     });
 
-    // --- BILDER NACHLADEN (NEU) ---
+    // --- BILDER NACHLADEN (VISUELLER DUPLIKAT-SCHUTZ) ---
     if (entry.screenshots && entry.screenshots.length > 0) {
         const imgContainer = document.getElementById('detailScreenshots');
-        imgContainer.innerHTML = ''; // "Lade Bilder..." entfernen
+        imgContainer.innerHTML = ''; 
         
-        for (const filename of entry.screenshots) {
+        // WICHTIG: Wir filtern Duplikate für die Anzeige heraus!
+        const uniqueScreenshots = [...new Set(entry.screenshots)];
+
+        for (const filename of uniqueScreenshots) {
             const blob = await getImageFromDB(filename);
             if (blob) {
+                // ... (Hier bleibt dein Code für das Bild-Element gleich) ...
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(blob);
                 
@@ -2265,7 +2286,6 @@ async function renderDayDetails(d) {
                 img.style.objectFit = 'cover';
                 img.style.cursor = 'pointer';
                 
-                // Doppelklick zum Vergrößern
                 img.ondblclick = () => {
                     const newTab = window.open();
                     if(newTab) newTab.document.write(`<html><body style="margin:0;background:#222;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${img.src}" style="max-width:100%;max-height:100%"></body></html>`);
@@ -2903,11 +2923,7 @@ async function exportZIP() {
     }
 }
 
-// ===========================================
-// === SICHERE IMPORT LOGIK (NEU) ===
-// ===========================================
-
-// --- SICHERE MERGE LOGIK ---
+// --- SICHERE MERGE LOGIK (ANTI-DUPLIKAT) ---
 function mergeData(newData) {
     let count = 0;
     
@@ -2916,38 +2932,37 @@ function mergeData(newData) {
         const oldEntry = data[k];
 
         if (!oldEntry) {
-            // Tag existiert noch nicht -> Neu anlegen
+            // Tag existiert noch nicht -> Einfach übernehmen
             data[k] = newEntry;
         } else {
-            // Tag existiert schon -> Vorsichtig zusammenfügen
-            
-            // 1. PnL & Trades übernehmen (IBKR ist hier die Wahrheit)
+            // Tag existiert schon -> Update
+
+            // A) Trades & PnL: Import gewinnt
             if(newEntry.trades && newEntry.trades.length > 0) {
                 data[k].trades = newEntry.trades;
-                data[k].total = newEntry.total;
+                data[k].total = newEntry.total; 
             }
 
-            // 2. Notizen schützen
-            // Wenn Import leer ist, behalte alte Notiz. Wenn Import Text hat, nimm Import.
+            // B) Notizen: Nur überschreiben wenn Import nicht leer
             if (newEntry.note && newEntry.note.trim() !== "") {
                 data[k].note = newEntry.note;
             }
 
-            // 3. Screenshots zusammenführen
-            const oldS = oldEntry.screenshots || [];
-            const newS = newEntry.screenshots || [];
-            data[k].screenshots = [...new Set([...oldS, ...newS])];
+            // C) Screenshots: RIGOROSER AUSTAUSCH (FIX FÜR DUPLIKATE)
+            // Wenn der Import eine Liste von Screenshots hat, nehmen wir DIESE Liste als die Wahre an.
+            // Das verhindert, dass sich durch mehrfaches Importieren "Geisterbilder" ansammeln.
+            if (newEntry.screenshots && newEntry.screenshots.length > 0) {
+                // Wir nehmen die Liste aus dem Backup
+                data[k].screenshots = newEntry.screenshots;
+            } else if (oldEntry.screenshots && oldEntry.screenshots.length > 0) {
+                // Wenn Backup keine Bilder hat, aber wir lokal welche haben -> behalten
+                // (nichts tun)
+            }
 
-            // 4. GEBÜHREN SCHÜTZEN (Der Fix!)
-            // Fall A: Import hat Gebühren (> 0) -> Wir nehmen die neuen (wahrscheinlich genauer)
-            if (newEntry.fees && newEntry.fees > 0) {
+            // D) Gebühren
+            if (newEntry.fees > 0) {
                 data[k].fees = newEntry.fees;
             }
-            // Fall B: Import hat 0 oder keine Gebühren, aber wir haben alte -> ALTE BEHALTEN!
-            else if (oldEntry.fees && oldEntry.fees > 0) {
-                // Wir tun NICHTS. data[k].fees bleibt, wie es war.
-            }
-            // Fall C: Weder noch -> Bleibt 0.
         }
         count++;
     }
@@ -2955,7 +2970,14 @@ function mergeData(newData) {
     save();
     init();
     renderCal();
-    alert(`✅ Import erfolgreich!\n${count} Tage aktualisiert.\nGebühren von nicht betroffenen Tagen wurden geschützt.`);
+    
+    // Kleines Feedback, damit du weißt, was passiert ist
+    const msg = document.getElementById('msg');
+    if(msg) {
+        msg.textContent = `Import: ${count} Tage aktualisiert`;
+        msg.style.display = 'block';
+        setTimeout(() => msg.style.display = 'none', 3000);
+    }
 }
 
 // 2. ZIP IMPORT LISTENER (REPARIERT)
@@ -3451,27 +3473,23 @@ function renderTaxExport() {
     });
 }
 
-// --- PDF GENERATOR (MIT CHF JOURNAL & FEHLER-ANZEIGE) ---
+// --- PDF GENERATOR (FINAL VERSION: STRUKTUR 1-6) ---
 async function generateTaxPDF() {
     try {
-        // 1. INPUTS PRÜFEN
         const year = document.getElementById('taxYearSelect').value;
         if(!year || year.length < 4) throw new Error("Bitte wähle zuerst ein Steuerjahr aus.");
         
         const rate = parseFloat(document.getElementById('taxExchangeRate').value);
         if(!rate || rate <= 0) throw new Error("Bitte gib einen gültigen Wechselkurs ein.");
 
-        // 2. BIBLIOTHEK PRÜFEN (Wichtig für GitHub!)
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            throw new Error("PDF-Bibliothek nicht geladen. Bitte Seite neu laden!");
-        }
+        if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("PDF-Bibliothek fehlt.");
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const p = taxData.personal;
 
         // ==========================================
-        // SEITE 1: ZUSAMMENFASSUNG
+        // SEITE 1: DECKBLATT
         // ==========================================
 
         doc.setFontSize(22); doc.setTextColor(44, 62, 80);
@@ -3485,16 +3503,12 @@ async function generateTaxPDF() {
         doc.text(`PID: ${p.id || '-'}`, 120, 45);
         doc.text(`Adresse: ${p.address || '-'}, ${p.zip || ''} ${p.city || '-'}`, 20, 50);
 
-        // --- DATEN BERECHNEN ---
-        let netPnL_USD = 0;
-        let totalFees_USD = 0;
-        
+        // --- BERECHNUNG ---
+        let netPnL_USD = 0; let totalFees_USD = 0;
         const sortedDays = Object.keys(data).filter(k => k.startsWith(year)).sort();
-
         sortedDays.forEach(k => {
             const d = data[k];
             netPnL_USD += d.total || 0; 
-            
             let dailyFees = 0;
             if (d.fees && d.fees > 0) dailyFees = d.fees;
             else if (d.trades) d.trades.forEach(t => dailyFees += getComm(t.inst, t.qty));
@@ -3508,12 +3522,12 @@ async function generateTaxPDF() {
 
         // 1. ERFOLGSRECHNUNG
         doc.setFont(undefined, 'bold');
-        doc.text("1. Handelsergebnis (Wertschriftenhandel)", 20, 65);
+        doc.text("1. Handelsergebnis (Brutto)", 20, 65);
         
         const tradeBody = [
             ['Brutto-Handelsgewinn', grossPnL_USD.toFixed(2) + ' USD', grossCHF.toFixed(2) + ' CHF'],
             ['Transaktionskosten (Commissions)', '-' + totalFees_USD.toFixed(2) + ' USD', '-' + feesCHF.toFixed(2) + ' CHF'],
-            ['= NETTO HANDELSGEWINN', netPnL_USD.toFixed(2) + ' USD', netCHF.toFixed(2) + ' CHF']
+            ['= ZWISCHENERGEBNIS HANDEL', netPnL_USD.toFixed(2) + ' USD', netCHF.toFixed(2) + ' CHF']
         ];
         
         doc.autoTable({
@@ -3526,40 +3540,30 @@ async function generateTaxPDF() {
             footStyles: { fillColor: [240, 240, 240], textColor: [50], fontStyle: 'italic' }
         });
 
-        // 2. AUSGABEN
+        // 2. GESCHÄFTSAUFWAND
         let finalY = doc.lastAutoTable.finalY + 15;
-        const rateEUR = parseFloat(document.getElementById('taxExchangeRateEUR')?.value) || 0.94;
         const expenses = (taxData.expenses || []).filter(e => e.year === year);
+        const bizExp = expenses.filter(e => e.cat !== 'Unterhalt' && e.cat !== 'Alimente' && e.cat !== 'Säule 3a' && e.cat !== 'Krankenkasse');
         
-        if (expenses.length > 0) {
+        if (bizExp.length > 0) {
             doc.setFont(undefined, 'bold');
-            doc.text("2. Geltend gemachte Aufwendungen", 20, finalY);
+            doc.text("2. Geschäftsaufwand (Abzüge)", 20, finalY);
             
-            let totalExpCHF = 0;
-            const expBody = expenses.map(e => {
+            let totalBizCHF = 0;
+            const expBody = bizExp.map(e => {
                 const r = e.rate || 1.00;
                 const amountCHF = parseFloat(e.amount) * r;
-                totalExpCHF += amountCHF;
-                
-                // Fix für "undefined" Kategorie
-                const category = e.cat ? e.cat : 'Sonstiges';
-                const currency = e.currency || 'CHF';
-                const rateInfo = currency !== 'CHF' ? `(@ ${r})` : '';
-
-                return [
-                    category + ` (${e.desc})`,
-                    `${parseFloat(e.amount).toFixed(2)} ${currency} ${rateInfo}`,
-                    '-' + amountCHF.toFixed(2) + ' CHF'
-                ];
+                totalBizCHF += amountCHF;
+                const curr = e.currency || 'CHF';
+                const rateInfo = curr !== 'CHF' ? `(@ ${r})` : '';
+                return [e.cat + ` (${e.desc})`, `${parseFloat(e.amount).toFixed(2)} ${curr} ${rateInfo}`, '-' + amountCHF.toFixed(2) + ' CHF'];
             });
             
-            expBody.push(['Total Aufwendungen', '', '-' + totalExpCHF.toFixed(2) + ' CHF']);
-            
-            // REINGEWINN
-            const finalProfitCHF = netCHF - totalExpCHF;
-            expBody.push(['', '', '']); 
-            expBody.push(['REINGEWINN (zu versteuern)', '', finalProfitCHF.toFixed(2) + ' CHF']);
-            
+            expBody.push(['Total Geschäftsaufwand', '', '-' + totalBizCHF.toFixed(2) + ' CHF']);
+            const reingewinn = netCHF - totalBizCHF;
+            expBody.push(['', '', '']);
+            expBody.push(['REINGEWINN (Steuerbar)', '', reingewinn.toFixed(2) + ' CHF']);
+
             doc.autoTable({
                 startY: finalY + 5,
                 head: [['Position', 'Original', 'Betrag (CHF)']],
@@ -3568,36 +3572,229 @@ async function generateTaxPDF() {
                 headStyles: { fillColor: [100, 100, 100] },
                 columnStyles: { 2: { halign: 'right', fontStyle: 'bold' }, 1: { halign: 'right' } }
             });
-            finalY = doc.lastAutoTable.finalY + 15;
+
+            finalY = doc.lastAutoTable.finalY + 10;
+            doc.setTextColor(200, 0, 0); doc.setFontSize(10); doc.setFont(undefined, 'bold');
+            doc.text(`-> Zu übertragen in Steuererklärung Seite 2, Ziffer 2.1`, 20, finalY);
+            doc.setFontSize(9); doc.setFont(undefined, 'normal');
+            doc.text(`(Einkünfte aus selbstständiger Erwerbstätigkeit)`, 20, finalY + 5);
+            doc.setTextColor(0);
+            finalY += 20;
+
         } else {
             doc.setFontSize(10); doc.setFont(undefined, 'italic');
-            doc.text("(Keine weiteren Aufwendungen geltend gemacht)", 20, finalY);
+            doc.text("(Kein weiterer Geschäftsaufwand geltend gemacht)", 20, finalY);
             finalY += 10;
+            doc.setTextColor(200, 0, 0); doc.setFontSize(10); doc.setFont(undefined, 'bold');
+            doc.text(`Reingewinn: ${netCHF.toFixed(2)} CHF -> Übertrag zu Seite 2, Ziffer 2.1`, 20, finalY);
+            doc.setTextColor(0);
+            finalY += 15;
         }
 
         // 3. VERMÖGEN
         doc.setFontSize(12); doc.setFont(undefined, 'bold');
-        doc.text("3. Vermögensstatus", 20, finalY);
+        doc.text("3. Vermögensstatus (Wertschriften)", 20, finalY);
         const bal = taxData.balances[year] || { start: 0, end: 0 };
         doc.autoTable({
             startY: finalY + 5,
-            body: [
-                ['Kontostand 01.01.' + year, bal.start.toFixed(2) + ' CHF'],
-                ['Kontostand 31.12.' + year, bal.end.toFixed(2) + ' CHF']
-            ],
+            body: [['Kontostand 01.01.' + year, bal.start.toFixed(2) + ' CHF'], ['Kontostand 31.12.' + year, bal.end.toFixed(2) + ' CHF']],
             theme: 'plain'
         });
+        finalY = doc.lastAutoTable.finalY + 10;
+        doc.setTextColor(200, 0, 0); doc.setFontSize(10); doc.setFont(undefined, 'bold');
+        doc.text(`-> Zu übertragen in Wertschriftenverzeichnis (Code A) und Steuererklärung Seite 4, Ziffer 30.1`, 20, finalY);
+        doc.setTextColor(0);
+
+        // ============================================================
+        // 2B. EINZELNACHWEISE UNTERHALT (Seiten)
+        // ============================================================
+
+        const unterhaltsZahlungen = expenses.filter(e => e.cat === 'Unterhalt' || e.cat === 'Alimente');
+
+        if (unterhaltsZahlungen.length > 0) {
+            
+            unterhaltsZahlungen.forEach((payment, idx) => {
+                doc.addPage(); 
+                const details = payment.details || {};
+                const isChild = payment.cat === 'Alimente';
+                
+                // HEADER
+                doc.setFillColor(200, 200, 200); doc.rect(20, 15, 170, 20, 'F');
+                doc.setFontSize(16); doc.setFont(undefined, 'bold'); doc.setTextColor(0);
+                doc.text(isChild ? "Unterhaltsbeiträge für Kinder" : "Unterhaltsbeiträge an Ex-Partner", 25, 23);
+                doc.setFontSize(12);
+                doc.text(`Hilfsblatt zur Steuererklärung ${year} (Kanton Schaffhausen)`, 25, 30);
+                doc.setFontSize(10); doc.setFont(undefined, 'normal');
+                doc.text(`PID-Nr.: ${p.id || ''}`, 185, 23, { align: 'right' });
+                doc.text(`Name: ${p.name || ''}`, 185, 30, { align: 'right' });
+
+                let yPos = 45;
+
+                // EMPFÄNGER
+                doc.setDrawColor(100); doc.setLineWidth(0.3); doc.rect(20, yPos, 170, 30);
+                doc.setFontSize(9); doc.setFont(undefined, 'bold'); doc.text("Empfänger/in der Zahlungen", 25, yPos + 5);
+                doc.setFont(undefined, 'normal');
+                doc.text("Name, Vorname:", 25, yPos + 12); doc.setFont(undefined, 'bold'); doc.text(details.recName || '-', 60, yPos + 12); doc.setFont(undefined, 'normal');
+                doc.text("Adresse:", 25, yPos + 18); doc.text(details.recAddress || '-', 60, yPos + 18);
+                doc.text("Wohnort / Land:", 25, yPos + 24); doc.text(details.recCountry || '-', 60, yPos + 24);
+                yPos += 35;
+
+                // ZAHLENDER
+                doc.rect(20, yPos, 170, 25);
+                doc.setFont(undefined, 'bold'); doc.text("Zahlende/r (Steuerpflichtige Person)", 25, yPos + 5);
+                doc.setFont(undefined, 'normal');
+                doc.text("Name, Vorname:", 25, yPos + 12); doc.text(p.name || '-', 60, yPos + 12);
+                doc.text("Wohnort:", 25, yPos + 18); doc.text(`${p.zip || ''} ${p.city || '-'}`, 60, yPos + 18);
+                yPos += 30;
+
+                // KIND (OPTIONAL)
+                if (isChild) {
+                    doc.rect(20, yPos, 170, 25);
+                    doc.setFont(undefined, 'bold'); doc.text("Angaben zum Kind", 25, yPos + 5);
+                    doc.setFont(undefined, 'normal');
+                    doc.text("Name, Vorname:", 25, yPos + 12); doc.text(details.childName || '-', 60, yPos + 12);
+                    doc.text("Geburtsdatum:", 110, yPos + 12); doc.text(details.childDob || '-', 140, yPos + 12);
+                    doc.text("Wohnadresse:", 25, yPos + 18); doc.text(details.childAddress || '(bei Empfänger)', 60, yPos + 18);
+                    yPos += 30;
+                }
+
+                // TABELLE
+                doc.setFont(undefined, 'bold'); doc.text("Zahlungsdetails", 25, yPos + 5);
+                
+                let payRows = [];
+                const freq = details.frequency;
+                let totalOrig = 0;
+                let totalCHF = 0;
+                const r = parseFloat(payment.rate || 1);
+
+                // FIX: Monatliche Tabelle ODER Standard
+                if (freq === 'individual' && details.monthlyAmounts) {
+                    const months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+                    details.monthlyAmounts.forEach((amt, i) => {
+                        if (amt > 0) {
+                            totalOrig += amt;
+                            payRows.push([months[i], `01.${i+1} - 30.${i+1}.${year}`, `${amt.toFixed(2)} ${payment.currency}`, `${(amt * r).toFixed(2)} CHF`]);
+                        }
+                    });
+                    totalCHF = totalOrig * r;
+                    // FIX: Summenzeile für Individuell
+                    payRows.push(['TOTAL JAHR', '', `${totalOrig.toFixed(2)} ${payment.currency}`, `${totalCHF.toFixed(2)} CHF`]);
+                } else {
+                    const fVal = parseInt(freq) || 12;
+                    const mAmount = parseFloat(details.baseAmount) || 0;
+                    totalOrig = mAmount * fVal;
+                    totalCHF = totalOrig * r;
+                    const fLabel = freq === '1' ? "Jährlich (1x)" : "Monatlich (12x)";
+                    payRows = [[
+                        isChild ? `Alimente für ${details.childName}` : `Unterhalt an ${details.recName}`,
+                        fLabel,
+                        `${mAmount.toFixed(2)} ${payment.currency}`,
+                        `${totalOrig.toFixed(2)} ${payment.currency}`
+                    ]];
+                    // Summenzeile auch hier für Konsistenz
+                    payRows.push(['TOTAL JAHR', '', '', `${totalCHF.toFixed(2)} CHF`]);
+                }
+
+                doc.autoTable({
+                    startY: yPos + 10,
+                    head: [['Monat/Bez.', 'Zeitraum/Frequenz', 'Betrag (Orig.)', 'Betrag (CHF)']],
+                    body: payRows,
+                    theme: 'plain',
+                    styles: { cellPadding: 3, fontSize: 10 },
+                    headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+                    columnStyles: { 3: { halign: 'right' } },
+                    // Letzte Zeile fett
+                    didParseCell: function (data) {
+                        if (data.row.index === payRows.length - 1) {
+                            data.cell.styles.fontStyle = 'bold';
+                            data.cell.styles.fillColor = [230, 230, 230];
+                        }
+                    }
+                });
+                
+                // ROTER HINWEIS (FIX: UNTERHALB TABELLE)
+                let noteY = doc.lastAutoTable.finalY + 15;
+                
+                // Sicherstellen, dass wir nicht vom Blatt fallen
+                if(noteY > 260) { doc.addPage(); noteY = 20; }
+                
+                doc.setFillColor(200, 0, 0); doc.triangle(24.5, noteY, 27.5, noteY, 26, noteY + 1.5, 'F');
+                
+                const ziffer = isChild ? "12.2" : "12.1"; 
+                const zifferText = isChild ? "(Unterhalt für minderjährige Kinder)" : "(Unterhalt an geschiedenen Ehegatten)";
+                
+                doc.setTextColor(200, 0, 0);
+                doc.setFontSize(11); doc.setFont(undefined, 'bold');
+                doc.text(`Zu übertragen in die Steuererklärung Seite 3, Ziffer ${ziffer}`, 25, noteY + 8);
+                doc.setFontSize(9); doc.setFont(undefined, 'normal');
+                doc.text(zifferText, 25, noteY + 13);
+                doc.setTextColor(0);
+                
+                // Wechselkurs Info
+                if (payment.currency !== 'CHF') {
+                    doc.setFontSize(8); doc.setFont(undefined, 'italic'); doc.setTextColor(100);
+                    doc.text(`Angewendeter Umrechnungskurs: 1 ${payment.currency} = ${r} CHF`, 25, noteY + 20);
+                    doc.setTextColor(0);
+                }
+            });
+        }
 
         // ==========================================
-        // SEITE 2: JOURNAL MIT CHF UMRECHNUNG
+        // 4. ZUSAMMENFASSUNG UNTERHALT (NEU)
         // ==========================================
-        
+        if (unterhaltsZahlungen.length > 0) {
+            doc.addPage();
+            doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
+            doc.text("4. Zusammenfassung der Unterhaltsbeiträge", 20, 20);
+            doc.setFontSize(10); doc.setFont(undefined, 'normal');
+            doc.text("Übersicht aller geleisteten Zahlungen im Steuerjahr " + year, 20, 28);
+            
+            let summaryRows = [];
+            let totalUnterhaltCHF = 0;
+            
+            unterhaltsZahlungen.forEach(ex => {
+                const r = parseFloat(ex.rate || 1);
+                const amtCHF = parseFloat(ex.amount) * r;
+                totalUnterhaltCHF += amtCHF;
+                
+                // Beschreibung
+                let typ = ex.cat === 'Alimente' ? 'Alimente (Kind)' : 'Unterhalt (Ex)';
+                let detailTxt = ex.cat === 'Alimente' ? ex.details.childName : ex.details.recName;
+                
+                summaryRows.push([
+                    typ,
+                    detailTxt,
+                    `${parseFloat(ex.amount).toFixed(2)} ${ex.currency}`,
+                    `${amtCHF.toFixed(2)} CHF`
+                ]);
+            });
+            
+            summaryRows.push(['TOTAL ABZÜGE (Unterhalt)', '', '', `${totalUnterhaltCHF.toFixed(2)} CHF`]);
+            
+            doc.autoTable({
+                startY: 35,
+                head: [['Art', 'Begünstigter', 'Total (Orig.)', 'Total (CHF)']],
+                body: summaryRows,
+                theme: 'striped',
+                headStyles: { fillColor: [44, 62, 80] },
+                columnStyles: { 3: { halign: 'right', fontStyle: 'bold' }, 2: { halign: 'right' } },
+                didParseCell: function (data) {
+                    if (data.row.index === summaryRows.length - 1) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [220, 220, 220];
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // 5. TRADING JOURNAL (VERSCHOBEN -> SEKTION 5)
+        // ==========================================
         doc.addPage();
-        doc.setFontSize(12); doc.setFont(undefined, 'bold');
-        doc.text("4. Detailliertes Trading-Journal (Nachweis)", 20, 20);
+        doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
+        doc.text("5. Detailliertes Trading-Journal (Nachweis)", 20, 20);
         
         const journalBody = [];
-        
         sortedDays.forEach(k => {
             const d = data[k];
             const net = d.total || 0;
@@ -3605,123 +3802,119 @@ async function generateTaxPDF() {
             if (d.fees && d.fees > 0) fees = d.fees;
             else if (d.trades) d.trades.forEach(t => fees += getComm(t.inst, t.qty));
             const gross = net + fees;
-            
             if (Math.abs(gross) < 0.01 && Math.abs(fees) < 0.01) return;
-            
             const [y, m, day] = k.split('-');
             journalBody.push([`${day}.${m}.${y}`, gross.toFixed(2), '-' + fees.toFixed(2), net.toFixed(2)]);
         });
         
-        // Summenzeile USD
-        journalBody.push([
-            'TOTAL JAHR (USD)',
-            grossPnL_USD.toFixed(2),
-            '-' + totalFees_USD.toFixed(2),
-            netPnL_USD.toFixed(2)
-        ]);
-
-        // NEU: Summenzeile CHF (Abgleich)
-        journalBody.push([
-            'TOTAL JAHR (CHF) bei Forex @ 1 USD = ' + rate + ' CHF (ESTV Jahresmittel)',
-            (grossPnL_USD * rate).toFixed(2) + ' (CHF)',
-            '-' + (totalFees_USD * rate).toFixed(2) + ' (CHF)',
-            (netPnL_USD * rate).toFixed(2) + ' (CHF)'// Das muss = "Betrag (CHF)" Seite 1 sein
-        ]);
+        journalBody.push(['TOTAL JAHR (in USD)', grossPnL_USD.toFixed(2), '-' + totalFees_USD.toFixed(2), netPnL_USD.toFixed(2)]);
+        journalBody.push([`TOTAL JAHR (in CHF)\nUmrechnungskurs: 1 USD = ${rate} CHF`, (grossPnL_USD * rate).toFixed(2), '-' + (totalFees_USD * rate).toFixed(2), (netPnL_USD * rate).toFixed(2)]);
 
         doc.autoTable({
             startY: 25,
-            head: [['Datum', 'Brutto (USD)', 'Gebühren (USD)', 'Netto (USD)']],
+            head: [['Datum', 'Brutto PnL (USD)', 'Gebühren (USD)', 'Netto PnL (USD)']],
             body: journalBody,
-            theme: 'grid',
-            styles: {
-                fontSize: 8  // Hier die Schriftgröße ändern (Standard ist 10)
-            },
-            headStyles: { fillColor: [50, 50, 50] },
-            columnStyles: { 1: {halign:'right'}, 2: {halign:'right', textColor:[200,0,0]}, 3: {halign:'right', fontStyle:'bold'} },
-            // Styling für die letzten ZWEI Zeilen (Total USD und Total CHF)
-            didParseCell: function (data) {
+            theme: 'plain',
+            styles: { fontSize: 8, cellPadding: 1.5, lineColor: [220, 220, 220], lineWidth: 0.1 },
+            headStyles: { fillColor: [44, 62, 80], textColor: 255, fontStyle: 'bold', halign: 'right' },
+            columnStyles: { 0: { halign: 'left', cellWidth: 40 }, 1: { halign: 'right' }, 2: { halign: 'right', textColor: [180, 0, 0] }, 3: { halign: 'right', fontStyle: 'bold' } },
+            didParseCell: function(data) {
+                if (data.section === 'head' && data.column.index === 0) data.cell.styles.halign = 'left';
                 const rows = journalBody.length;
-                if (data.row.index === rows - 2) { // Total USD
+                if (data.row.index >= rows - 2) {
                     data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.fillColor = [240, 240, 240];
+                    if (data.row.index === rows - 2) { data.cell.styles.fillColor = [245, 245, 245]; data.cell.styles.textColor = [0, 0, 0]; }
+                    if (data.row.index === rows - 1) { data.cell.styles.fillColor = [230, 230, 230]; data.cell.styles.textColor = [0, 0, 0]; }
                 }
-                if (data.row.index === rows - 1) { // Total CHF
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.fillColor = [220, 230, 240]; // Leicht bläulich zur Unterscheidung
-                    data.cell.styles.textColor = [0, 0, 0];
+            },
+            didDrawCell: function(data) {
+                if (data.row.index === journalBody.length - 1) {
+                    doc.setDrawColor(100, 100, 100); doc.setLineWidth(0.5);
+                    doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
                 }
             }
         });
 
-        // Unterschrift
-        let signY = doc.lastAutoTable.finalY + 30;
-        if (signY > 250) { doc.addPage(); signY = 40; }
-        
-        doc.setFontSize(10); doc.setFont(undefined, 'normal');
-        doc.text("Ort, Datum: __________________________   Unterschrift: __________________________", 20, signY);
-
         // ==========================================
-    // ANHANG: BELEGE
-    // ==========================================
-    
-    let hasAttachments = false;
-    
-    // Wir sammeln alle relevanten Belege für dieses Jahr
-    const relevantExpenses = (taxData.expenses || []).filter(e => e.year === year);
-    
-    for (const ex of relevantExpenses) {
-        if (ex.receipts && ex.receipts.length > 0) {
-            
-            if (!hasAttachments) {
-                doc.addPage();
-                doc.setFontSize(14); doc.text("Anhang: Belege", 20, 20);
-                hasAttachments = true;
-            }
-            
-            for (const filename of ex.receipts) {
-                const blob = await getImageFromDB(filename);
-                if (blob) {
-                    if (blob.type === 'application/pdf') {
-                        // PDF Hinweis
-                        doc.setFontSize(10);
-                        doc.text(`[PDF Datei] ${ex.desc}: Siehe Backup-Datei "${filename}"`, 20, doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 40);
-                    } else {
-                        // BILD Einfügen
-                        doc.addPage();
-                        doc.setFontSize(10);
-                        doc.text(`Beleg zu: ${ex.desc} (${ex.cat})`, 20, 15);
-                        
-                        try {
-                            // Bilddaten lesen
-                            const imgData = await new Promise(r => {
-                                const reader = new FileReader();
-                                reader.onload = () => r(reader.result);
-                                reader.readAsDataURL(blob);
-                            });
-                            
-                            // Bild einfügen (automatisch skaliert auf A4 Breite)
-                            const props = doc.getImageProperties(imgData);
-                            const pdfWidth = doc.internal.pageSize.getWidth() - 40;
-                            const pdfHeight = (props.height * pdfWidth) / props.width;
-                            
-                            doc.addImage(imgData, 'JPEG', 20, 25, pdfWidth, pdfHeight);
-                        } catch (err) {
-                            console.error("Bild Fehler", err);
-                        }
+        // 6. ANHANG (VERSCHOBEN -> SEKTION 6)
+        // ==========================================
+        const receiptRows = [];
+        const imagesToPrint = [];
+        const relevantExpenses = (taxData.expenses || []).filter(e => e.year === year);
+
+        for (const ex of relevantExpenses) {
+            if (ex.receipts && ex.receipts.length > 0) {
+                let safeDesc = (ex.desc || "Beleg").replace(/[^a-z0-9äöüÄÖÜ\s-]/gi, '_').trim().replace(/\s+/g, '_');
+                let safeCat = (ex.cat || "Allgemein").replace(/[^a-z0-9äöüÄÖÜ\s-]/gi, '_');
+
+                for (let i = 0; i < ex.receipts.length; i++) {
+                    const filename = ex.receipts[i];
+                    const isPDF = filename.toLowerCase().endsWith('.pdf');
+                    let ext = "jpg";
+                    if (filename.includes('.')) ext = filename.split('.').pop();
+                    else if (isPDF) ext = "pdf";
+
+                    const displayFilename = `${safeCat}_${safeDesc}_${i+1}.${ext}`;
+                    const typeStr = isPDF ? "PDF (Digital / Hardcopy)" : "Bild (siehe Anhang)";
+                    receiptRows.push([ex.cat, ex.desc, typeStr, displayFilename]);
+
+                    if (!isPDF) {
+                        imagesToPrint.push({ filename: filename, displayName: displayFilename, desc: ex.desc, cat: ex.cat });
                     }
                 }
             }
         }
-    }
 
-        // Speichern
+        if (receiptRows.length > 0) {
+            doc.addPage();
+            doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
+            doc.text("6. Anhang: Beleg-Verzeichnis", 20, 20);
+            doc.setFontSize(10); doc.setFont(undefined, 'normal');
+            doc.text("Die folgenden Belege sind im digitalen ZIP-Backup enthalten (Ordner 'Lesbare_Belege').", 20, 30);
+            
+            doc.autoTable({
+                startY: 40,
+                head: [['Kategorie', 'Beschreibung', 'Typ', 'Dateiname (Referenz)']],
+                body: receiptRows,
+                theme: 'grid',
+                headStyles: { fillColor: [50, 50, 50] },
+                columnStyles: { 2: { fontStyle: 'italic' }, 3: { fontSize: 8, textColor: [80, 80, 80], fontStyle: 'bold' } }
+            });
+        }
+
+        if (imagesToPrint.length > 0) {
+            for (const item of imagesToPrint) {
+                const blob = await getImageFromDB(item.filename);
+                if (blob) {
+                    try {
+                        doc.addPage();
+                        doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.text(`Bild-Beleg: ${item.displayName}`, 20, 15);
+                        doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.text(`Zu Position: ${item.cat} (${item.desc})`, 20, 20);
+                        const imgData = await new Promise(r => { const reader = new FileReader(); reader.onload = () => r(reader.result); reader.readAsDataURL(blob); });
+                        const props = doc.getImageProperties(imgData);
+                        const pdfWidth = doc.internal.pageSize.getWidth() - 40;
+                        const pdfHeight = (props.height * pdfWidth) / props.width;
+                        let finalW = pdfWidth, finalH = pdfHeight;
+                        const pageHeight = doc.internal.pageSize.getHeight() - 40;
+                        if (finalH > pageHeight) { finalH = pageHeight; finalW = (props.width * finalH) / props.height; }
+                        doc.addImage(imgData, 'JPEG', 20, 30, finalW, finalH);
+                    } catch (err) { console.error(err); }
+                }
+            }
+        }
+
+        // UNTERSCHRIFT
+        let signY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 30 : 250;
+        if (signY > 250) { doc.addPage(); signY = 40; }
+        doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.setTextColor(0);
+        doc.text("Ort, Datum: __________________________   Unterschrift: __________________________", 20, signY);
+
         const safeName = (p.name || 'Steuer').replace(/[^a-z0-9]/gi, '_');
         doc.save(`Steuerreport_${year}_${safeName}.pdf`);
 
     } catch(e) {
-        // HIER FANGEN WIR DEN FEHLER AB UND ZEIGEN IHN AN!
         console.error(e);
-        alert("❌ PDF Fehler: " + e.message + "\n\nTipp: Lade die Seite neu, damit die Bibliotheken laden können.");
+        alert("❌ PDF Fehler: " + e.message);
     }
 }
 
@@ -3899,7 +4092,7 @@ function renderExpenses() {
     });
 }
 
-// --- MODAL FUNKTIONEN ---
+// --- MODAL FUNKTIONEN (MIT INDIVIDUELLEN MONATEN) ---
 
 function openDetailModal(index) {
     currentExpenseIndex = index;
@@ -3922,37 +4115,111 @@ function openDetailModal(index) {
     document.getElementById('detailRecCountry').value = details.recCountry || '';
     document.getElementById('detailRecAddress').value = details.recAddress || '';
     
+    // Einstellungen laden
     document.getElementById('detailFrequency').value = details.frequency || '12';
     
-    // Währung setzen
     const curr = ex.currency || 'CHF';
     document.getElementById('detailCurrency').value = curr;
     
-    // KURS AUTOMATISCH HOLEN
+    // Kurs holen
     const centralRate = getCentralRate(curr);
-    document.getElementById('detailRate').value = centralRate;
-    document.getElementById('detailRate').disabled = true; // Feld sperren, damit man nicht manuell ändert!
+    const savedRate = ex.rate || centralRate;
+    document.getElementById('detailRate').value = savedRate;
     
+    // Beträge laden
     document.getElementById('detailAmountInput').value = details.baseAmount || 0;
     
-    calcDetailTotal(); 
+    // Monatstabelle initialisieren (auch wenn nicht sichtbar)
+    renderMonthlyTable(details.monthlyAmounts || []);
+    
+    // UI umschalten
+    toggleMonthlyTable();
+    
     document.getElementById('expenseDetailModal').classList.add('active');
 }
 
-// Wenn Währung im Modal geändert wird -> Kurs updaten
-document.getElementById('detailCurrency').onchange = function() {
-    const newCurr = this.value;
+function updateDetailCurrency() {
+    const newCurr = document.getElementById('detailCurrency').value;
     const newRate = getCentralRate(newCurr);
     document.getElementById('detailRate').value = newRate;
-    calcDetailTotal();
-};
+    recalcAllMonths(); // Alles neu berechnen
+}
 
-function closeDetailModal() {
-    document.getElementById('expenseDetailModal').classList.remove('active');
+function toggleMonthlyTable() {
+    const freq = document.getElementById('detailFrequency').value;
+    const isIndiv = freq === 'individual';
+    
+    document.getElementById('monthlyTableContainer').style.display = isIndiv ? 'block' : 'none';
+    document.getElementById('simpleAmountContainer').style.visibility = isIndiv ? 'hidden' : 'visible'; // Visibility um Layout zu halten
+    
+    calcDetailTotal();
+}
+
+function renderMonthlyTable(savedAmounts) {
+    const tbody = document.getElementById('monthlyTableBody');
+    tbody.innerHTML = '';
+    const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    
+    months.forEach((m, i) => {
+        const val = savedAmounts && savedAmounts[i] ? savedAmounts[i] : 0;
+        
+        const row = document.createElement('div');
+        row.style.cssText = "display:flex; padding:8px 15px; border-bottom:1px solid #eee; align-items:center;";
+        row.innerHTML = `
+            <div style="width:40px; font-weight:bold; color:#666;">${m}</div>
+            <div style="flex:1;">
+                <input type="number" step="0.01" class="slds-input monthly-input" 
+                       data-index="${i}" value="${val === 0 ? '' : val}" 
+                       placeholder="0.00" oninput="recalcAllMonths()">
+            </div>
+            <div style="flex:1; text-align:right; font-family:monospace;" id="monthCalc_${i}">
+                0.00 CHF
+            </div>
+        `;
+        tbody.appendChild(row);
+    });
+    recalcAllMonths(); // Einmal durchrechnen für Anzeige
+}
+
+function recalcAllMonths() {
+    const rate = parseFloat(document.getElementById('detailRate').value) || 1;
+    const inputs = document.querySelectorAll('.monthly-input');
+    let sumOrig = 0;
+    
+    inputs.forEach(input => {
+        const val = parseFloat(input.value) || 0;
+        const idx = input.getAttribute('data-index');
+        const chfVal = val * rate;
+        
+        sumOrig += val;
+        
+        // Update Zeilen-Anzeige
+        document.getElementById(`monthCalc_${idx}`).textContent = chfVal.toFixed(2) + " CHF";
+    });
+    
+    // Wenn Modus individuell ist, ist das die Gesamtsumme
+    if(document.getElementById('detailFrequency').value === 'individual') {
+        const totalCHF = sumOrig * rate;
+        const curr = document.getElementById('detailCurrency').value;
+        document.getElementById('detailTotalPreview').innerHTML = `
+            <span style="color:#54698d; font-size:0.8em; display:block;">Original: ${sumOrig.toFixed(2)} ${curr}</span>
+            ${totalCHF.toFixed(2)} CHF
+        `;
+    } else {
+        calcDetailTotal(); // Fallback auf Standard-Rechnung
+    }
 }
 
 function calcDetailTotal() {
-    const freq = parseFloat(document.getElementById('detailFrequency').value);
+    const freqVal = document.getElementById('detailFrequency').value;
+    
+    // Wenn individuell -> abbrechen, da recalcAllMonths das macht
+    if(freqVal === 'individual') {
+        recalcAllMonths();
+        return;
+    }
+
+    const freq = parseFloat(freqVal);
     const base = parseFloat(document.getElementById('detailAmountInput').value) || 0;
     const rate = parseFloat(document.getElementById('detailRate').value) || 1;
     const curr = document.getElementById('detailCurrency').value;
@@ -3960,7 +4227,6 @@ function calcDetailTotal() {
     const yearlyTotalOrig = base * freq;
     const yearlyTotalCHF = yearlyTotalOrig * rate;
     
-    // Anzeige: "12000 EUR (= 10560.00 CHF)"
     document.getElementById('detailTotalPreview').innerHTML = `
         <span style="color:#54698d; font-size:0.8em; display:block;">Original: ${yearlyTotalOrig.toFixed(2)} ${curr}</span>
         ${yearlyTotalCHF.toFixed(2)} CHF
@@ -3973,42 +4239,58 @@ function saveDetailFromModal() {
     const ex = taxData.expenses[currentExpenseIndex];
     const isChild = ex.cat === 'Alimente';
     
-    // Details sammeln
+    // Inputs holen
+    const freq = document.getElementById('detailFrequency').value;
+    const curr = document.getElementById('detailCurrency').value;
+    const rate = parseFloat(document.getElementById('detailRate').value) || 1;
+    
     const details = {
-        childName: isChild ? document.getElementById('detailChildName').value : '',
-        childDob: isChild ? document.getElementById('detailChildDob').value : '',
-        childAddress: isChild ? document.getElementById('detailChildAddress').value : '',
-        
         recName: document.getElementById('detailRecName').value,
         recCountry: document.getElementById('detailRecCountry').value,
         recAddress: document.getElementById('detailRecAddress').value,
-        
-        frequency: document.getElementById('detailFrequency').value,
-        baseAmount: parseFloat(document.getElementById('detailAmountInput').value) || 0
+        frequency: freq,
+        baseAmount: parseFloat(document.getElementById('detailAmountInput').value) || 0,
+        monthlyAmounts: [] // Array für Einzelwerte
     };
-    
-    // Werte in das Haupt-Objekt zurückschreiben
-    ex.details = details;
-    ex.currency = document.getElementById('detailCurrency').value;
-    ex.rate = parseFloat(document.getElementById('detailRate').value) || 1;
-    
-    // Gesamtsumme berechnen (Monat * 12)
-    ex.amount = details.baseAmount * parseInt(details.frequency);
-    
-    // Beschreibung automatisch generieren (damit man in der Liste was sieht)
+
     if(isChild) {
-        ex.desc = `Alimente: ${details.childName} (an ${details.recName})`;
-    } else {
-        ex.desc = `Unterhalt an: ${details.recName}`;
+        details.childName = document.getElementById('detailChildName').value;
+        details.childDob = document.getElementById('detailChildDob').value;
+        details.childAddress = document.getElementById('detailChildAddress').value;
     }
     
-    // Speichern & Schließen
-    // WICHTIG: Hier speichern wir leise, damit kein Popup kommt
-    // Das Popup kommt erst wenn der User im Haupt-Tab auf "Speichern" klickt
+    // Werte berechnen
+    let finalAmountOrig = 0;
+    
+    if(freq === 'individual') {
+        const inputs = document.querySelectorAll('.monthly-input');
+        inputs.forEach(input => {
+            const val = parseFloat(input.value) || 0;
+            details.monthlyAmounts.push(val);
+            finalAmountOrig += val;
+        });
+        details.baseAmount = 0; // Nicht relevant bei individuell
+    } else {
+        finalAmountOrig = details.baseAmount * parseInt(freq);
+    }
+
+    // Speichern
+    ex.details = details;
+    ex.currency = curr;
+    ex.rate = rate;
+    ex.amount = finalAmountOrig; // Wichtig für die Hauptanzeige
+    
+    if(isChild) ex.desc = `Alimente: ${details.childName} (an ${details.recName})`;
+    else ex.desc = `Unterhalt an: ${details.recName}`;
+    
     taxData.expenses[currentExpenseIndex] = ex; 
     
     closeDetailModal();
     renderExpenses();
+}
+
+function closeDetailModal() {
+    document.getElementById('expenseDetailModal').classList.remove('active');
 }
 
 // --- STANDARD UPDATE FUNKTIONEN (wie vorher) ---
