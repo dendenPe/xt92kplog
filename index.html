@@ -337,33 +337,27 @@ body{
 .month-selector button{padding:8px 12px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600}
 .month-selector h2{color:#495057;font-size:1.1em}
 
-/* TRADINGVIEW WIDGET CONTAINER */
+/* TRADINGVIEW FIX */
 .tradingview-widget-container {
     width: 100%;
     height: 500px;
     border-radius: 10px;
     overflow: hidden;
     margin-bottom: 15px;
+    background: #fff; /* Weisser Hintergrund falls Widget lädt */
 }
 
 .tradingview-widget-container iframe {
+    width: 100% !important;
+    height: 100% !important;
     border: none;
 }
 
-.widget-info {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 12px;
-    margin-top: 10px;
-    font-size: 0.8em;
-    color: #868e96;
-    text-align: center;
-}
-/* TradingView Widget für Mobile anpassen */
 @media(max-width: 768px) {
     .tradingview-widget-container {
-        height: 800px !important; /* Höher für Mobile */
-        min-height: 400px;
+        height: 600px !important; /* Feste Höhe erzwingen */
+        min-height: 600px !important;
+        display: block !important;
     }
 }
 
@@ -656,13 +650,83 @@ body{
     border: 1px solid #1971c2 !important;
 }
 
+/* --- DETAIL MODAL (SFDC STYLE) --- */
+.detail-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+.detail-modal.active { display: flex; animation: fadeIn 0.2s ease-out; }
+.detail-content { background: #fff; width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
+.detail-header { background: #f4f6f9; padding: 15px 20px; border-bottom: 1px solid #d8dde6; display: flex; justify-content: space-between; align-items: center; }
+.detail-header h3 { margin: 0; color: #16325c; font-size: 1.1em; }
+.detail-body { padding: 20px; overflow-y: auto; background: #fff; }
+.detail-footer { padding: 15px 20px; background: #f4f6f9; border-top: 1px solid #d8dde6; text-align: right; }
+
+/* Grid System für das Formular */
+.slds-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+.slds-col-full { grid-column: span 2; }
+.slds-label { display: block; font-size: 0.75em; color: #54698d; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.slds-input { width: 100%; padding: 8px 12px; border: 1px solid #dddbda; border-radius: 4px; transition: border 0.2s; font-size: 0.95em; color: #16325c; }
+.slds-input:focus { outline: none; border-color: #1b96ff; box-shadow: 0 0 0 1px #1b96ff; }
+.slds-section-title { font-size: 1em; color: #16325c; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #e0e5ee; font-weight: bold; }
+
+/* --- RESPONSIVE TAX FORM --- */
+.tax-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.tax-input-row.bottom {
+    align-items: flex-end;
+}
+
+/* MOBILE ANPASSUNGEN (iPhone etc.) */
+@media(max-width: 768px) {
+    .tax-input-row {
+        flex-direction: column; /* Untereinander stapeln */
+        align-items: stretch;   /* Auf volle Breite ziehen */
+        gap: 5px;
+        background: #fcfcfc;
+        padding: 5px;
+        border-radius: 4px;
+    }
+    
+    .tax-input-row input, 
+    .tax-input-row select {
+        width: 100% !important; /* Volle Breite erzwingen */
+        font-size: 16px !important; /* Verhindert Zoom auf iOS */
+    }
+    
+    .tax-input-row button {
+        width: 100% !important;
+        margin-top: 5px;
+    }
+    
+    /* Labels auf Mobile besser sichtbar machen */
+    .tax-input-row label {
+        margin-bottom: 2px;
+        margin-top: 5px;
+    }
+    
+    /* Den Container padding reduzieren */
+    .container { padding: 0 !important; }
+    .content { padding: 10px !important; }
+}
+/* Mobile Tax Nav Fix */
+@media(max-width: 768px) {
+    #tax .tax-nav-btn {
+        flex: 1 1 45%; /* Buttons nehmen ca. 50% Breite ein (2 pro Zeile) */
+        font-size: 0.8em; /* Schrift etwas kleiner */
+        padding: 10px 2px;
+        white-space: normal; /* Text darf umbrechen */
+    }
+}
 </style>
 </head>
 <body>
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version 02i</h1>
+<h1>Trade Log / Version 02j</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -866,7 +930,7 @@ body{
     <h2 style="text-align:center;margin-bottom:15px;color:#2c3e50">🇨🇭 Steuererklärung (Schaffhausen)</h2>
     
     <!-- Navigation innerhalb des Steuer-Tabs -->
-    <div style="display:flex; background:#f8f9fa; border-radius:8px; margin-bottom:20px; padding:5px; gap:5px;">
+    <div style="display:flex; flex-wrap:wrap; background:#f8f9fa; border-radius:8px; margin-bottom:20px; padding:5px; gap:5px;">
         <button class="btn-sm btn-outline tax-nav-btn active" onclick="switchTaxSubView('overview')" style="flex:1; border:none;">Übersicht</button>
         <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('personal')" style="flex:1; border:none;">Persönlich</button>
         <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('expenses')" style="flex:1; border:none;">Ausgaben</button>
@@ -950,6 +1014,19 @@ body{
             </div>
             
             <button class="btn btn-success" onclick="generateTaxPDF()">🚀 PDF Generieren (Schaffhausen)</button>
+            <hr style="margin:20px 0; border:0; border-top:1px dashed #ccc;">
+            
+            <div class="chart-title">💾 Steuer-Backup (Lokal)</div>
+            <div class="info-box">
+                Sichert NUR die Steuerdaten (Ausgaben, Belege, pers. Daten) als ZIP.<br>
+                Ideal, um Belege nicht zu verlieren.
+            </div>
+            
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-primary" onclick="exportTaxZIP()" style="flex:1;">📦 Steuer-ZIP erstellen</button>
+                <input type="file" id="taxZipInput" style="display:none" onchange="importTaxZIP(this)">
+                <button class="btn btn-info" onclick="document.getElementById('taxZipInput').click()" style="flex:1;">📂 Steuer-ZIP importieren</button>
+            </div>
         </div>
     </div>
 </div>
@@ -989,6 +1066,93 @@ body{
 </div>
 
 <!-- MODAL -->
+<!-- SPEZIAL MODAL FÜR UNTERHALT/ALIMENTE -->
+<div id="expenseDetailModal" class="detail-modal">
+    <div class="detail-content">
+        <div class="detail-header">
+            <h3 id="expDetailTitle">Details erfassen</h3>
+            <button onclick="closeDetailModal()" style="background:none;border:none;font-size:1.5em;cursor:pointer;color:#54698d;">&times;</button>
+        </div>
+        
+        <div class="detail-body">
+            <!-- Dynamischer Bereich für Kind (nur bei Alimenten) -->
+            <div id="childSection" style="display:none;">
+                <div class="slds-section-title">👶 Angaben zum Kind</div>
+                <div class="slds-grid">
+                    <div>
+                        <label class="slds-label">Name des Kindes</label>
+                        <input type="text" id="detailChildName" class="slds-input" placeholder="Vorname Nachname">
+                    </div>
+                    <div>
+                        <label class="slds-label">Geburtsdatum</label>
+                        <input type="date" id="detailChildDob" class="slds-input">
+                    </div>
+                    <div class="slds-col-full">
+                        <label class="slds-label">Wohnadresse Kind (Falls abweichend)</label>
+                        <input type="text" id="detailChildAddress" class="slds-input" placeholder="Strasse, PLZ, Ort, Land">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empfänger Daten (Mutter/Ex-Partner) -->
+            <div class="slds-section-title">👤 Empfänger der Zahlung (Mutter/Ex-Partner)</div>
+            <div class="slds-grid">
+                <div>
+                    <label class="slds-label">Name</label>
+                    <input type="text" id="detailRecName" class="slds-input" placeholder="Vorname Nachname">
+                </div>
+                <div>
+                    <label class="slds-label">Land / Wohnsitz</label>
+                    <input type="text" id="detailRecCountry" class="slds-input" placeholder="z.B. Schweiz oder Deutschland">
+                </div>
+                <div class="slds-col-full">
+                    <label class="slds-label">Vollständige Adresse</label>
+                    <input type="text" id="detailRecAddress" class="slds-input" placeholder="Strasse, PLZ, Ort">
+                </div>
+            </div>
+
+            <!-- Zahlungsdaten -->
+            <div class="slds-section-title">💸 Zahlungsdetails</div>
+            <div class="slds-grid">
+                <div>
+                    <label class="slds-label">Zahlweise</label>
+                    <select id="detailFrequency" class="slds-input" onchange="calcDetailTotal()">
+                        <option value="12">Monatlich (x12)</option>
+                        <option value="1">Jährlich (Einmalig)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="slds-label">Währung</label>
+                    <select id="detailCurrency" class="slds-input" onchange="calcDetailTotal()">
+                        <option value="CHF">CHF</option>
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="slds-label">Betrag (pro Zahlung)</label>
+                    <input type="number" id="detailAmountInput" class="slds-input" oninput="calcDetailTotal()">
+                </div>
+                <div>
+                    <label class="slds-label">Wechselkurs (zu CHF)</label>
+                    <input type="number" id="detailRate" class="slds-input" step="0.0001" value="1.00" oninput="calcDetailTotal()">
+                </div>
+            </div>
+            
+            <!-- Live Berechnung -->
+            <div style="background:#eef4ff; padding:15px; border-radius:6px; text-align:center; margin-top:10px; border:1px solid #cce4f7;">
+                <div style="font-size:0.8em; color:#54698d; margin-bottom:5px;">Jahressumme (Berechnet)</div>
+                <div id="detailTotalPreview" style="font-size:1.5em; font-weight:bold; color:#1b96ff;">0.00 CHF</div>
+            </div>
+        </div>
+        
+        <div class="detail-footer">
+            <button class="btn-outline" onclick="closeDetailModal()" style="width:auto; margin-right:10px;">Abbrechen</button>
+            <button class="btn-primary" onclick="saveDetailFromModal()" style="width:auto; display:inline-block;">Übernehmen</button>
+        </div>
+    </div>
+</div>
+
 <div id="modal" class="modal">
 <div class="modal-content">
 <div class="modal-header"><span id="modalTitle"></span></div>
@@ -1049,6 +1213,7 @@ body{
     { id: 'cont-long', label: 'Cont. Long 🟢' },
     { id: 'cont-short', label: 'Cont. Short 🔴' }
 ];
+let activeExpenseIndex = -1; // Speichert, über welcher Box die Maus gerade ist
 let calMonth=new Date(),statsMonth=new Date(),data={},selDate=null,dataCount=0,cachedDirHandle=null;
 let currentTrades = [];
 let todayTrades = [];
@@ -1677,44 +1842,6 @@ function showView(n){
         switchTaxSubView('overview'); // Ersten Unter-Tab öffnen
     }
     else if(n==='today')init();
-}
-
-// Swipe Logic
-let touchStartX = 0;
-let touchStartY = 0;
-
-document.addEventListener('touchstart', function(e) {
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
-}, false);
-
-document.addEventListener('touchend', function(e) {
-    const touchEndX = e.changedTouches[0].screenX;
-    const touchEndY = e.changedTouches[0].screenY;
-    handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
-}, false);
-
-function handleSwipe(sx, sy, ex, ey) {
-    if(document.getElementById('day-details').classList.contains('active')) return;
-
-    const diffX = ex - sx;
-    const diffY = ey - sy;
-
-    if (Math.abs(diffX) > 50 && Math.abs(diffY) < 50) {
-        const currentViewEl = document.querySelector('.view.active');
-        if(!currentViewEl) return;
-        
-        const currentId = currentViewEl.id;
-        const currentIndex = viewIds.indexOf(currentId);
-        
-        if(currentIndex === -1) return;
-
-        if (diffX < 0) {
-            if (currentIndex < viewIds.length - 1) showView(viewIds[currentIndex + 1]);
-        } else {
-            if (currentIndex > 0) showView(viewIds[currentIndex - 1]);
-        }
-    }
 }
 
 function changeMonth(d){calMonth.setMonth(calMonth.getMonth()+d);renderCal()}
@@ -3194,6 +3321,11 @@ function saveTaxData(silent = false) {
     if (!silent) {
         alert("Daten gespeichert! ✓");
     }
+    const rateUSD = document.getElementById('taxExchangeRate');
+    if(rateUSD) taxData.rateUSD = parseFloat(rateUSD.value);
+
+    const rateEUR = document.getElementById('taxExchangeRateEUR');
+    if(rateEUR) taxData.rateEUR = parseFloat(rateEUR.value);
 }
 
 // 2. Navigation im Steuer-Tab
@@ -3528,6 +3660,60 @@ async function generateTaxPDF() {
         doc.setFontSize(10); doc.setFont(undefined, 'normal');
         doc.text("Ort, Datum: __________________________   Unterschrift: __________________________", 20, signY);
 
+        // ==========================================
+    // ANHANG: BELEGE
+    // ==========================================
+    
+    let hasAttachments = false;
+    
+    // Wir sammeln alle relevanten Belege für dieses Jahr
+    const relevantExpenses = (taxData.expenses || []).filter(e => e.year === year);
+    
+    for (const ex of relevantExpenses) {
+        if (ex.receipts && ex.receipts.length > 0) {
+            
+            if (!hasAttachments) {
+                doc.addPage();
+                doc.setFontSize(14); doc.text("Anhang: Belege", 20, 20);
+                hasAttachments = true;
+            }
+            
+            for (const filename of ex.receipts) {
+                const blob = await getImageFromDB(filename);
+                if (blob) {
+                    if (blob.type === 'application/pdf') {
+                        // PDF Hinweis
+                        doc.setFontSize(10);
+                        doc.text(`[PDF Datei] ${ex.desc}: Siehe Backup-Datei "${filename}"`, 20, doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 40);
+                    } else {
+                        // BILD Einfügen
+                        doc.addPage();
+                        doc.setFontSize(10);
+                        doc.text(`Beleg zu: ${ex.desc} (${ex.cat})`, 20, 15);
+                        
+                        try {
+                            // Bilddaten lesen
+                            const imgData = await new Promise(r => {
+                                const reader = new FileReader();
+                                reader.onload = () => r(reader.result);
+                                reader.readAsDataURL(blob);
+                            });
+                            
+                            // Bild einfügen (automatisch skaliert auf A4 Breite)
+                            const props = doc.getImageProperties(imgData);
+                            const pdfWidth = doc.internal.pageSize.getWidth() - 40;
+                            const pdfHeight = (props.height * pdfWidth) / props.width;
+                            
+                            doc.addImage(imgData, 'JPEG', 20, 25, pdfWidth, pdfHeight);
+                        } catch (err) {
+                            console.error("Bild Fehler", err);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
         // Speichern
         const safeName = (p.name || 'Steuer').replace(/[^a-z0-9]/gi, '_');
         doc.save(`Steuerreport_${year}_${safeName}.pdf`);
@@ -3546,52 +3732,55 @@ const originalInit = window.onload; // Falls vorhanden
 // Siehe Schritt 5.
 
 load();
-// --- PASTE SUPPORT (STRG+V / CMD+V) ---
+// --- PASTE SUPPORT (UPDATED) ---
 document.addEventListener('paste', function(e) {
-    // 1. Inhalt der Zwischenablage prüfen
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     const files = [];
 
-    // Nach Bildern suchen
     for (let i = 0; i < items.length; i++) {
-        // Wenn es ein Bild ist...
-        if (items[i].type.indexOf("image") !== -1) {
+        // Auch PDF erlauben (manche Systeme erlauben File-Copy)
+        if (items[i].kind === 'file') {
             const blob = items[i].getAsFile();
             files.push(blob);
         }
     }
 
-    // Wenn keine Bilder gefunden wurden, brechen wir ab 
-    // (damit du weiterhin Text in deine Notizen pasten kannst!)
     if (files.length === 0) return;
 
-    // 2. Prüfen: Wo befinden wir uns gerade?
     const modal = document.getElementById('modal');
     const todayView = document.getElementById('today');
-    const todayNotesTab = document.getElementById('today-notes');
+    const taxView = document.getElementById('tax'); // NEU
 
-    // FALL A: Das Bearbeiten-Fenster (Modal) ist offen
+    // 1. Priorität: Modal (Bearbeiten)
     if (modal && modal.classList.contains('active')) {
-        // Wir prüfen, ob der Notiz-Tab im Modal sichtbar ist (optional, aber sauberer)
         const modalNotesTab = document.getElementById('tab-notes');
         if(modalNotesTab && modalNotesTab.style.display !== 'none') {
-            e.preventDefault(); // Verhindert, dass der Browser versucht, das Bild ins Textfeld zu quetschen
-            processModalFiles(files); // Ab in die Modal-Logik
+            e.preventDefault(); processModalFiles(files); return;
+        }
+    }
+
+    // 2. Priorität: Steuer-Ausgaben (Maus muss über Box sein)
+    if (taxView && taxView.classList.contains('active')) {
+        if (activeExpenseIndex !== -1) {
+            e.preventDefault();
+            handleExpenseFile(activeExpenseIndex, files);
             return;
         }
     }
 
-    // FALL B: Wir sind in der "Heute"-Ansicht
+    // 3. Priorität: Heute Tab
     if (todayView && todayView.classList.contains('active')) {
-        // Wir prüfen, ob der Notiz-Tab aktiv ist
+        const todayNotesTab = document.getElementById('today-notes');
         if (todayNotesTab && todayNotesTab.classList.contains('active')) {
-            e.preventDefault();
-            processFiles(files); // Ab in die Heute-Logik
+            e.preventDefault(); processFiles(files);
         }
     }
 });
 
-// --- AUSGABEN LOGIC (LIVE UPDATE FIX) ---
+// --- AUSGABEN LOGIC (MIT DETAIL-MODAL) ---
+let currentExpenseIndex = -1; // Merkt sich, welche Zeile wir bearbeiten
+
+// --- AUSGABEN LOGIC (RESPONSIVE) ---
 function renderExpenses() {
     const container = document.getElementById('expenseEntries');
     if(!container) return;
@@ -3601,8 +3790,8 @@ function renderExpenses() {
     
     taxData.expenses.forEach((ex, i) => {
         if(!ex.currency) ex.currency = 'CHF';
-        // Wenn kein Kurs da ist (oder 0), Standard auf 1
-        if(ex.rate === undefined || ex.rate === null || ex.rate === '') ex.rate = 1.00;
+        if(ex.rate === undefined || ex.rate === null) ex.rate = 1.00;
+        if(!ex.receipts) ex.receipts = [];
 
         const div = document.createElement('div');
         div.style.marginBottom = "15px";
@@ -3612,102 +3801,225 @@ function renderExpenses() {
         div.style.border = "1px solid #e9ecef";
         div.style.borderLeft = "5px solid #17a2b8";
 
-        // Sofortige Berechnung für die Anzeige
         const amount = parseFloat(ex.amount) || 0;
         const rate = parseFloat(ex.rate) || 0;
         const totalCHF = (amount * rate).toFixed(2);
+        
+        // Spezial-Buttons Logic
+        const isSpecial = (ex.cat === 'Unterhalt' || ex.cat === 'Alimente');
+        let centerPartHTML = '';
+        
+        if (isSpecial) {
+             const btnLabel = ex.cat === 'Alimente' ? '👶 Kinder & Zahlung bearbeiten' : '👤 Empfänger & Zahlung bearbeiten';
+             // Auf Mobile auch volle Breite
+             centerPartHTML = `<div style="flex:4;"><button class="btn-info" onclick="openDetailModal(${i})" style="width:100%; padding:12px;">✏️ ${btnLabel}</button></div>`;
+        } else {
+             centerPartHTML = `
+             <div style="flex:2">
+                <label style="font-size:0.75em;font-weight:bold;color:#666">Betrag</label>
+                <input type="number" step="0.01" value="${ex.amount}" oninput="updateExp(${i},'amount',this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+             </div>
+             <div style="width:80px; flex-shrink:0;">
+                <label style="font-size:0.75em;font-weight:bold;color:#666">Währung</label>
+                <select onchange="updateExp(${i},'currency',this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;background:white">
+                    <option value="CHF" ${ex.currency==='CHF'?'selected':''}>CHF</option>
+                    <option value="USD" ${ex.currency==='USD'?'selected':''}>USD</option>
+                    <option value="EUR" ${ex.currency==='EUR'?'selected':''}>EUR</option>
+                </select>
+             </div>
+             <div style="flex:1">
+                <label style="font-size:0.75em;font-weight:bold;color:#666">Kurs</label>
+                <input type="number" step="0.0001" value="${ex.rate}" oninput="updateExp(${i},'rate',this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
+             </div>`;
+        }
 
         div.innerHTML = `
-            <!-- ZEILE 1: Beschreibung & Jahr -->
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <!-- ZEILE 1 (Beschreibung) -->
+            <div class="tax-input-row">
                 <div style="flex:2">
                     <label style="font-size:0.75em; color:#666; font-weight:bold;">Beschreibung</label>
-                    <input type="text" value="${ex.desc}" 
-                           oninput="updateExp(${i},'desc',this.value)" 
-                           style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
+                    <input type="text" value="${ex.desc}" oninput="updateExp(${i},'desc',this.value)" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;" ${isSpecial ? 'disabled' : ''}>
                 </div>
                 <div style="flex:1">
-                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Steuerjahr</label>
-                    <select onchange="updateExp(${i},'year',this.value)" 
-                            style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;">
+                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Jahr</label>
+                    <select onchange="updateExp(${i},'year',this.value)" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;">
                         <option value="2025" ${ex.year==='2025'?'selected':''}>2025</option>
                         <option value="2026" ${ex.year==='2026'?'selected':''}>2026</option>
                     </select>
                 </div>
             </div>
             
-            <!-- ZEILE 2: Kategorie -->
-            <div style="margin-bottom:10px;">
-                <label style="font-size:0.75em; color:#666; font-weight:bold;">Kategorie</label>
-                <select style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;" 
-                        onchange="updateExp(${i},'cat',this.value)">
-                    <option value="Software/Daten" ${ex.cat==='Software/Daten'?'selected':''}>Software / Daten</option>
-                    <option value="Hardware" ${ex.cat==='Hardware'?'selected':''}>Hardware / Büro</option>
-                    <option value="Bildung" ${ex.cat==='Bildung'?'selected':''}>Bildung / Kurse</option>
-                    <option value="Säule 3a" ${ex.cat==='Säule 3a'?'selected':''}>Säule 3a</option>
-                    <option value="Krankenkasse" ${ex.cat==='Krankenkasse'?'selected':''}>Krankenkasse</option>
-                    <option value="Werbung" ${ex.cat==='Werbung'?'selected':''}>Werbekosten</option>
-                    <option value="Sonstiges" ${ex.cat==='Sonstiges'?'selected':''}>Sonstiges</option>
-                </select>
-            </div>
-
-            <!-- ZEILE 3: Betrag, Währung, Kurs, Löschen -->
-            <div style="display:flex; gap:10px; align-items:flex-end;">
-                
-                <!-- Betrag -->
-                <div style="flex:2">
-                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Betrag</label>
-                    <input type="number" step="0.01" value="${ex.amount}" 
-                           oninput="updateExp(${i},'amount',this.value)" 
-                           style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
-                </div>
-                
-                <!-- Währung -->
-                <div style="width:80px">
-                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Währung</label>
-                    <select style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;" 
-                            onchange="updateExp(${i},'currency',this.value)">
-                        <option value="CHF" ${ex.currency==='CHF'?'selected':''}>CHF</option>
-                        <option value="USD" ${ex.currency==='USD'?'selected':''}>USD</option>
-                        <option value="EUR" ${ex.currency==='EUR'?'selected':''}>EUR</option>
+            <!-- ZEILE 2 (Kategorie) -->
+            <div class="tax-input-row">
+                <div style="width:100%">
+                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Kategorie</label>
+                    <select style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;" onchange="updateExp(${i},'cat',this.value)">
+                        <option value="Software/Daten" ${ex.cat==='Software/Daten'?'selected':''}>Software / Daten</option>
+                        <option value="Hardware" ${ex.cat==='Hardware'?'selected':''}>Hardware / Büro</option>
+                        <option value="Unterhalt" ${ex.cat==='Unterhalt'?'selected':''}>👤 Unterhalt an Mutter/Ex</option>
+                        <option value="Alimente" ${ex.cat==='Alimente'?'selected':''}>👶 Alimente für Kind</option>
+                        <option value="Säule 3a" ${ex.cat==='Säule 3a'?'selected':''}>Säule 3a</option>
+                        <option value="Krankenkasse" ${ex.cat==='Krankenkasse'?'selected':''}>Krankenkasse</option>
+                        <option value="Werbung" ${ex.cat==='Werbung'?'selected':''}>Werbekosten</option>
+                        <option value="Sonstiges" ${ex.cat==='Sonstiges'?'selected':''}>Sonstiges</option>
                     </select>
                 </div>
+            </div>
 
-                <!-- Kurs -->
-                <div style="flex:1">
-                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Kurs zu CHF</label>
-                    <input type="number" step="0.0001" value="${ex.rate}" 
-                           oninput="updateExp(${i},'rate',this.value)" 
-                           style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
-                </div>
-                
-                <!-- Löschen Button -->
-                <button onclick="removeExp(${i})" 
-                        style="width:40px; height:38px; background:#fa5252; color:white; border:none; border-radius:4px; cursor:pointer; flex-shrink:0; margin-bottom:1px;">
-                    ✕
-                </button>
+            <!-- ZEILE 3 (Beträge) -->
+            <div class="tax-input-row bottom">
+                ${centerPartHTML}
+                <button onclick="removeExp(${i})" style="width:40px; height:38px; background:#fa5252; color:white; border:none; border-radius:4px; cursor:pointer; flex-shrink:0;">✕</button>
             </div>
             
-            <!-- Live Vorschau (Mit ID für Update) -->
-            <div id="preview_${i}" style="text-align:right; font-size:0.9em; color:#1971c2; margin-top:8px; font-weight:bold; padding-top:5px; border-top:1px dashed #eee;">
+            <div id="preview_${i}" style="text-align:right; font-size:0.9em; color:#1971c2; font-weight:bold; margin-bottom:10px;">
                 = ${totalCHF} CHF
+            </div>
+
+            <!-- BELEGE BOX -->
+            <div class="screenshot-container" 
+                 onmouseenter="activeExpenseIndex=${i}" 
+                 onmouseleave="activeExpenseIndex=-1"
+                 style="background:#f1f3f5; padding:10px; border-radius:6px; border:1px dashed #ccc;">
+                <label style="font-size:0.7em; color:#666; font-weight:bold;">📄 Belege</label>
+                
+                <div class="screenshot-dropzone" id="dropzone_exp_${i}" 
+                     onclick="document.getElementById('input_exp_${i}').click()"
+                     style="padding:10px; margin-bottom:5px; font-size:0.8em; background:white;">
+                    Datei hier reinziehen
+                </div>
+                <input type="file" id="input_exp_${i}" style="display:none" onchange="handleExpenseFile(${i}, this.files)">
+                
+                <div id="preview_exp_${i}" class="preview-grid" style="gap:5px;"></div>
             </div>
         `;
         container.appendChild(div);
+        setTimeout(() => setupExpenseDropzone(i), 0);
+        renderExpenseReceipts(i);
     });
 }
 
-function updateExp(i, field, val) {
-    // 1. Daten im Hintergrund-Objekt aktualisieren
-    // Wir speichern den Wert direkt (auch als String), damit das Eingabefeld nicht springt (z.B. bei "10.")
-    taxData.expenses[i][field] = val;
+// --- MODAL FUNKTIONEN ---
 
-    // 2. Spezialfall: Währung auf CHF geändert -> Kurs auf 1 setzen
-    if(field === 'currency' && val === 'CHF') {
-        taxData.expenses[i].rate = 1.00;
-        renderExpenses(); // Hier müssen wir neu rendern, um das Kurs-Feld zu aktualisieren
+function openDetailModal(index) {
+    currentExpenseIndex = index;
+    const ex = taxData.expenses[index];
+    const details = ex.details || {}; 
+    
+    const isChild = ex.cat === 'Alimente';
+    document.getElementById('expDetailTitle').textContent = isChild ? "👶 Alimente erfassen" : "👤 Unterhaltszahlungen erfassen";
+    
+    const childSec = document.getElementById('childSection');
+    if(childSec) childSec.style.display = isChild ? 'block' : 'none';
+    
+    if(isChild) {
+        document.getElementById('detailChildName').value = details.childName || '';
+        document.getElementById('detailChildDob').value = details.childDob || '';
+        document.getElementById('detailChildAddress').value = details.childAddress || '';
+    }
+    
+    document.getElementById('detailRecName').value = details.recName || '';
+    document.getElementById('detailRecCountry').value = details.recCountry || '';
+    document.getElementById('detailRecAddress').value = details.recAddress || '';
+    
+    document.getElementById('detailFrequency').value = details.frequency || '12';
+    
+    // Währung setzen
+    const curr = ex.currency || 'CHF';
+    document.getElementById('detailCurrency').value = curr;
+    
+    // KURS AUTOMATISCH HOLEN
+    const centralRate = getCentralRate(curr);
+    document.getElementById('detailRate').value = centralRate;
+    document.getElementById('detailRate').disabled = true; // Feld sperren, damit man nicht manuell ändert!
+    
+    document.getElementById('detailAmountInput').value = details.baseAmount || 0;
+    
+    calcDetailTotal(); 
+    document.getElementById('expenseDetailModal').classList.add('active');
+}
+
+// Wenn Währung im Modal geändert wird -> Kurs updaten
+document.getElementById('detailCurrency').onchange = function() {
+    const newCurr = this.value;
+    const newRate = getCentralRate(newCurr);
+    document.getElementById('detailRate').value = newRate;
+    calcDetailTotal();
+};
+
+function closeDetailModal() {
+    document.getElementById('expenseDetailModal').classList.remove('active');
+}
+
+function calcDetailTotal() {
+    const freq = parseFloat(document.getElementById('detailFrequency').value);
+    const base = parseFloat(document.getElementById('detailAmountInput').value) || 0;
+    const rate = parseFloat(document.getElementById('detailRate').value) || 1;
+    const curr = document.getElementById('detailCurrency').value;
+    
+    const yearlyTotalOrig = base * freq;
+    const yearlyTotalCHF = yearlyTotalOrig * rate;
+    
+    // Anzeige: "12000 EUR (= 10560.00 CHF)"
+    document.getElementById('detailTotalPreview').innerHTML = `
+        <span style="color:#54698d; font-size:0.8em; display:block;">Original: ${yearlyTotalOrig.toFixed(2)} ${curr}</span>
+        ${yearlyTotalCHF.toFixed(2)} CHF
+    `;
+}
+
+function saveDetailFromModal() {
+    if(currentExpenseIndex === -1) return;
+    
+    const ex = taxData.expenses[currentExpenseIndex];
+    const isChild = ex.cat === 'Alimente';
+    
+    // Details sammeln
+    const details = {
+        childName: isChild ? document.getElementById('detailChildName').value : '',
+        childDob: isChild ? document.getElementById('detailChildDob').value : '',
+        childAddress: isChild ? document.getElementById('detailChildAddress').value : '',
+        
+        recName: document.getElementById('detailRecName').value,
+        recCountry: document.getElementById('detailRecCountry').value,
+        recAddress: document.getElementById('detailRecAddress').value,
+        
+        frequency: document.getElementById('detailFrequency').value,
+        baseAmount: parseFloat(document.getElementById('detailAmountInput').value) || 0
+    };
+    
+    // Werte in das Haupt-Objekt zurückschreiben
+    ex.details = details;
+    ex.currency = document.getElementById('detailCurrency').value;
+    ex.rate = parseFloat(document.getElementById('detailRate').value) || 1;
+    
+    // Gesamtsumme berechnen (Monat * 12)
+    ex.amount = details.baseAmount * parseInt(details.frequency);
+    
+    // Beschreibung automatisch generieren (damit man in der Liste was sieht)
+    if(isChild) {
+        ex.desc = `Alimente: ${details.childName} (an ${details.recName})`;
+    } else {
+        ex.desc = `Unterhalt an: ${details.recName}`;
+    }
+    
+    // Speichern & Schließen
+    // WICHTIG: Hier speichern wir leise, damit kein Popup kommt
+    // Das Popup kommt erst wenn der User im Haupt-Tab auf "Speichern" klickt
+    taxData.expenses[currentExpenseIndex] = ex; 
+    
+    closeDetailModal();
+    renderExpenses();
+}
+
+// --- STANDARD UPDATE FUNKTIONEN (wie vorher) ---
+function updateExp(i, field, val) {
+    if(field === 'cat') {
+        taxData.expenses[i].cat = val;
+        // Wenn auf Spezial gewechselt wird, rendern wir neu um den Button zu zeigen
+        if(val === 'Unterhalt' || val === 'Alimente') renderExpenses();
         return;
     }
+
 
     // 3. LIVE UPDATE DES TEXTES (Ohne Re-Render!)
     // Wir suchen nur das blaue Textfeld für diese Zeile
@@ -3736,7 +4048,260 @@ function removeExp(i) {
     // Beim Löschen rendern wir neu
     renderExpenses();
 }
+function getCentralRate(currency) {
+    if (currency === 'CHF') return 1.00;
+    
+    // Versuche, den Wert aus den Input-Feldern zu lesen (falls Tab offen)
+    const rateUSD = document.getElementById('taxExchangeRate');
+    const rateEUR = document.getElementById('taxExchangeRateEUR');
+    
+    if (currency === 'USD' && rateUSD) return parseFloat(rateUSD.value) || 0.85;
+    if (currency === 'EUR' && rateEUR) return parseFloat(rateEUR.value) || 0.94;
+    
+    // Fallback: Gespeicherte Werte in taxData nutzen (wenn Tab nicht offen)
+    if (currency === 'USD') return taxData.rateUSD || 0.85;
+    if (currency === 'EUR') return taxData.rateEUR || 0.94;
+    
+    return 1.00;
+}
+// --- BELEGE LOGIC ---
 
+function setupExpenseDropzone(index) {
+    const dropzone = document.getElementById(`dropzone_exp_${index}`);
+    if(!dropzone) return;
+    
+    dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
+    dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+    dropzone.ondrop = (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        handleExpenseFile(index, e.dataTransfer.files);
+    };
+}
+
+async function handleExpenseFile(index, files) {
+    const ex = taxData.expenses[index];
+    if(!ex.receipts) ex.receipts = [];
+    
+    for(let i=0; i<files.length; i++) {
+        const file = files[i];
+        // Erlaube Bilder UND PDF
+        if (file.type.match('image.*') || file.type === 'application/pdf') {
+            const timestamp = new Date().getTime();
+            // Eindeutiger Name: receipt_INDEX_TIMESTAMP.ext
+            let ext = file.name.split('.').pop();
+            const filename = `receipt_${index}_${timestamp}_${i}.${ext}`;
+            
+            await saveImageToDB(filename, file);
+            ex.receipts.push(filename);
+        }
+    }
+    
+    saveTaxData(true); // Leise speichern
+    renderExpenseReceipts(index); // Nur die Vorschau dieser Zeile aktualisieren
+}
+
+async function renderExpenseReceipts(index) {
+    const container = document.getElementById(`preview_exp_${index}`);
+    if(!container) return;
+    container.innerHTML = '';
+    
+    const ex = taxData.expenses[index];
+    if(!ex.receipts) return;
+    
+    for(let i=0; i<ex.receipts.length; i++) {
+        const filename = ex.receipts[i];
+        const blob = await getImageFromDB(filename);
+        
+        if(blob) {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.style.width = '60px'; div.style.height = '60px'; // Kleiner als Screenshots
+            
+            const btn = document.createElement('div');
+            btn.className = 'btn-remove-img';
+            btn.innerHTML = '✕';
+            btn.onclick = (e) => { 
+                e.stopPropagation(); 
+                ex.receipts.splice(i, 1); 
+                saveTaxData(true); 
+                renderExpenseReceipts(index); 
+            };
+            
+            // Icon oder Bild anzeigen
+            if(filename.toLowerCase().endsWith('.pdf') || blob.type === 'application/pdf') {
+                // PDF Icon
+                div.innerHTML = `<div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;background:#ffeaea;color:#d63031;font-weight:bold;font-size:0.8em;flex-direction:column;">PDF<span style="font-size:0.6em">Vorschau</span></div>`;
+                div.onclick = () => {
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                };
+            } else {
+                // Bild Vorschau
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(blob);
+                img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
+                div.appendChild(img);
+                addHoverPreview(div, img.src); // Hover Effekt
+                div.onclick = () => window.open(img.src);
+            }
+            
+            div.appendChild(btn);
+            container.appendChild(div);
+        }
+    }
+}
+// --- TAX ZIP LOGIC (MIT SPRECHENDEN DATEINAMEN) ---
+async function exportTaxZIP() {
+    const btn = document.querySelector('button[onclick="exportTaxZIP()"]');
+    const oldText = btn ? btn.innerText : "ZIP";
+    if(btn) btn.innerText = "⏳ Packe ZIP...";
+
+    try {
+        const zip = new JSZip();
+        
+        // 1. JSON Daten
+        zip.file("tax_data.json", JSON.stringify(taxData, null, 2));
+        
+        // 2. Belege speichern (mit Umbenennung!)
+        const folder = zip.folder("receipts");
+        
+        if(taxData.expenses) {
+            let fileCounter = 0;
+            
+            for(const ex of taxData.expenses) {
+                if(ex.receipts && ex.receipts.length > 0) {
+                    
+                    // Wir bauen einen schönen Namen: Kategorie_Beschreibung
+                    // Ersetze ungültige Zeichen durch Unterstrich
+                    let safeDesc = (ex.desc || "Ohne_Beschreibung").replace(/[^a-z0-9äöüÄÖÜ\s-]/gi, '_').trim();
+                    let safeCat = (ex.cat || "Allgemein").replace(/[^a-z0-9äöüÄÖÜ\s-]/gi, '_');
+                    
+                    // Leerzeichen zu Unterstrich
+                    safeDesc = safeDesc.replace(/\s+/g, '_');
+                    
+                    for(let i=0; i < ex.receipts.length; i++) {
+                        const originalInternalName = ex.receipts[i];
+                        const blob = await getImageFromDB(originalInternalName);
+                        
+                        if(blob) {
+                            // Dateiendung vom Blob oder vom Originalnamen raten
+                            let ext = "jpg";
+                            if (blob.type === "application/pdf") ext = "pdf";
+                            else if (originalInternalName.includes('.')) ext = originalInternalName.split('.').pop();
+                            
+                            // Neuer Name: Kategorie_Beschreibung_Nr.ext
+                            // z.B. Software_TradingView_1.pdf
+                            const newFilename = `${safeCat}_${safeDesc}_${i+1}.${ext}`;
+                            
+                            // WICHTIG: Wir speichern es im ZIP unter dem neuen Namen!
+                            folder.file(newFilename, blob);
+                            
+                            // HINWEIS: Für den Import müssen wir eine "Mapping"-Datei erstellen,
+                            // sonst wissen wir beim Import nicht mehr, welcher schöne Name zu welcher ID gehört.
+                            // ODER einfacher: Wir speichern die Zuordnung im tax_data.json (machen wir eh).
+                            // ABER: Wenn wir die Datei im ZIP umbenennen, findet der Import sie unter dem alten Namen nicht mehr.
+                            
+                            // LÖSUNG: Wir lassen die Datei im ZIP unter dem "schönen" Namen.
+                            // Beim Import ist uns der Name egal, wir laden einfach alle Dateien in den DB-Speicher 
+                            // und müssen die Referenzen in taxData aktualisieren.
+                            // DAS IST KOMPLEX.
+                            
+                            // EINFACHERE LÖSUNG FÜR DICH:
+                            // Wir speichern die Datei ZWEIMAL im ZIP (einmal technisch für Restore, einmal schön für dich).
+                            // Das kostet Speicher, ist aber am sichersten.
+                            
+                            // Ordner "human_readable" für dich:
+                            zip.folder("Lesbare_Belege").file(newFilename, blob);
+                            
+                            // Ordner "receipts" für das System (Originalname):
+                            folder.file(originalInternalName, blob);
+                            
+                            fileCounter++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        const content = await zip.generateAsync({type:"blob"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = `Steuer_Backup_${new Date().toISOString().slice(0,10)}.zip`;
+        a.click();
+        
+        if(btn) btn.innerText = "✅ Fertig";
+        setTimeout(() => { if(btn) btn.innerText = oldText; }, 2000);
+
+    } catch (e) {
+        console.error(e);
+        alert("Fehler beim ZIP: " + e.message);
+        if(btn) btn.innerText = oldText;
+    }
+}
+
+// --- TAX ZIP IMPORT (REPARIERT) ---
+async function importTaxZIP(input) {
+    const file = input.files[0];
+    if(!file) return;
+    
+    // Feedback Button
+    const btn = input.nextElementSibling;
+    const oldText = btn ? btn.innerText : "";
+    if(btn) { btn.innerText = "⏳ Lade..."; btn.disabled = true; }
+    
+    try {
+        const zip = await JSZip.loadAsync(file);
+        
+        // 1. JSON Daten laden
+        let jsonText = null;
+        if(zip.file("tax_data.json")) {
+            jsonText = await zip.file("tax_data.json").async("text");
+        }
+        
+        if(!jsonText) throw new Error("Keine 'tax_data.json' im ZIP gefunden!");
+        
+        const newTaxData = JSON.parse(jsonText);
+        
+        // 2. Belege wiederherstellen (NUR aus dem System-Ordner 'receipts')
+        let imgCount = 0;
+        
+        // Wir suchen direkt im zip.files Objekt
+        for(const filename in zip.files) {
+            // Wir ignorieren den Ordner "Lesbare_Belege" und nehmen nur "receipts/"
+            // Wir ignorieren Ordner-Einträge selbst (.dir)
+            if(filename.startsWith("receipts/") && !zip.files[filename].dir) {
+                
+                const blob = await zip.file(filename).async("blob");
+                // Dateinamen säubern (Pfad entfernen): "receipts/img.jpg" -> "img.jpg"
+                const cleanName = filename.split('/').pop();
+                
+                if(cleanName && blob.size > 0) {
+                    await saveImageToDB(cleanName, blob);
+                    imgCount++;
+                }
+            }
+        }
+        
+        // 3. Daten übernehmen
+        taxData = newTaxData;
+        saveTaxData(true); // Speichern ohne Popup
+        
+        alert(`✅ Import erfolgreich!\n${imgCount} Belege wiederhergestellt.`);
+        
+        // UI aktualisieren, falls wir gerade drauf schauen
+        if(document.getElementById('tax-expenses').classList.contains('active')) renderExpenses();
+        if(document.getElementById('tax-personal').classList.contains('active')) loadPersonalData();
+        if(document.getElementById('tax-balances').classList.contains('active')) loadBalanceEntries();
+        
+    } catch(e) {
+        console.error(e);
+        alert("❌ Fehler beim Import: " + e.message);
+    } finally {
+        if(btn) { btn.innerText = oldText; btn.disabled = false; }
+        input.value = ''; // Reset für nächsten Versuch
+    }
+}
 </script>
 </body>
 </html>
