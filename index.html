@@ -3490,10 +3490,10 @@ async function generateTaxPDF() {
 
         // NEU: Summenzeile CHF (Abgleich)
         journalBody.push([
-            'TOTAL JAHR (CHF @ ' + rate + ')',
-            (grossPnL_USD * rate).toFixed(2),
-            '-' + (totalFees_USD * rate).toFixed(2),
-            (netPnL_USD * rate).toFixed(2) // Das muss = "Betrag (CHF)" Seite 1 sein
+            'TOTAL JAHR (CHF) bei Forex @ 1 USD = ' + rate + ' CHF (ESTV Jahresmittel)',
+            (grossPnL_USD * rate).toFixed(2) + ' (CHF)',
+            '-' + (totalFees_USD * rate).toFixed(2) + ' (CHF)',
+            (netPnL_USD * rate).toFixed(2) + ' (CHF)'// Das muss = "Betrag (CHF)" Seite 1 sein
         ]);
 
         doc.autoTable({
@@ -3501,6 +3501,9 @@ async function generateTaxPDF() {
             head: [['Datum', 'Brutto (USD)', 'Gebühren (USD)', 'Netto (USD)']],
             body: journalBody,
             theme: 'grid',
+            styles: {
+                fontSize: 8  // Hier die Schriftgröße ändern (Standard ist 10)
+            },
             headStyles: { fillColor: [50, 50, 50] },
             columnStyles: { 1: {halign:'right'}, 2: {halign:'right', textColor:[200,0,0]}, 3: {halign:'right', fontStyle:'bold'} },
             // Styling für die letzten ZWEI Zeilen (Total USD und Total CHF)
