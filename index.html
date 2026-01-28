@@ -12,6 +12,20 @@
 <style>
 /* --- BASE STYLES --- */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* === SALESFORCE DESIGN VARIABLES (NUR FÜR STEUER-TAB) === */
+:root {
+    --slds-brand-light: #1b96ff;
+    --slds-brand: #0176d3;
+    --slds-brand-dark: #014486;
+    --slds-header: #16325c;
+    --slds-success: #2e844a;
+    --slds-error: #ea001e;
+    --slds-text: #080707;
+    --slds-text-weak: #706e6b;
+    --slds-border: #dddbda;
+    --slds-background: #f3f3f2;
+    --slds-shadow: 0 2px 4px 0 rgba(0,0,0,0.1);
+}
 body{
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
@@ -639,18 +653,421 @@ body{
     z-index: 100; /* Sicherstellen, dass es über dem Bild liegt */
 }
 
-/* --- STEUER VIEW STYLES --- */
-.tax-subview { display: none; animation: fadeIn 0.3s ease; }
-.tax-subview.active { display: block; }
+/* === SALESFORCE STEUER-TAB DESIGN === */
+
+/* Steuer-Tab Hintergrund */
+#tax {
+    background: var(--slds-background);
+    padding: 1.5rem;
+    min-height: calc(100vh - 150px);
+}
+
+/* Steuer Page Header */
+.tax-page-header {
+    background: linear-gradient(135deg, var(--slds-brand-light) 0%, var(--slds-brand) 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--slds-shadow);
+}
+
+.tax-page-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.tax-page-header p {
+    font-size: 0.875rem;
+    opacity: 0.95;
+}
+
+/* Steuer Navigation Tabs */
+.tax-nav-container {
+    background: white;
+    border: 1px solid var(--slds-border);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--slds-shadow);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tax-nav-btn {
+    flex: 1 1 calc(20% - 0.5rem);
+    min-width: 120px;
+    padding: 0.75rem 1rem;
+    background: white;
+    border: 1px solid var(--slds-border);
+    border-radius: 0.25rem;
+    color: var(--slds-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.tax-nav-btn:hover {
+    background: #f4f6f9;
+    border-color: var(--slds-brand);
+    color: var(--slds-brand);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
 
 .tax-nav-btn.active {
-    background: #e7f5ff !important;
-    color: #1971c2 !important;
-    font-weight: bold;
-    border: 1px solid #1971c2 !important;
+    background: linear-gradient(135deg, var(--slds-brand-light) 0%, var(--slds-brand) 100%);
+    color: white;
+    border-color: var(--slds-brand);
+    box-shadow: 0 2px 6px rgba(1, 118, 211, 0.3);
+    font-weight: 700;
+}
+
+/* Sub Views Container */
+.tax-subview {
+    display: none;
+    animation: fadeInUp 0.3s ease;
+}
+
+.tax-subview.active {
+    display: block;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Salesforce Card Styles */
+.slds-card {
+    background: white;
+    border: 1px solid var(--slds-border);
+    border-radius: 0.25rem;
+    box-shadow: var(--slds-shadow);
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.slds-card-header {
+    padding: 1rem 1.5rem;
+    background: #fafaf9;
+    border-bottom: 1px solid var(--slds-border);
+}
+
+.slds-card-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--slds-header);
+    text-transform: uppercase;
+    letter-spacing: 0.025rem;
+}
+
+.slds-card-body {
+    padding: 1.5rem;
+}
+
+/* Form Elements im Steuer-Tab */
+#tax .form-group {
+    margin-bottom: 1rem;
+    background: white;
+    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+#tax .form-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--slds-text);
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025rem;
+}
+
+#tax .form-group input,
+#tax .form-group select,
+#tax .form-group textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--slds-border);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    background: white;
+    color: var(--slds-text);
+    transition: border 0.15s ease;
+}
+
+#tax .form-group input:focus,
+#tax .form-group select:focus,
+#tax .form-group textarea:focus {
+    outline: none;
+    border-color: var(--slds-brand);
+    box-shadow: 0 0 0 1px var(--slds-brand);
+}
+
+/* Info Box */
+#tax .info-box {
+    background: #ecf6ff;
+    border-left: 4px solid var(--slds-brand-light);
+    color: #014486;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+/* Chart Container im Steuer-Tab */
+#tax .chart-container {
+    background: white;
+    border: 1px solid var(--slds-border);
+    padding: 1.5rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--slds-shadow);
+}
+
+#tax .chart-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--slds-header);
+    margin-bottom: 1rem;
+    text-align: left;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--slds-border);
+}
+
+/* Buttons im Steuer-Tab */
+#tax .btn {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--slds-border);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+#tax .btn-primary {
+    background: linear-gradient(135deg, var(--slds-brand-light) 0%, var(--slds-brand) 100%);
+    border-color: var(--slds-brand);
+    color: white;
+}
+
+#tax .btn-primary:hover {
+    background: linear-gradient(135deg, var(--slds-brand) 0%, var(--slds-brand-dark) 100%);
+    box-shadow: 0 2px 6px rgba(1, 118, 211, 0.3);
+}
+
+#tax .btn-info {
+    background: white;
+    border: 1px solid var(--slds-brand);
+    color: var(--slds-brand);
+}
+
+#tax .btn-info:hover {
+    background: #ecf6ff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#tax .btn-success {
+    background: var(--slds-success);
+    border-color: var(--slds-success);
+    color: white;
+}
+
+#tax .btn-success:hover {
+    background: #2a7a43;
+    box-shadow: 0 2px 6px rgba(46, 132, 74, 0.3);
+}
+
+/* Stats Grid */
+.tax-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.tax-stat-card {
+    background: white;
+    border: 1px solid var(--slds-border);
+    border-radius: 0.25rem;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--slds-shadow);
+    transition: all 0.15s ease;
+}
+
+.tax-stat-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.tax-stat-label {
+    font-size: 0.75rem;
+    color: var(--slds-text-weak);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.025rem;
+}
+
+.tax-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--slds-text);
+}
+
+.tax-stat-value.profit {
+    color: var(--slds-success);
+}
+
+.tax-stat-value.loss {
+    color: var(--slds-error);
+}
+
+/* Responsive für Mobile */
+@media(max-width: 768px) {
+    #tax {
+        padding: 1rem;
+    }
+    
+    .tax-page-header {
+        padding: 1.5rem 1rem;
+    }
+    
+    .tax-page-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .tax-nav-btn {
+        flex: 1 1 calc(50% - 0.5rem);
+        min-width: auto;
+    }
+}
+
+/* === AUSGABEN SECTION STYLES === */
+.expense-item {
+    background: white;
+    border: 1px solid var(--slds-border);
+    border-radius: 0.25rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--slds-brand-light);
+    box-shadow: var(--slds-shadow);
+    transition: all 0.15s ease;
+}
+
+.expense-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.expense-preview-total {
+    text-align: right;
+    font-size: 1rem;
+    color: var(--slds-brand);
+    font-weight: 700;
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: #ecf6ff;
+    border-radius: 0.25rem;
+}
+
+.expense-receipts-container {
+    background: #fafaf9;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--slds-border);
+    margin-top: 1rem;
+}
+
+.expense-receipts-label {
+    font-size: 0.75rem;
+    color: var(--slds-text-weak);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.expense-dropzone {
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    background: white;
+    border: 2px dashed var(--slds-border);
+    border-radius: 0.25rem;
+    text-align: center;
+    color: var(--slds-text-weak);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.expense-dropzone:hover {
+    background: #ecf6ff;
+    border-color: var(--slds-brand);
+    color: var(--slds-brand);
+}
+
+.tax-input-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    align-items: flex-start;
+}
+
+.tax-input-row > div {
+    flex: 1;
+}
+
+.tax-input-row .btn {
+    margin-top: 1.5rem;
+}
+
+@media(max-width: 768px) {
+    .tax-input-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .tax-input-row .btn {
+        margin-top: 0.5rem;
+        width: 100%;
+    }
 }
 
 /* --- DETAIL MODAL (SFDC STYLE) --- */
+
+/* Tax View - Kein Container, direkt auf Hintergrund */
+#tax {
+    background: var(--slds-background);
+    padding: 1.5rem;
+    min-height: calc(100vh - 150px);
+}
+
+/* Mehr Platz zwischen den Cards */
+#tax .slds-card {
+    margin-bottom: 1.5rem;
+}
+
+/* Responsiv */
+@media(max-width: 768px) {
+    #tax {
+        padding: 1rem;
+        background: #e5e5ea; /* Leicht anderer Grauton für Mobile */
+    }
+}
+
 .detail-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
 .detail-modal.active { display: flex; animation: fadeIn 0.2s ease-out; }
 .detail-content { background: #fff; width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
@@ -726,7 +1143,7 @@ body{
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Kojote_v003</h1>
+<h1>Trade Log / Version Kojote_SFDC_v004</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -927,105 +1344,178 @@ body{
 
 <!-- === STEUER VIEW (NEU) === -->
 <div id="tax" class="view">
-    <h2 style="text-align:center;margin-bottom:15px;color:#2c3e50">🇨🇭 Steuererklärung (Schaffhausen)</h2>
+    <!-- SALESFORCE PAGE HEADER -->
+    <div class="tax-page-header">
+        <h2>🇨🇭 Steuererklärung (Schaffhausen)</h2>
+        <p>Professionelle Steueraufbereitung für deine Trading-Einkünfte</p>
+    </div>
     
     <!-- Navigation innerhalb des Steuer-Tabs -->
-    <div style="display:flex; flex-wrap:wrap; background:#f8f9fa; border-radius:8px; margin-bottom:20px; padding:5px; gap:5px;">
-        <button class="btn-sm btn-outline tax-nav-btn active" onclick="switchTaxSubView('overview')" style="flex:1; border:none;">Übersicht</button>
-        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('personal')" style="flex:1; border:none;">Persönlich</button>
-        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('expenses')" style="flex:1; border:none;">Ausgaben</button>
-        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('balances')" style="flex:1; border:none;">Kontostand</button>
-        <button class="btn-sm btn-outline tax-nav-btn" onclick="switchTaxSubView('export')" style="flex:1; border:none;">PDF Export</button>
+    <div class="tax-nav-container"> 
+        <button class="tax-nav-btn active" onclick="switchTaxSubView('overview')">Übersicht</button>
+        <button class="tax-nav-btn" onclick="switchTaxSubView('personal')">Persönlich</button>
+        <button class="tax-nav-btn" onclick="switchTaxSubView('expenses')">Ausgaben</button>
+        <button class="tax-nav-btn" onclick="switchTaxSubView('balances')">Kontostand</button>
+        <button class="tax-nav-btn" onclick="switchTaxSubView('export')">PDF Export</button>
     </div>
 
     <!-- 1. ÜBERSICHT -->
     <div id="tax-overview" class="tax-subview active">
-        <div class="chart-container">
-            <div class="chart-title">📊 Jahres-Zusammenfassung</div>
-            <div id="taxOverviewContent">Lade Daten...</div>
+        <div class="slds-card">
+            <div class="slds-card-header">
+                <h3 class="slds-card-title">📊 Jahres-Zusammenfassung</h3>
+            </div>
+            <div class="slds-card-body">
+                <div id="taxOverviewContent">Lade Daten...</div>
+            </div>
         </div>
     </div>
 
     <!-- 2. PERSÖNLICHE DATEN -->
     <div id="tax-personal" class="tax-subview">
-        <div class="chart-container">
-            <div class="chart-title">👤 Persönliche Angaben</div>
-            <div class="info-box">Diese Daten werden für den PDF-Kopf benötigt und nur lokal gespeichert.</div>
-            
-            <div class="form-group"><label>Vorname Nachname</label><input type="text" id="taxName" placeholder="Max Mustermann"></div>
-            <div class="form-group"><label>Strasse Nr.</label><input type="text" id="taxAddress" placeholder="Musterstrasse 1"></div>
-            <div style="display:flex;gap:10px;">
-                <div class="form-group" style="flex:1"><label>PLZ</label><input type="text" id="taxZip" placeholder="8200"></div>
-                <div class="form-group" style="flex:2"><label>Ort</label><input type="text" id="taxCity" placeholder="Schaffhausen"></div>
+        <div class="slds-card">
+            <div class="slds-card-header">
+                <h3 class="slds-card-title">👤 Persönliche Angaben</h3>
             </div>
-            <div class="form-group"><label>Steuer-ID / PID</label><input type="text" id="taxId" placeholder="123.456.789"></div>
-            
-            <button class="btn btn-primary" onclick="saveTaxData()">💾 Daten speichern</button>
+            <div class="slds-card-body">
+                <div class="info-box">
+                    ℹ️ Diese Daten werden für den PDF-Kopf benötigt und nur lokal gespeichert.
+                </div>
+                
+                <div class="form-group">
+                    <label>Vorname Nachname</label>
+                    <input type="text" id="taxName" placeholder="Max Mustermann">
+                </div>
+                
+                <div class="form-group">
+                    <label>Strasse Nr.</label>
+                    <input type="text" id="taxAddress" placeholder="Musterstrasse 1">
+                </div>
+                
+                <div style="display:flex;gap:1rem;">
+                    <div class="form-group" style="flex:1">
+                        <label>PLZ</label>
+                        <input type="text" id="taxZip" placeholder="8200">
+                    </div>
+                    <div class="form-group" style="flex:2">
+                        <label>Ort</label>
+                        <input type="text" id="taxCity" placeholder="Schaffhausen">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Steuer-ID / PID</label>
+                    <input type="text" id="taxId" placeholder="123.456.789">
+                </div>
+                
+                <button class="btn btn-primary" onclick="saveTaxData()" style="width:100%;margin-top:1rem;">
+                    💾 Daten speichern
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- 3. KONTOSTÄNDE -->
     <div id="tax-balances" class="tax-subview">
-        <div class="chart-container">
-            <div class="chart-title">💰 Vermögensnachweis (CHF)</div>
-            <div class="info-box">Bitte gib hier die Kontostände per 01.01. und 31.12. ein (für die Vermögenssteuer).</div>
-            <div id="balanceEntries"></div>
-            <button class="btn btn-info" onclick="addBalanceYear()" style="margin-top:10px;">+ Jahr hinzufügen</button>
+        <div class="slds-card">
+            <div class="slds-card-header">
+                <h3 class="slds-card-title">💰 Vermögensnachweis (CHF)</h3>
+            </div>
+            <div class="slds-card-body">
+                <div class="info-box">
+                    ℹ️ Bitte gib hier die Kontostände per 01.01. und 31.12. ein (für die Vermögenssteuer).
+                </div>
+                
+                <div id="balanceEntries"></div>
+                
+                <button class="btn btn-info" onclick="addBalanceYear()" style="margin-top:1rem;">
+                    + Jahr hinzufügen
+                </button>
+            </div>
         </div>
     </div>
 
 <!-- 3. AUSGABEN (NEU) -->
    <!-- 3. AUSGABEN (MIT SPEICHER-BUTTON) -->
     <div id="tax-expenses" class="tax-subview">
-        <div class="chart-container">
-            <div class="chart-title">💸 Betriebsausgaben & Abzüge (CHF)</div>
-            <div class="info-box">
-                Hier Kosten erfassen (z.B. Software, Hardware, Büro).<br>
-                Diese werden im PDF separat aufgelistet.
+        <div class="slds-card">
+            <div class="slds-card-header">
+                <h3 class="slds-card-title">💸 Betriebsausgaben & Abzüge (CHF)</h3>
             </div>
-            
-            <div id="expenseEntries"></div>
-            
-            <div style="display:flex; gap:10px; margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
-                <button class="btn btn-info" onclick="addExpenseItem()">+ Neue Zeile</button>
-                <button class="btn btn-primary" onclick="saveTaxData(false)">💾 Ausgaben Speichern</button>
+            <div class="slds-card-body">
+                <div class="info-box">
+                    ℹ️ Hier Kosten erfassen (z.B. Software, Hardware, Büro).
+    Diese werden im PDF separat aufgelistet.
+                </div>
+                
+                <div id="expenseEntries"></div>
+                
+                <div style="display:flex; gap:0.75rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--slds-border);">
+                    <button class="btn btn-info" onclick="addExpenseItem()" style="flex:1;">
+                        + Neue Zeile
+                    </button>
+                    <button class="btn btn-primary" onclick="saveTaxData(false)" style="flex:1;">
+                        💾 Ausgaben Speichern
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- 4. EXPORT -->
     <div id="tax-export" class="tax-subview">
-        <div class="chart-container">
-            <div class="chart-title">📄 PDF Erstellen</div>
-            
-            <div class="form-group">
-                <label>Steuerjahr auswählen</label>
-                <select id="taxYearSelect" style="width:100%;padding:12px;border-radius:8px;"><option>Bitte wählen...</option></select>
+        <!-- PDF Generation Card -->
+        <div class="slds-card">
+            <div class="slds-card-header">
+                <h3 class="slds-card-title">📄 PDF Erstellen</h3>
             </div>
-            
-            <div class="form-group">
-                <label>USD/CHF Jahresmittelkurs (ESTV)</label>
-                <input type="number" step="0.0001" id="taxExchangeRate" value="0.8500" placeholder="z.B. 0.8500">
-                <small style="color:#666">Den offiziellen Kurs findest du bei der ESTV.</small>
-            <div class="form-group">
-                <label>EUR/CHF Mittelkurs (ESTV)</label>
-                <input type="number" step="0.0001" id="taxExchangeRateEUR" value="0.9400">
+            <div class="slds-card-body">
+                <div class="form-group">
+                    <label>Steuerjahr auswählen</label>
+                    <select id="taxYearSelect" style="width:100%;">
+                        <option>Bitte wählen...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>USD/CHF Jahresmittelkurs (ESTV)</label>
+                    <input type="number" step="0.0001" id="taxExchangeRate" value="0.8500" placeholder="z.B. 0.8500">
+                    <small style="color:var(--slds-text-weak);font-size:0.75rem;display:block;margin-top:0.25rem;">
+                        Den offiziellen Kurs findest du bei der ESTV.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label>EUR/CHF Mittelkurs (ESTV)</label>
+                    <input type="number" step="0.0001" id="taxExchangeRateEUR" value="0.9400">
+                </div>
+                
+                <button class="btn btn-success" onclick="generateTaxPDF()" style="width:100%;margin-top:1rem;">
+                    🚀 PDF Generieren (Schaffhausen)
+                </button>
             </div>
+        </div>
+        
+        <!-- Backup Card -->
+        <div class="slds-card" style="margin-top:1.5rem;">
+            <div class="slds-card-header">
+                <h3 class="slds-card-title">💾 Steuer-Backup (Lokal)</h3>
             </div>
-            
-            <button class="btn btn-success" onclick="generateTaxPDF()">🚀 PDF Generieren (Schaffhausen)</button>
-            <hr style="margin:20px 0; border:0; border-top:1px dashed #ccc;">
-            
-            <div class="chart-title">💾 Steuer-Backup (Lokal)</div>
-            <div class="info-box">
-                Sichert NUR die Steuerdaten (Ausgaben, Belege, pers. Daten) als ZIP.<br>
-                Ideal, um Belege nicht zu verlieren.
-            </div>
-            
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-primary" onclick="exportTaxZIP()" style="flex:1;">📦 Steuer-ZIP erstellen</button>
-                <input type="file" id="taxZipInput" style="display:none" onchange="importTaxZIP(this)">
-                <button class="btn btn-info" onclick="document.getElementById('taxZipInput').click()" style="flex:1;">📂 Steuer-ZIP importieren</button>
+            <div class="slds-card-body">
+                <div class="info-box">
+                    ℹ️ Sichert NUR die Steuerdaten (Ausgaben, Belege, pers. Daten) als ZIP.
+    Ideal, um Belege nicht zu verlieren.
+                </div>
+                
+                <div style="display:flex; gap:0.75rem;">
+                    <button class="btn btn-primary" onclick="exportTaxZIP()" style="flex:1;">
+                        📦 Steuer-ZIP erstellen
+                    </button>
+                    <input type="file" id="taxZipInput" style="display:none" onchange="importTaxZIP(this)">
+                    <button class="btn btn-info" onclick="document.getElementById('taxZipInput').click()" style="flex:1;">
+                        📂 Steuer-ZIP importieren
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -3987,66 +4477,71 @@ function renderExpenses() {
         if(!ex.receipts) ex.receipts = [];
 
         const div = document.createElement('div');
-        div.style.marginBottom = "15px";
-        div.style.padding = "15px";
-        div.style.background = "#fff";
-        div.style.borderRadius = "8px";
-        div.style.border = "1px solid #e9ecef";
-        div.style.borderLeft = "5px solid #17a2b8";
+        div.className = 'expense-item';
 
         const amount = parseFloat(ex.amount) || 0;
         const rate = parseFloat(ex.rate) || 0;
         const totalCHF = (amount * rate).toFixed(2);
         
-        // Spezial-Buttons Logic
         const isSpecial = (ex.cat === 'Unterhalt' || ex.cat === 'Alimente');
         let centerPartHTML = '';
         
         if (isSpecial) {
-             const btnLabel = ex.cat === 'Alimente' ? '👶 Kinder & Zahlung bearbeiten' : '👤 Empfänger & Zahlung bearbeiten';
-             // Auf Mobile auch volle Breite
-             centerPartHTML = `<div style="flex:4;"><button class="btn-info" onclick="openDetailModal(${i})" style="width:100%; padding:12px;">✏️ ${btnLabel}</button></div>`;
+            const btnLabel = ex.cat === 'Alimente' ? '👶 Kinder & Zahlung bearbeiten' : '👤 Empfänger & Zahlung bearbeiten';
+            centerPartHTML = `
+                <div style="flex:4;">
+                    <button class="btn btn-info" onclick="openDetailModal(${i})" style="width:100%; padding:0.75rem;">
+                        ✏️ ${btnLabel}
+                    </button>
+                </div>`;
         } else {
-             centerPartHTML = `
-             <div style="flex:2">
-                <label style="font-size:0.75em;font-weight:bold;color:#666">Betrag</label>
-                <input type="number" step="0.01" value="${ex.amount}" oninput="updateExp(${i},'amount',this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
-             </div>
-             <div style="width:80px; flex-shrink:0;">
-                <label style="font-size:0.75em;font-weight:bold;color:#666">Währung</label>
-                <select onchange="updateExp(${i},'currency',this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;background:white">
-                    <option value="CHF" ${ex.currency==='CHF'?'selected':''}>CHF</option>
-                    <option value="USD" ${ex.currency==='USD'?'selected':''}>USD</option>
-                    <option value="EUR" ${ex.currency==='EUR'?'selected':''}>EUR</option>
-                </select>
-             </div>
-             <div style="flex:1">
-                <label style="font-size:0.75em;font-weight:bold;color:#666">Kurs</label>
-                <input type="number" step="0.0001" value="${ex.rate}" oninput="updateExp(${i},'rate',this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px">
-             </div>`;
+            centerPartHTML = `
+                <div style="flex:2">
+                    <label class="slds-form-label">Betrag</label>
+                    <input type="number" step="0.01" value="${ex.amount}" oninput="updateExp(${i},'amount',this.value)" 
+                           style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;font-size:0.8125rem;">
+                </div>
+                <div style="width:100px; flex-shrink:0;">
+                    <label class="slds-form-label">Währung</label>
+                    <select onchange="updateExp(${i},'currency',this.value)" 
+                            style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;background:white;font-size:0.8125rem;">
+                        <option value="CHF" ${ex.currency==='CHF'?'selected':''}>CHF</option>
+                        <option value="USD" ${ex.currency==='USD'?'selected':''}>USD</option>
+                        <option value="EUR" ${ex.currency==='EUR'?'selected':''}>EUR</option>
+                    </select>
+                </div>
+                <div style="flex:1">
+                    <label class="slds-form-label">Kurs</label>
+                    <input type="number" step="0.0001" value="${ex.rate}" oninput="updateExp(${i},'rate',this.value)" 
+                           style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;font-size:0.8125rem;">
+                </div>`;
         }
 
         div.innerHTML = `
-            <!-- ZEILE 1 (Beschreibung) -->
+            <!-- Zeile 1: Beschreibung & Jahr -->
             <div class="tax-input-row">
                 <div style="flex:2">
-                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Beschreibung</label>
-                    <input type="text" value="${ex.desc}" oninput="updateExp(${i},'desc',this.value)" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;" ${isSpecial ? 'disabled' : ''}>
+                    <label class="slds-form-label">Beschreibung</label>
+                    <input type="text" value="${ex.desc}" oninput="updateExp(${i},'desc',this.value)" 
+                           style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;font-size:0.8125rem;" 
+                           ${isSpecial ? 'disabled' : ''}>
                 </div>
                 <div style="flex:1">
-                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Jahr</label>
-                    <select onchange="updateExp(${i},'year',this.value)" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;">
+                    <label class="slds-form-label">Jahr</label>
+                    <select onchange="updateExp(${i},'year',this.value)" 
+                            style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;background:white;font-size:0.8125rem;">
                         <option value="2025" ${ex.year==='2025'?'selected':''}>2025</option>
                         <option value="2026" ${ex.year==='2026'?'selected':''}>2026</option>
                     </select>
                 </div>
             </div>
             
-            <!-- ZEILE 2 (Kategorie) -->
+            <!-- Zeile 2: Kategorie -->
             <div class="tax-input-row">
                 <div style="width:100%">
-                    <label style="font-size:0.75em; color:#666; font-weight:bold;">Kategorie</label>
-                    <select style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; background:white;" onchange="updateExp(${i},'cat',this.value)">
+                    <label class="slds-form-label">Kategorie</label>
+                    <select style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;background:white;font-size:0.8125rem;" 
+                            onchange="updateExp(${i},'cat',this.value)">
                         <option value="Software/Daten" ${ex.cat==='Software/Daten'?'selected':''}>Software / Daten</option>
                         <option value="Hardware" ${ex.cat==='Hardware'?'selected':''}>Hardware / Büro</option>
                         <option value="Unterhalt" ${ex.cat==='Unterhalt'?'selected':''}>👤 Unterhalt an Mutter/Ex</option>
@@ -4059,33 +4554,36 @@ function renderExpenses() {
                 </div>
             </div>
 
-            <!-- ZEILE 3 (Beträge) -->
-            <div class="tax-input-row bottom">
+            <!-- Zeile 3: Beträge & Löschen -->
+            <div class="tax-input-row" style="align-items:flex-end;">
                 ${centerPartHTML}
-                <button onclick="removeExp(${i})" style="width:40px; height:38px; background:#fa5252; color:white; border:none; border-radius:4px; cursor:pointer; flex-shrink:0;">✕</button>
+                <button onclick="removeExp(${i})" class="btn btn-destructive" 
+                        style="width:50px; height:42px; flex-shrink:0; padding:0;">
+                    ✕
+                </button>
             </div>
             
-            <div id="preview_${i}" style="text-align:right; font-size:0.9em; color:#1971c2; font-weight:bold; margin-bottom:10px;">
+            <!-- Total Anzeige -->
+            <div id="preview_${i}" class="expense-preview-total">
                 = ${totalCHF} CHF
             </div>
 
-            <!-- BELEGE BOX -->
-            <div class="screenshot-container" 
+            <!-- Belege Box -->
+            <div class="expense-receipts-container" 
                  onmouseenter="activeExpenseIndex=${i}" 
-                 onmouseleave="activeExpenseIndex=-1"
-                 style="background:#f1f3f5; padding:10px; border-radius:6px; border:1px dashed #ccc;">
-                <label style="font-size:0.7em; color:#666; font-weight:bold;">📄 Belege</label>
+                 onmouseleave="activeExpenseIndex=-1">
+                <label class="expense-receipts-label">📄 Belege</label>
                 
-                <div class="screenshot-dropzone" id="dropzone_exp_${i}" 
-                     onclick="document.getElementById('input_exp_${i}').click()"
-                     style="padding:10px; margin-bottom:5px; font-size:0.8em; background:white;">
-                    Datei hier reinziehen
+                <div class="expense-dropzone" id="dropzone_exp_${i}" 
+                     onclick="document.getElementById('input_exp_${i}').click()">
+                    📎 Datei hier reinziehen oder klicken
                 </div>
                 <input type="file" id="input_exp_${i}" style="display:none" onchange="handleExpenseFile(${i}, this.files)">
                 
-                <div id="preview_exp_${i}" class="preview-grid" style="gap:5px;"></div>
+                <div id="preview_exp_${i}" class="preview-grid"></div>
             </div>
         `;
+        
         container.appendChild(div);
         setTimeout(() => setupExpenseDropzone(i), 0);
         renderExpenseReceipts(i);
