@@ -1889,7 +1889,7 @@ tbody tr:hover {
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Claude SFDC 14</h1>
+<h1>Trade Log / Version Claude SFDC 15</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -4526,13 +4526,15 @@ function switchFullTab(tabName) {
 
 function addFullTrade() {
     window.currentFullTrades.push({
-        time: '',
-        symbol: 'ES',
-        contracts: 1,
         pnl: 0,
-        strategy: ''
+        start: '',
+        end: '',
+        inst: 'ES',
+        qty: 1,
+        tag: ''
     });
     renderFullTrades();
+    recalcFullPnL();
 }
 
 function renderFullTrades() {
@@ -4542,38 +4544,99 @@ function renderFullTrades() {
         return;
     }
     
+    // Strategie-Optionen aus globaler STRATEGIES Variable
+    const stratOptions = (typeof STRATEGIES !== 'undefined' ? STRATEGIES : [
+        {id: '', label: 'Strategie...'},
+        {id: 'rev-long', label: 'Reversal Long 🟢'},
+        {id: 'rev-short', label: 'Reversal Short 🔴'},
+        {id: 'cont-long', label: 'Cont. Long 🟢'},
+        {id: 'cont-short', label: 'Cont. Short 🔴'}
+    ]).map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+    
     container.innerHTML = window.currentFullTrades.map((trade, idx) => `
         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="time" value="${trade.time || ''}" onchange="currentFullTrades[${idx}].time = this.value" 
-                    style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                <input type="text" value="${trade.symbol || 'ES'}" placeholder="Symbol" onchange="currentFullTrades[${idx}].symbol = this.value" 
-                    style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                <input type="number" value="${trade.contracts || 1}" placeholder="Kontrakte" min="1" onchange="currentFullTrades[${idx}].contracts = parseInt(this.value) || 1" 
-                    style="width: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+            <!-- Zeile 1: PnL (groß und wichtig) -->
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 0.75em; color: #666; display: block; margin-bottom: 4px;">P&L ($)</label>
+                <input type="number" value="${trade.pnl || ''}" placeholder="0.00" step="0.01" 
+                    onchange="window.currentFullTrades[${idx}].pnl = parseFloat(this.value) || 0; recalcFullPnL();" 
+                    style="width: 100%; padding: 10px; border: 2px solid ${(trade.pnl || 0) >= 0 ? '#51cf66' : '#ff6b6b'}; border-radius: 4px; font-size: 16px; font-weight: bold;">
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="number" value="${trade.pnl || ''}" placeholder="P&L" step="0.01" onchange="currentFullTrades[${idx}].pnl = parseFloat(this.value) || 0" 
-                    style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                <select onchange="currentFullTrades[${idx}].strategy = this.value" 
-                    style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                    <option value="">Strategie...</option>
-                    <option value="rev-long" ${trade.strategy === 'rev-long' ? 'selected' : ''}>Reversal Long 🟢</option>
-                    <option value="rev-short" ${trade.strategy === 'rev-short' ? 'selected' : ''}>Reversal Short 🔴</option>
-                    <option value="cont-long" ${trade.strategy === 'cont-long' ? 'selected' : ''}>Cont. Long 🟢</option>
-                    <option value="cont-short" ${trade.strategy === 'cont-short' ? 'selected' : ''}>Cont. Short 🔴</option>
-                </select>
-                <button onclick="deleteFullTrade(${idx})" style="padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            
+            <!-- Zeile 2: Start-Zeit & End-Zeit -->
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 0.75em; color: #666; display: block; margin-bottom: 4px;">Entry</label>
+                    <input type="time" value="${trade.start || ''}" 
+                        onchange="window.currentFullTrades[${idx}].start = this.value" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 0.75em; color: #666; display: block; margin-bottom: 4px;">Exit</label>
+                    <input type="time" value="${trade.end || ''}" 
+                        onchange="window.currentFullTrades[${idx}].end = this.value" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </div>
+            </div>
+            
+            <!-- Zeile 3: Instrument, Anzahl, Strategie -->
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label style="font-size: 0.75em; color: #666; display: block; margin-bottom: 4px;">Instrument</label>
+                    <select onchange="window.currentFullTrades[${idx}].inst = this.value" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                        <option value="ES" ${trade.inst === 'ES' ? 'selected' : ''}>ES</option>
+                        <option value="NQ" ${trade.inst === 'NQ' ? 'selected' : ''}>NQ</option>
+                        <option value="MES" ${trade.inst === 'MES' ? 'selected' : ''}>MES</option>
+                        <option value="MNQ" ${trade.inst === 'MNQ' ? 'selected' : ''}>MNQ</option>
+                    </select>
+                </div>
+                <div style="width: 70px;">
+                    <label style="font-size: 0.75em; color: #666; display: block; margin-bottom: 4px;">Anz.</label>
+                    <input type="number" value="${trade.qty || 1}" min="1" 
+                        onchange="window.currentFullTrades[${idx}].qty = parseInt(this.value) || 1" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 0.75em; color: #666; display: block; margin-bottom: 4px;">Strategie</label>
+                    <select onchange="window.currentFullTrades[${idx}].tag = this.value" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                        ${stratOptions.replace(`value="${trade.tag || ''}"`, `value="${trade.tag || ''}" selected`)}
+                    </select>
+                </div>
+                <button onclick="deleteFullTrade(${idx})" style="padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; height: 38px;">
                     🗑️
                 </button>
             </div>
         </div>
     `).join('');
+    
+    // Fix für Strategie-Auswahl (selected setzen)
+    window.currentFullTrades.forEach((trade, idx) => {
+        const selects = container.querySelectorAll('select');
+        // Jeder Trade hat 2 selects (Instrument + Strategie)
+        const stratSelect = selects[idx * 2 + 1];
+        if(stratSelect && trade.tag) {
+            stratSelect.value = trade.tag;
+        }
+    });
 }
 
 function deleteFullTrade(idx) {
     window.currentFullTrades.splice(idx, 1);
     renderFullTrades();
+    recalcFullPnL();
+}
+
+// Berechnet die Summe aller Trade-PnLs und aktualisiert das Gesamt-PnL Feld
+function recalcFullPnL() {
+    if(!window.currentFullTrades || window.currentFullTrades.length === 0) return;
+    
+    const sum = window.currentFullTrades.reduce((total, trade) => total + (parseFloat(trade.pnl) || 0), 0);
+    const pnlField = document.getElementById('modal-pnl');
+    if(pnlField) {
+        pnlField.value = sum;
+    }
 }
 
 function handleFullScreenshots(files) {
