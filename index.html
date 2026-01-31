@@ -1889,7 +1889,7 @@ tbody tr:hover {
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Claude SFDC 15</h1>
+<h1>Trade Log / Version Claude SFDC v16</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -2122,9 +2122,59 @@ tbody tr:hover {
 
 <!-- === VIEW: WERTPAPIERE (HOLDINGS) === -->
 <div id="holdings" class="view">
-    <div class="header" style="background:linear-gradient(135deg,#3498db 0%,#2980b9 100%); margin-bottom:20px;">
-        <h1 style="font-size:1.2em;">📦 Wertpapier Beteiligungen</h1>
-        <div class="backup-status">Langfristiges Portfolio</div>
+    <div class="header" style="background:linear-gradient(135deg,#3498db 0%,#2980b9 100%);">
+        <h1>📦 Wertpapier Beteiligungen</h1>
+    </div>
+    
+    <!-- Portfolio Auswahl Box -->
+    <div class="chart-container" style="margin-bottom:15px; padding:12px 15px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:15px;">
+            <label style="font-weight:600; color:#333;">Portfolio:</label>
+            <div style="position:relative;">
+                <button id="portfolio-dropdown-btn" onclick="togglePortfolioDropdown(event)" 
+                    style="background:#0176d3; border:none; color:white; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:0.95em; display:flex; align-items:center; gap:10px; font-weight:500; min-width:180px; justify-content:space-between;">
+                    <span id="currentPortfolioName">Portfolio 1</span>
+                    <span>▼</span>
+                </button>
+                
+                <!-- Dropdown Content -->
+                <div id="portfolio-dropdown-content" style="display:none; position:absolute; top:calc(100% + 5px); left:0; background:white; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.25); min-width:300px; z-index:99999; border:1px solid #ddd;">
+                    <div style="background:#f8f9fa; padding:10px 15px; border-bottom:1px solid #eee; border-radius:8px 8px 0 0;">
+                        <strong style="color:#333; font-size:0.9em;">📦 Portfolio auswählen</strong>
+                    </div>
+                    
+                    <!-- Portfolio Liste -->
+                    <div id="portfolio-list" style="max-height:200px; overflow-y:auto;">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                    
+                    <!-- Umbenennen Sektion -->
+                    <div style="border-top:1px solid #eee; padding:12px; background:#fafafa;">
+                        <label style="font-size:0.8em; color:#666; display:block; margin-bottom:5px;">✏️ Aktuelles Portfolio umbenennen:</label>
+                        <input type="text" id="portfolioNameInput" 
+                            placeholder="Name eingeben..." 
+                            style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:0.9em; box-sizing:border-box;"
+                            onchange="savePortfolioName()"
+                            onkeyup="if(event.key==='Enter') savePortfolioName()">
+                    </div>
+                    
+                    <!-- Aktionen -->
+                    <div style="border-top:1px solid #eee; padding:12px; display:flex; gap:8px;">
+                        <button onclick="addNewPortfolio()" style="flex:1; padding:10px; background:#0176d3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">
+                            ➕ Neues Portfolio
+                        </button>
+                        <button onclick="deleteCurrentPortfolio()" style="padding:10px 15px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.9em;" title="Aktuelles Portfolio löschen">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Info rechts -->
+        <div style="font-size:0.85em; color:#666;">
+            Klicke auf den Button um Portfolio zu wechseln oder neues zu erstellen
+        </div>
     </div>
 
     <!-- Import Area -->
@@ -2628,6 +2678,17 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
                     • Die <strong>Quellensteuer</strong> (Verrechnungssteuer/USA Tax) kann via DA-1 angerechnet werden.
                 </div>
 
+                <!-- PORTFOLIO-AUSWAHL -->
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>📦 Portfolio auswählen</span>
+                    </label>
+                    <select id="taxSecuritiesPortfolio" onchange="switchTaxSecuritiesPortfolio()" 
+                        style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:0.95em; margin-top:8px;">
+                        <!-- Wird dynamisch gefüllt -->
+                    </select>
+                </div>
+
                 <!-- JAHRESWAHL -->
                 <div style="margin-bottom:20px; text-align:center;">
                     <label style="font-weight:bold; color:#54698d;">Basierend auf importiertem Portfolio-Report:</label>
@@ -2805,6 +2866,19 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
                     </select>
                 </div>
                 
+                <!-- Portfolio-Auswahl für PDF -->
+                <div class="form-group" style="margin-top:1rem;">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>📦 Portfolios für PDF auswählen</span>
+                        <button type="button" onclick="toggleAllPdfPortfolios()" class="btn btn-sm" style="font-size:0.75rem; padding:4px 8px; background:#f0f0f0; border:1px solid #ccc;">
+                            Alle an/aus
+                        </button>
+                    </label>
+                    <div id="pdfPortfolioSelector" style="background:#f8f9fa; border:1px solid #ddd; border-radius:6px; padding:10px; margin-top:8px; max-height:150px; overflow-y:auto;">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label>USD/CHF Jahresmittelkurs (ESTV)</label>
                     <input type="number" step="0.0001" id="taxExchangeRate" value="0.8500" placeholder="z.B. 0.8500">
@@ -2830,6 +2904,30 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
                         <!-- Wird dynamisch gefüllt -->
                         <div style="color:#888; font-style:italic; text-align:center; padding:10px;">
                             Bitte erst Steuerjahr auswählen...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bemerkungen zur Steuererklärung -->
+                <div class="form-group" style="margin-top:1rem;">
+                    <label style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleTaxRemarks()">
+                        <span>📝 Bemerkungen zur Steuererklärung</span>
+                        <span id="taxRemarksToggle" style="font-size:0.8rem; color:#666;">▼ Öffnen</span>
+                    </label>
+                    <div id="taxRemarksContainer" style="display:none; margin-top:8px;">
+                        <textarea id="taxRemarks" 
+                            placeholder="Hier können Sie Bemerkungen an das Finanzamt eingeben...
+
+Beispiele:
+• Erläuterungen zu besonderen Umständen
+• Hinweise zu Abzügen
+• Begründungen für Positionen
+
+Der Text wird formatiert übernommen (Zeilenumbrüche, Einzüge, Aufzählungen)."
+                            style="width:100%; min-height:150px; padding:12px; border:1px solid #ddd; border-radius:6px; font-family:inherit; font-size:0.9rem; line-height:1.5; resize:vertical; white-space:pre-wrap;"
+                            onchange="saveTaxRemarks()"></textarea>
+                        <div style="font-size:0.75rem; color:#888; margin-top:4px;">
+                            💡 Formatierung wird beibehalten: Zeilenumbrüche, Einzüge, • Aufzählungspunkte
                         </div>
                     </div>
                 </div>
@@ -3112,12 +3210,14 @@ let calMonth=new Date(),statsMonth=new Date(),data={},selDate=null,dataCount=0,c
 let currentTrades = [];
 let todayTrades = [];
 let todayScreenshots = []; // Neue Variable für die Bilder
-// NEU: Multi-Year Portfolio Structure
-let portfoliosByYear = {
-    // "2024": { positions: {}, summary: {}, lastUpdate: null, reportPeriod: {} },
-    // "2025": { positions: {}, summary: {}, lastUpdate: null, reportPeriod: {} },
-    // "2026": { positions: {}, summary: {}, lastUpdate: null, reportPeriod: {} }
-};
+
+// ========== MULTI-PORTFOLIO SYSTEM ==========
+// Struktur: { "portfolio_1": { name: "...", years: { "2024": {...}, "2025": {...} } }, "portfolio_2": {...} }
+let allPortfolios = {};
+let currentPortfolioId = 'portfolio_1'; // Aktives Portfolio
+
+// Legacy: Multi-Year für ein Portfolio (wird zu allPortfolios migriert)
+let portfoliosByYear = {};
 
 let currentPortfolioYear = new Date().getFullYear().toString(); // Default: Aktuelles Jahr
 
@@ -5833,7 +5933,10 @@ function switchTaxSubView(view) {
     if(view === 'securities') renderTaxSecurities();
     if(view === 'balances') renderBalances();
     if(view === 'expenses') renderExpenses();
-    if(view === 'export') renderTaxExport();
+    if(view === 'export') {
+        renderTaxExport();
+        loadTaxRemarks(); // Lade Bemerkungen wenn Export-Tab geöffnet wird
+    }
 }
 
 // --- STEUER LOHN/GEHALT ---
@@ -6315,16 +6418,18 @@ function renderTaxExport() {
         };
     }
     
-    // Sektionsauswahl initialisieren wenn Jahr ausgewählt wurde
+    // Sektionsauswahl und Portfolio-Auswahl initialisieren wenn Jahr ausgewählt wurde
     const yearSelect = document.getElementById('taxYearSelect');
     if(yearSelect) {
         yearSelect.onchange = function() {
             renderPdfSectionSelector();
+            renderPdfPortfolioSelector();
         };
     }
     
     // Initial rendern falls Jahr bereits gewählt
     renderPdfSectionSelector();
+    renderPdfPortfolioSelector();
 }
 
 // ========== PDF SEKTIONEN KONFIGURATION ==========
@@ -6404,6 +6509,7 @@ function getPdfSectionDefinitions(year) {
             available: hasReceipts,
             defaultEnabled: true
         }
+        // Bemerkungen erscheinen automatisch am Ende wenn vorhanden (keine Auswahl nötig)
     ];
 }
 
@@ -6522,6 +6628,146 @@ function updatePdfSectionNumbers() {
     });
 }
 
+// ========== BEMERKUNGEN ZUR STEUERERKLÄRUNG ==========
+
+// Toggle Bemerkungen-Box
+function toggleTaxRemarks() {
+    const container = document.getElementById('taxRemarksContainer');
+    const toggle = document.getElementById('taxRemarksToggle');
+    
+    if(container.style.display === 'none') {
+        container.style.display = 'block';
+        toggle.textContent = '▲ Schließen';
+        
+        // Lade gespeicherte Bemerkungen
+        const textarea = document.getElementById('taxRemarks');
+        if(textarea && taxData.remarks) {
+            textarea.value = taxData.remarks;
+        }
+    } else {
+        container.style.display = 'none';
+        toggle.textContent = '▼ Öffnen';
+    }
+}
+
+// Speichere Bemerkungen
+function saveTaxRemarks() {
+    const textarea = document.getElementById('taxRemarks');
+    if(textarea) {
+        taxData.remarks = textarea.value;
+        saveTaxData(true); // Silent save
+    }
+}
+
+// Lade Bemerkungen beim Öffnen des Tax-Tabs
+function loadTaxRemarks() {
+    const textarea = document.getElementById('taxRemarks');
+    if(textarea && taxData.remarks) {
+        textarea.value = taxData.remarks;
+    }
+}
+
+// ========== PORTFOLIO-AUSWAHL FÜR PDF EXPORT ==========
+
+// Speichert welche Portfolios für PDF ausgewählt sind
+let selectedPdfPortfolios = {};
+
+// Rendert die Portfolio-Checkboxen für den PDF Export
+function renderPdfPortfolioSelector() {
+    const container = document.getElementById('pdfPortfolioSelector');
+    if (!container) return;
+    
+    const yearSelect = document.getElementById('taxYearSelect');
+    const year = yearSelect ? yearSelect.value : null;
+    
+    if (!year || year.length < 4) {
+        container.innerHTML = '<div style="color:#888; font-style:italic; text-align:center; padding:10px;">Bitte erst Steuerjahr auswählen...</div>';
+        return;
+    }
+    
+    // Initialisiere selectedPdfPortfolios wenn nötig
+    if (!selectedPdfPortfolios[year]) {
+        selectedPdfPortfolios[year] = {};
+        // Standardmäßig alle Portfolios aktiviert
+        Object.keys(allPortfolios).forEach(id => {
+            selectedPdfPortfolios[year][id] = true;
+        });
+    }
+    
+    let html = '';
+    Object.keys(allPortfolios).forEach(id => {
+        const portfolio = allPortfolios[id];
+        const name = portfolio.name || id;
+        const isChecked = selectedPdfPortfolios[year][id] !== false;
+        const hasData = portfolio.years && portfolio.years[year] && portfolio.years[year].lastUpdate;
+        
+        html += `
+            <label style="display:flex; align-items:center; padding:8px 10px; cursor:pointer; border-radius:4px; transition:background 0.15s; margin-bottom:2px; gap:10px; ${!hasData ? 'opacity:0.5;' : ''}"
+                   onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='transparent'">
+                <input type="checkbox" 
+                       id="pdfPortfolio_${id}" 
+                       ${isChecked ? 'checked' : ''} 
+                       ${!hasData ? 'disabled' : ''}
+                       onchange="togglePdfPortfolio('${year}', '${id}', this.checked)"
+                       style="cursor:pointer; width:16px; height:16px; flex-shrink:0;">
+                <span style="font-weight:500; color:#333; font-size:0.9em;">${name}</span>
+                <span style="font-size:0.75em; color:#888; margin-left:auto;">
+                    ${hasData ? '✓ Daten vorhanden' : 'Keine Daten für ' + year}
+                </span>
+            </label>
+        `;
+    });
+    
+    container.innerHTML = html || '<div style="color:#888; text-align:center; padding:10px;">Keine Portfolios vorhanden</div>';
+}
+
+// Toggle einzelnes Portfolio
+function togglePdfPortfolio(year, portfolioId, enabled) {
+    if (!selectedPdfPortfolios[year]) selectedPdfPortfolios[year] = {};
+    selectedPdfPortfolios[year][portfolioId] = enabled;
+}
+
+// Toggle alle Portfolios
+function toggleAllPdfPortfolios() {
+    const yearSelect = document.getElementById('taxYearSelect');
+    const year = yearSelect ? yearSelect.value : null;
+    if (!year || year.length < 4) return;
+    
+    // Prüfe ob alle an sind
+    const allEnabled = Object.keys(allPortfolios).every(id => {
+        const hasData = allPortfolios[id].years && allPortfolios[id].years[year] && allPortfolios[id].years[year].lastUpdate;
+        return !hasData || selectedPdfPortfolios[year]?.[id] !== false;
+    });
+    
+    // Toggle
+    Object.keys(allPortfolios).forEach(id => {
+        const hasData = allPortfolios[id].years && allPortfolios[id].years[year] && allPortfolios[id].years[year].lastUpdate;
+        if (hasData) {
+            if (!selectedPdfPortfolios[year]) selectedPdfPortfolios[year] = {};
+            selectedPdfPortfolios[year][id] = !allEnabled;
+            const checkbox = document.getElementById(`pdfPortfolio_${id}`);
+            if (checkbox) checkbox.checked = !allEnabled;
+        }
+    });
+}
+
+// Gibt die ausgewählten Portfolios für ein Jahr zurück
+function getSelectedPdfPortfolios(year) {
+    const selected = [];
+    Object.keys(allPortfolios).forEach(id => {
+        const portfolio = allPortfolios[id];
+        const hasData = portfolio.years && portfolio.years[year] && portfolio.years[year].lastUpdate;
+        if (hasData && selectedPdfPortfolios[year]?.[id] !== false) {
+            selected.push({
+                id: id,
+                name: portfolio.name || id,
+                data: portfolio.years[year]
+            });
+        }
+    });
+    return selected;
+}
+
 // Gibt die aktivierten Sektionen für ein Jahr zurück
 function getEnabledPdfSections(year) {
     const sections = getPdfSectionDefinitions(year);
@@ -6580,12 +6826,20 @@ async function generateTaxPDF() {
             return parts.join('.') + (suffix ? ' ' + suffix : '');
         };
 
-        // --- CHECK: PORTFOLIO JAHR VS STEUERJAHR ---
+        // --- MULTI-PORTFOLIO SUPPORT ---
+        // Hole alle ausgewählten Portfolios für dieses Jahr
+        const selectedPortfoliosForPdf = getSelectedPdfPortfolios(year);
+        console.log(`📦 Ausgewählte Portfolios für PDF:`, selectedPortfoliosForPdf.map(p => p.name));
+        
+        // Legacy: yearPortfolio für Abwärtskompatibilität (erstes Portfolio oder Fallback)
         let yearPortfolio = null; 
         
-        if (portfoliosByYear[year] && portfoliosByYear[year].lastUpdate) {
+        if (selectedPortfoliosForPdf.length > 0) {
+            yearPortfolio = selectedPortfoliosForPdf[0].data;
+            console.log(`✅ Erstes Portfolio für Steuerjahr ${year}: ${selectedPortfoliosForPdf[0].name}`);
+        } else if (portfoliosByYear[year] && portfoliosByYear[year].lastUpdate) {
             yearPortfolio = portfoliosByYear[year]; 
-            console.log(`✅ Portfolio für Steuerjahr ${year} gefunden`);
+            console.log(`✅ Fallback: Portfolio für Steuerjahr ${year} aus portfoliosByYear`);
         } else {
             console.warn(`⚠️ Kein Portfolio für Steuerjahr ${year} gefunden. Nutze Fallback.`);
             yearPortfolio = { positions: {}, summary: {}, exchangeRates: {} };
@@ -6607,7 +6861,7 @@ async function generateTaxPDF() {
         const coverNum = getSectionNumber('cover');
 
         doc.setFontSize(22); doc.setTextColor(44, 62, 80);
-        doc.text("Jahresabschluss", 105, 20, { align: 'center' });
+        doc.text("Jahresabschluss (Trading und Investitionen)", 105, 20, { align: 'center' });
         doc.setFontSize(12); doc.setTextColor(100);
         doc.text(`Steuerperiode ${year} | Kanton Schaffhausen`, 105, 28, { align: 'center' });
         
@@ -6930,90 +7184,110 @@ if (bankRows.length > 0) {
     finalY += 10;
 }
 
-// 3a. CASH POSITIONEN BEI INTERACTIVE BROKERS
-if (yearPortfolio.positions) {
-    const positions = yearPortfolio.positions || {};
-    const cashList = Object.values(positions).filter(p => p.isCash);
-    
-    if (cashList.length > 0) {
-        // Titel "Interactive Brokers..." - bündig unter den Bankzeilen
-        // X-Abstand auf 20 setzen (nicht 22), damit es bündig ist
-        doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(0); 
-        doc.text(
-          "Interactive Brokers Cash Position (31.12." + year + ")",
-          16.5,   
-          finalY + 5
-        );
-        
-        // Tabelle startet etwas tiefer
-        finalY += 8;
-        
-        const cashRows = [];
-        let totalCashUSD = 0;
-        let totalCashCHF = 0;
-        
-        const rateEURCHF = getGlobalEURCHFRate(); 
-        
-        cashList.forEach(p => {
-            const currency = (p.currency || 'USD').trim();
-            const originalAmount = p.originalAmount !== undefined ? p.originalAmount : p.val;
-            const rateToUSD = getPortfolioRate(currency);
-            const usdAmount = originalAmount * rateToUSD;
-            let chfAmount = usdAmount * rate; 
-            if (currency === 'EUR') chfAmount = originalAmount * rateEURCHF;
-            
-            totalCashUSD += usdAmount;
-            totalCashCHF += chfAmount;
-            
-            // Hinweis Logik
-            let posLabel = `Cash ${currency}`;
-            if (currency === 'USD') posLabel += "\n(Saldo inkl. realisierte Trading-Erfolge)";
-            
-            cashRows.push([
-                posLabel,
-                fmtNum(originalAmount, currency),
-                fmtNum(usdAmount, 'USD'),
-                fmtNum(chfAmount, 'CHF')
-            ]);
-        });
-        
-        totalBankAssetsCHF += totalCashCHF;
+// 3a. CASH POSITIONEN BEI INTERACTIVE BROKERS - MULTI-PORTFOLIO
+// Iteriere über alle ausgewählten Portfolios
+const portfoliosToRender = selectedPortfoliosForPdf.length > 0 ? selectedPortfoliosForPdf : 
+    (yearPortfolio.positions ? [{ id: 'default', name: 'Portfolio', data: yearPortfolio }] : []);
 
-        cashRows.push([
-            'TOTAL IBKR CASH',
-            '',
-            fmtNum(totalCashUSD, 'USD'),
-            fmtNum(totalCashCHF, 'CHF')
-        ]);
+portfoliosToRender.forEach((portfolioInfo, portfolioIndex) => {
+    const currentPortfolioData = portfolioInfo.data;
+    const portfolioName = portfolioInfo.name || 'Portfolio';
+    
+    if (currentPortfolioData.positions) {
+        const positions = currentPortfolioData.positions || {};
+        const cashList = Object.values(positions).filter(p => p.isCash);
         
-        doc.autoTable({
-            startY: finalY,
-            head: [['Position', 'Betrag (Orig.)', 'Betrag (USD)', 'Betrag (CHF)']],
-            body: cashRows,
-            theme: 'grid',
-            headStyles: { fillColor: [70, 130, 180], fontSize: 9 },
-            styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
-            columnStyles: { 
-                0: { cellWidth: 70 }, 
-                1: { halign: 'right' }, 
-                2: { halign: 'right' }, 
-                3: { halign: 'right', fontStyle: 'bold' } 
-            },
-            didParseCell: function(data) {
-                if (data.section === 'body' && data.column.index === 0 && data.cell.raw.includes('\n')) {
-                    data.cell.styles.fontSize = 8;
-                    data.cell.styles.fontStyle = 'italic';
+        if (cashList.length > 0) {
+            // Prüfe ob neue Seite nötig
+            if (finalY > 220) { doc.addPage(); finalY = 20; }
+            
+            // Portfolio-Name als Titel (nur wenn mehrere Portfolios)
+            const portfolioLabel = selectedPortfoliosForPdf.length > 1 ? ` - ${portfolioName}` : '';
+            
+            doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(0); 
+            doc.text(
+              `Interactive Brokers Cash Position${portfolioLabel} (31.12.${year})`,
+              16.5,   
+              finalY + 5
+            );
+            
+            finalY += 8;
+            
+            const cashRows = [];
+            let totalCashUSD = 0;
+            let totalCashCHF = 0;
+            
+            const rateEURCHF = getGlobalEURCHFRate();
+            
+            // Lokale Rate-Funktion für dieses Portfolio
+            const getThisPortfolioRate = (curr) => {
+                if (!curr || curr === 'USD') return 1;
+                if (currentPortfolioData.exchangeRates && currentPortfolioData.exchangeRates[curr]) {
+                    return currentPortfolioData.exchangeRates[curr];
                 }
-                if (data.row.index === cashRows.length - 1) {
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.fillColor = [240, 240, 240];
+                return getRate(curr);
+            };
+            
+            cashList.forEach(p => {
+                const currency = (p.currency || 'USD').trim();
+                const originalAmount = p.originalAmount !== undefined ? p.originalAmount : p.val;
+                const rateToUSD = getThisPortfolioRate(currency);
+                const usdAmount = originalAmount * rateToUSD;
+                let chfAmount = usdAmount * rate; 
+                if (currency === 'EUR') chfAmount = originalAmount * rateEURCHF;
+                
+                totalCashUSD += usdAmount;
+                totalCashCHF += chfAmount;
+                
+                let posLabel = `Cash ${currency}`;
+                if (currency === 'USD') posLabel += "\n(Saldo inkl. realisierte Trading-Erfolge)";
+                
+                cashRows.push([
+                    posLabel,
+                    fmtNum(originalAmount, currency),
+                    fmtNum(usdAmount, 'USD'),
+                    fmtNum(chfAmount, 'CHF')
+                ]);
+            });
+            
+            totalBankAssetsCHF += totalCashCHF;
+
+            cashRows.push([
+                `TOTAL IBKR CASH${portfolioLabel}`,
+                '',
+                fmtNum(totalCashUSD, 'USD'),
+                fmtNum(totalCashCHF, 'CHF')
+            ]);
+            
+            doc.autoTable({
+                startY: finalY,
+                head: [['Position', 'Betrag (Orig.)', 'Betrag (USD)', 'Betrag (CHF)']],
+                body: cashRows,
+                theme: 'grid',
+                headStyles: { fillColor: [70, 130, 180], fontSize: 9 },
+                styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
+                columnStyles: { 
+                    0: { cellWidth: 70 }, 
+                    1: { halign: 'right' }, 
+                    2: { halign: 'right' }, 
+                    3: { halign: 'right', fontStyle: 'bold' } 
+                },
+                didParseCell: function(data) {
+                    if (data.section === 'body' && data.column.index === 0 && data.cell.raw.includes('\n')) {
+                        data.cell.styles.fontSize = 8;
+                        data.cell.styles.fontStyle = 'italic';
+                    }
+                    if (data.row.index === cashRows.length - 1) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [240, 240, 240];
+                    }
                 }
-            }
-        });
-        
-        finalY = doc.lastAutoTable.finalY + 8;
+            });
+            
+            finalY = doc.lastAutoTable.finalY + 8;
+        }
     }
-}
+});
 
 // --- GESAMTSUMME BANKGUTHABEN ---
 if (totalBankAssetsCHF > 0) {
@@ -7030,159 +7304,221 @@ if (totalBankAssetsCHF > 0) {
         doc.setTextColor(0);
 
         // ==========================================
-        // WERTSCHRIFTEN DETAILS (MIT USD SUMME) - Untersektion von Portfolio
+        // WERTSCHRIFTEN DETAILS - MULTI-PORTFOLIO SUPPORT
         // ==========================================
         
-        if (yearPortfolio.positions && Object.keys(yearPortfolio.positions).length > 0) {
-            doc.addPage();
+        // Iteriere über alle ausgewählten Portfolios
+        let grandTotalValueCHF = 0;
+        
+        portfoliosToRender.forEach((portfolioInfo, portfolioIndex) => {
+            const currentPortfolioData = portfolioInfo.data;
+            const portfolioName = portfolioInfo.name || 'Portfolio';
             
-            doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
-            doc.text(`${portfolioNum}b. Detailliertes Wertschriftenverzeichnis (Aktienpositionen)`, 20, 20);
-            
-            doc.setFontSize(10); doc.setFont(undefined, 'normal');
-            const stichtag = `31.12.${year}`;
-            doc.text(`Nachweis gemäss IBKR Portfolio-Report | Stichtag: ${stichtag}`, 20, 28);
-            
-            const rateInfo = `Umrechnungskurs: 1 USD = ${rate} CHF (ESTV Jahresmittel ${year})`;
-            doc.setFontSize(9); doc.setTextColor(100); doc.text(rateInfo, 20, 35); doc.setTextColor(0);
-            
-            const positions = yearPortfolio.positions || {};
-            const posList = Object.values(positions).filter(p => !p.isCash).sort((a, b) => (b.val || 0) - (a.val || 0));
-            
-            const tableRows = [];
-            // Neue Variable: totalValueUSD
-            let totalValueUSD = 0; 
-            let totalValueCHF = 0; let totalUnrealCHF = 0; let totalRealUSD = 0;
-            
-            posList.forEach(p => {
-                if (Math.abs(p.qty || 0) > 0.001) {
-                    
-                    const currency = p.currency || 'USD';
-                    const rawVal = p.originalAmount !== undefined ? p.originalAmount : p.val;
-                    
-                    const rateToUSD = getPortfolioRate(currency);
-                    const valUSD = rawVal * rateToUSD;
-                    const valCHF = valUSD * rate;
-                    const unrealCHF = (p.unReal || 0) * rateToUSD * rate; 
-                    
-                    totalValueUSD += valUSD; // <-- Hier wird USD summiert
-                    totalValueCHF += valCHF;
-                    totalUnrealCHF += unrealCHF;
-                    
-                    const currInfo = currency !== 'USD' ? ` (${currency})` : '';
-                    
-                    tableRows.push([
-                        p.symbol + currInfo,
-                        p.qty.toFixed(2),
-                        (p.cost || 0).toFixed(2),
-                        (p.close || 0).toFixed(2),
-                        fmtNum(valUSD, '$'),
-                        fmtNum(valCHF, 'CHF'),
-                        unrealCHF >= 0 ? '+' + fmtNum(unrealCHF) : fmtNum(unrealCHF)
-                    ]);
-                }
-                if (Math.abs(p.real || 0) > 0.01) totalRealUSD += p.real;
-            });
-            
-            const totalRealCHF = totalRealUSD * rate;
-            
-            // Summenzeile: Jetzt mit USD Total!
-            tableRows.push([
-                'TOTAL WERTSCHRIFTEN', 
-                '', 
-                '', 
-                '', 
-                fmtNum(totalValueUSD, '$'),  // <-- Das ist neu!
-                fmtNum(totalValueCHF, 'CHF'), 
-                totalUnrealCHF >= 0 ? '+' + fmtNum(totalUnrealCHF) : fmtNum(totalUnrealCHF)
-            ]);
-            
-            doc.autoTable({
-                startY: 42,
-                head: [['Symbol', 'Menge', 'Ø Preis', 'Kurs 31.12.', 'Wert (USD)', 'Steuerwert (CHF)', 'Unreal. G/V (CHF)']],
-                body: tableRows,
-                theme: 'grid',
-                headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 9, fontStyle: 'bold' },
-                styles: { fontSize: 8, cellPadding: 2 },
-                columnStyles: { 0: { cellWidth: 30 }, 1: { halign: 'right', cellWidth: 20 }, 2: { halign: 'right', cellWidth: 25 }, 3: { halign: 'right', cellWidth: 25 }, 4: { halign: 'right', cellWidth: 28 }, 5: { halign: 'right', cellWidth: 30, fontStyle: 'bold' }, 6: { halign: 'right', cellWidth: 30 } },
-                didParseCell: function(data) {
-                    if (data.row.index === tableRows.length - 1) { data.cell.styles.fontStyle = 'bold'; data.cell.styles.fillColor = [230, 230, 230]; }
-                }
-            });
-            
-            // DIVIDENDEN (Format angepasst)
-            let divYPos = doc.lastAutoTable.finalY + 15;
-            if (divYPos > 240) { doc.addPage(); divYPos = 20; }
-
-            const summary = yearPortfolio.summary || {};
-            const divGrossUSD = summary.dividends || 0;
-            const divTaxUSD = Math.abs(summary.tax || 0);
-            const divNetUSD = divGrossUSD - divTaxUSD;
-
-            const divGrossCHF = divGrossUSD * rate;
-            const divTaxCHF = divTaxUSD * rate;
-            const divNetCHF = divNetUSD * rate;
-
-            if (divGrossUSD > 0) {
-                doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
-                doc.text("Dividendenerträge (Steuerjahr " + year + ")", 20, divYPos);
+            if (currentPortfolioData.positions && Object.keys(currentPortfolioData.positions).length > 0) {
+                doc.addPage();
                 
-                const divRows = [
-                    ['Brutto-Dividenden (Total)', fmtNum(divGrossUSD, 'USD'), fmtNum(divGrossCHF, 'CHF')],
-                    ['Abgezogene Quellensteuer (USA)', '-' + fmtNum(divTaxUSD, 'USD'), '-' + fmtNum(divTaxCHF, 'CHF')],
-                    ['Netto-Gutschrift', fmtNum(divNetUSD, 'USD'), fmtNum(divNetCHF, 'CHF')]
-                ];
+                // Portfolio-Name im Titel
+                const portfolioLabel = selectedPortfoliosForPdf.length > 1 ? ` - ${portfolioName}` : '';
+                const subSection = selectedPortfoliosForPdf.length > 1 ? String.fromCharCode(98 + portfolioIndex) : 'b'; // b, c, d...
+                
+                doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
+                doc.text(`${portfolioNum}${subSection}. Wertschriftenverzeichnis${portfolioLabel}`, 20, 20);
+                
+                doc.setFontSize(10); doc.setFont(undefined, 'normal');
+                const stichtag = `31.12.${year}`;
+                doc.text(`Nachweis gemäss IBKR Portfolio-Report | Stichtag: ${stichtag}`, 20, 28);
+                
+                const rateInfo = `Umrechnungskurs: 1 USD = ${rate} CHF (ESTV Jahresmittel ${year})`;
+                doc.setFontSize(9); doc.setTextColor(100); doc.text(rateInfo, 20, 35); doc.setTextColor(0);
+                
+                // Lokale Rate-Funktion für dieses Portfolio
+                const getThisPortfolioRate = (curr) => {
+                    if (!curr || curr === 'USD') return 1;
+                    if (currentPortfolioData.exchangeRates && currentPortfolioData.exchangeRates[curr]) {
+                        return currentPortfolioData.exchangeRates[curr];
+                    }
+                    return getRate(curr);
+                };
+                
+                const positions = currentPortfolioData.positions || {};
+                const posList = Object.values(positions).filter(p => !p.isCash).sort((a, b) => (b.val || 0) - (a.val || 0));
+                
+                const tableRows = [];
+                let totalValueUSD = 0; 
+                let totalValueCHF = 0; 
+                let totalUnrealCHF = 0; 
+                let totalRealUSD = 0;
+                
+                posList.forEach(p => {
+                    if (Math.abs(p.qty || 0) > 0.001) {
+                        const currency = p.currency || 'USD';
+                        const rawVal = p.originalAmount !== undefined ? p.originalAmount : p.val;
+                        
+                        const rateToUSD = getThisPortfolioRate(currency);
+                        const valUSD = rawVal * rateToUSD;
+                        const valCHF = valUSD * rate;
+                        const unrealCHF = (p.unReal || 0) * rateToUSD * rate; 
+                        
+                        totalValueUSD += valUSD;
+                        totalValueCHF += valCHF;
+                        totalUnrealCHF += unrealCHF;
+                        
+                        const currInfo = currency !== 'USD' ? ` (${currency})` : '';
+                        
+                        tableRows.push([
+                            p.symbol + currInfo,
+                            p.qty.toFixed(2),
+                            (p.cost || 0).toFixed(2),
+                            (p.close || 0).toFixed(2),
+                            fmtNum(valUSD, '$'),
+                            fmtNum(valCHF, 'CHF'),
+                            unrealCHF >= 0 ? '+' + fmtNum(unrealCHF) : fmtNum(unrealCHF)
+                        ]);
+                    }
+                    if (Math.abs(p.real || 0) > 0.01) totalRealUSD += p.real;
+                });
+                
+                grandTotalValueCHF += totalValueCHF;
+                const totalRealCHF = totalRealUSD * rate;
+                
+                // Summenzeile
+                tableRows.push([
+                    `TOTAL${portfolioLabel}`, 
+                    '', 
+                    '', 
+                    '', 
+                    fmtNum(totalValueUSD, '$'),
+                    fmtNum(totalValueCHF, 'CHF'), 
+                    totalUnrealCHF >= 0 ? '+' + fmtNum(totalUnrealCHF) : fmtNum(totalUnrealCHF)
+                ]);
                 
                 doc.autoTable({
-                    startY: divYPos + 5,
-                    head: [['Position', 'Betrag (USD)', 'Betrag (CHF)']],
-                    body: divRows,
+                    startY: 42,
+                    head: [['Symbol', 'Menge', 'Ø Preis', 'Kurs 31.12.', 'Wert (USD)', 'Steuerwert (CHF)', 'Unreal. G/V (CHF)']],
+                    body: tableRows,
                     theme: 'grid',
-                    headStyles: { fillColor: [46, 204, 113], textColor: 0, fontSize: 9 },
-                    styles: { fontSize: 9, cellPadding: 3 },
-                    columnStyles: { 0: { cellWidth: 80 }, 1: { halign: 'right', cellWidth: 50 }, 2: { halign: 'right', cellWidth: 50, fontStyle: 'bold' } },
+                    headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    columnStyles: { 0: { cellWidth: 30 }, 1: { halign: 'right', cellWidth: 20 }, 2: { halign: 'right', cellWidth: 25 }, 3: { halign: 'right', cellWidth: 25 }, 4: { halign: 'right', cellWidth: 28 }, 5: { halign: 'right', cellWidth: 30, fontStyle: 'bold' }, 6: { halign: 'right', cellWidth: 30 } },
                     didParseCell: function(data) {
-                        if (data.row.index === 0) data.cell.styles.fillColor = [240, 255, 245];
-                        if (data.row.index === 1) { data.cell.styles.fillColor = [255, 245, 245]; data.cell.styles.textColor = [200, 0, 0]; }
-                        if (data.row.index === 2) { data.cell.styles.fontStyle = 'bold'; data.cell.styles.fillColor = [230, 230, 230]; }
+                        if (data.row.index === tableRows.length - 1) { data.cell.styles.fontStyle = 'bold'; data.cell.styles.fillColor = [230, 230, 230]; }
                     }
                 });
                 
-                let noteY = doc.lastAutoTable.finalY + 8;
-                doc.setFontSize(9); doc.setTextColor(0, 150, 0);
-                doc.text(`> Brutto-Dividenden (${fmtNum(divGrossCHF, 'CHF')}) sind als EINKOMMEN zu deklarieren (Seite 2, Ziff. 4)`, 20, noteY);
-                noteY += 5;
-                doc.text(`> Quellensteuer (${fmtNum(divTaxCHF, 'CHF')}) ist via Formular DA-1 rückforderbar`, 20, noteY);
-                doc.setTextColor(0);
-                divYPos = noteY + 10;
-            } else {
-                divYPos += 5;
-            }
+                // DIVIDENDEN
+                let divYPos = doc.lastAutoTable.finalY + 15;
+                if (divYPos > 240) { doc.addPage(); divYPos = 20; }
 
-            // REALISIERTE GEWINNE (Format angepasst)
-            let yPos = divYPos;
-            if (yPos > 250) { doc.addPage(); yPos = 20; }
+                const summary = currentPortfolioData.summary || {};
+                const divGrossUSD = summary.dividends || 0;
+                const divTaxUSD = Math.abs(summary.tax || 0);
+                const divNetUSD = divGrossUSD - divTaxUSD;
+
+                const divGrossCHF = divGrossUSD * rate;
+                const divTaxCHF = divTaxUSD * rate;
+                const divNetCHF = divNetUSD * rate;
+
+                if (divGrossUSD > 0) {
+                    doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
+                    doc.text(`Dividendenerträge${portfolioLabel} (Steuerjahr ${year})`, 20, divYPos);
+                    
+                    const divRows = [
+                        ['Brutto-Dividenden (Total)', fmtNum(divGrossUSD, 'USD'), fmtNum(divGrossCHF, 'CHF')],
+                        ['Abgezogene Quellensteuer (USA)', '-' + fmtNum(divTaxUSD, 'USD'), '-' + fmtNum(divTaxCHF, 'CHF')],
+                        ['Netto-Gutschrift', fmtNum(divNetUSD, 'USD'), fmtNum(divNetCHF, 'CHF')]
+                    ];
+                    
+                    doc.autoTable({
+                        startY: divYPos + 5,
+                        head: [['Position', 'Betrag (USD)', 'Betrag (CHF)']],
+                        body: divRows,
+                        theme: 'grid',
+                        headStyles: { fillColor: [46, 204, 113], textColor: 0, fontSize: 9 },
+                        styles: { fontSize: 9, cellPadding: 3 },
+                        columnStyles: { 0: { cellWidth: 80 }, 1: { halign: 'right', cellWidth: 50 }, 2: { halign: 'right', cellWidth: 50, fontStyle: 'bold' } },
+                        didParseCell: function(data) {
+                            if (data.row.index === 0) data.cell.styles.fillColor = [240, 255, 245];
+                            if (data.row.index === 1) { data.cell.styles.fillColor = [255, 245, 245]; data.cell.styles.textColor = [200, 0, 0]; }
+                            if (data.row.index === 2) { data.cell.styles.fontStyle = 'bold'; data.cell.styles.fillColor = [230, 230, 230]; }
+                        }
+                    });
+                    
+                    let noteY = doc.lastAutoTable.finalY + 8;
+                    doc.setFontSize(9); doc.setTextColor(0, 150, 0);
+                    doc.text(`> Brutto-Dividenden (${fmtNum(divGrossCHF, 'CHF')}) sind als EINKOMMEN zu deklarieren (Seite 2, Ziff. 4)`, 20, noteY);
+                    noteY += 5;
+                    doc.text(`> Quellensteuer (${fmtNum(divTaxCHF, 'CHF')}) ist via Formular DA-1 rückforderbar`, 20, noteY);
+                    doc.setTextColor(0);
+                    divYPos = noteY + 10;
+                } else {
+                    divYPos += 5;
+                }
+
+                // REALISIERTE GEWINNE
+                let yPos = divYPos;
+                if (yPos > 250) { doc.addPage(); yPos = 20; }
+                
+                doc.setFontSize(10); doc.setFont(undefined, 'bold');
+                doc.text(`Realisierte Kapitalgewinne${portfolioLabel}`, 20, yPos);
+                doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+                yPos += 7;
+                doc.text(`Total realisierte Gewinne: ${fmtNum(totalRealUSD, 'USD')} = ${fmtNum(totalRealCHF, 'CHF')}`, 20, yPos);
+                yPos += 10;
+                doc.setFontSize(8); doc.setTextColor(150);
+                doc.text("Hinweis: Kapitalgewinne sind für Privatanleger in der Schweiz meist steuerfrei.", 20, yPos);
+                doc.setTextColor(0);
+                
+                yPos += 15;
+                if (yPos > 260) { doc.addPage(); yPos = 20; }
+                doc.setFillColor(255, 240, 240); doc.rect(15, yPos - 5, 180, 20, 'F');
+                doc.setDrawColor(200, 0, 0); doc.setLineWidth(0.5); doc.rect(15, yPos - 5, 180, 20);
+                doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(200, 0, 0);
+                doc.text("-> Übertrag in Steuererklärung:", 20, yPos + 2);
+                doc.setFontSize(9); doc.setFont(undefined, 'normal');
+                doc.text(`• Vermögen: ${fmtNum(totalValueCHF, 'CHF')} -> Seite 4, Ziffer 30.1`, 25, yPos + 8);
+                doc.text(`• Diese Seite als Beilage dem Wertschriftenverzeichnis beifügen`, 25, yPos + 13);
+                doc.setTextColor(0);
+            }
+        }); // Ende portfoliosToRender.forEach
+        
+        // GESAMT-SUMMARY wenn mehrere Portfolios
+        if (selectedPortfoliosForPdf.length > 1 && grandTotalValueCHF > 0) {
+            doc.addPage();
+            doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.setTextColor(44, 62, 80);
+            doc.text(`${portfolioNum}. Zusammenfassung aller Portfolios`, 20, 20);
             
-            doc.setFontSize(10); doc.setFont(undefined, 'bold');
-            doc.text("Realisierte Kapitalgewinne (Verkaufte Positionen)", 20, yPos);
-            doc.setFont(undefined, 'normal'); doc.setFontSize(9);
-            yPos += 7;
-            doc.text(`Total realisierte Gewinne: ${fmtNum(totalRealUSD, 'USD')} = ${fmtNum(totalRealCHF, 'CHF')}`, 20, yPos);
-            yPos += 10;
-            doc.setFontSize(8); doc.setTextColor(150);
-            doc.text("Hinweis: Kapitalgewinne sind für Privatanleger in der Schweiz meist steuerfrei.", 20, yPos);
-            doc.setTextColor(0);
+            doc.setFontSize(10); doc.setFont(undefined, 'normal');
+            doc.text(`Steuerperiode ${year}`, 20, 30);
             
-            yPos += 15;
-            if (yPos > 260) { doc.addPage(); yPos = 20; }
-            doc.setFillColor(255, 240, 240); doc.rect(15, yPos - 5, 180, 20, 'F');
-            doc.setDrawColor(200, 0, 0); doc.setLineWidth(0.5); doc.rect(15, yPos - 5, 180, 20);
-            doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(200, 0, 0);
-            doc.text("-> Übertrag in Steuererklärung:", 20, yPos + 2);
-            doc.setFontSize(9); doc.setFont(undefined, 'normal');
-            doc.text(`• Vermögen: ${fmtNum(totalValueCHF, 'CHF')} -> Seite 4, Ziffer 30.1`, 25, yPos + 8);
-            doc.text(`• Diese Seite als Beilage dem Wertschriftenverzeichnis beifügen`, 25, yPos + 13);
-            doc.setTextColor(0);
+            const summaryRows = [];
+            selectedPortfoliosForPdf.forEach(p => {
+                const positions = Object.values(p.data.positions || {}).filter(pos => !pos.isCash);
+                let portfolioTotal = 0;
+                positions.forEach(pos => {
+                    const currency = pos.currency || 'USD';
+                    const rawVal = pos.originalAmount !== undefined ? pos.originalAmount : pos.val;
+                    const rateToUSD = (p.data.exchangeRates && p.data.exchangeRates[currency]) || 1;
+                    portfolioTotal += rawVal * rateToUSD * rate;
+                });
+                summaryRows.push([p.name, fmtNum(portfolioTotal, 'CHF')]);
+            });
+            summaryRows.push(['TOTAL ALLE PORTFOLIOS', fmtNum(grandTotalValueCHF, 'CHF')]);
+            
+            doc.autoTable({
+                startY: 40,
+                head: [['Portfolio', 'Steuerwert (CHF)']],
+                body: summaryRows,
+                theme: 'grid',
+                headStyles: { fillColor: [44, 62, 80], textColor: 255, fontSize: 10 },
+                styles: { fontSize: 10, cellPadding: 5 },
+                columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right', cellWidth: 70, fontStyle: 'bold' } },
+                didParseCell: function(data) {
+                    if (data.row.index === summaryRows.length - 1) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [230, 240, 255];
+                    }
+                }
+            });
         }
 } // Ende isSectionEnabled('portfolio')
 
@@ -7468,6 +7804,80 @@ if (totalBankAssetsCHF > 0) {
             }
         } // Ende isSectionEnabled('receipts')
 
+        // ==========================================
+        // BEMERKUNGEN ZUR STEUERERKLÄRUNG (IMMER AM ENDE, OHNE KAPITELNUMMER)
+        // ==========================================
+        // Bemerkungen erscheinen IMMER wenn vorhanden, unabhängig von der Sektionsauswahl
+        if(taxData.remarks && taxData.remarks.trim()) {
+            doc.addPage();
+            
+            // Header ohne Kapitelnummer
+            doc.setFillColor(240, 240, 240);
+            doc.rect(20, 15, 170, 18, 'F');
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(0);
+            doc.text(`Bemerkungen zur Steuererklärung`, 25, 25);
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(80);
+            doc.text(`Steuerperiode ${year} | ${p.name || '-'}`, 25, 40);
+            
+            // Bemerkungstext
+            let yPos = 50;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(0);
+            
+            const remarks = taxData.remarks.trim();
+            const lines = remarks.split('\n');
+            
+            lines.forEach(line => {
+                // Prüfe ob neue Seite nötig
+                if(yPos > 270) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                
+                // Aufzählungspunkte erkennen und formatieren
+                let xOffset = 25;
+                let displayLine = line;
+                
+                if(line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('*')) {
+                    xOffset = 30;
+                    displayLine = line.trim();
+                } else if(line.startsWith('  ') || line.startsWith('\t')) {
+                    // Eingerückter Text
+                    xOffset = 35;
+                    displayLine = line.trim();
+                }
+                
+                // Lange Zeilen umbrechen
+                const maxWidth = 165 - (xOffset - 25);
+                const splitLines = doc.splitTextToSize(displayLine, maxWidth);
+                
+                splitLines.forEach(splitLine => {
+                    if(yPos > 270) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.text(splitLine, xOffset, yPos);
+                    yPos += 5;
+                });
+            });
+            
+            // Info-Box am Ende
+            yPos += 10;
+            if(yPos > 250) { doc.addPage(); yPos = 20; }
+            doc.setFillColor(245, 245, 245);
+            doc.rect(20, yPos, 170, 12, 'F');
+            doc.setFontSize(8);
+            doc.setTextColor(120);
+            doc.text('Diese Bemerkungen wurden der Steuererklärung als Anlage beigefügt.', 25, yPos + 5);
+            doc.text(`Erstellt am: ${new Date().toLocaleDateString('de-CH')}`, 25, yPos + 9);
+        }
+
         // UNTERSCHRIFT
         let signY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 30 : 250;
         if (signY > 250) { doc.addPage(); signY = 40; }
@@ -7510,12 +7920,49 @@ function renderPortfolio() {
     // --- GLOBALE KURSE HOLEN ---
     const rateUSDCHF = getGlobalUSDCHFRate(); 
     const rateEURCHF = getGlobalEURCHFRate(); 
+    
+    // Aktueller Portfolio-Name
+    const currentPortfolioNameDisplay = allPortfolios[currentPortfolioId]?.name || currentPortfolioId || 'Portfolio';
 
     // HTML Struktur
     const view = document.getElementById('holdings');
     view.innerHTML = `
         <div class="header" style="background:linear-gradient(135deg,#3498db 0%,#2980b9 100%); padding: 10px;">
             <h1 style="font-size:1.0em; margin:0;">📦 Wertpapier Beteiligungen</h1>
+        </div>
+
+        <!-- PORTFOLIO AUSWAHL BOX -->
+        <div class="chart-container" style="padding:12px 15px !important; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+            <label style="font-weight:600; color:#333;">Portfolio:</label>
+            <div style="position:relative;">
+                <button id="portfolio-dropdown-btn" onclick="togglePortfolioDropdown(event)" 
+                    style="background:#0176d3; border:none; color:white; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:0.95em; display:flex; align-items:center; gap:10px; font-weight:500; min-width:180px; justify-content:space-between;">
+                    <span id="currentPortfolioName">${currentPortfolioNameDisplay}</span>
+                    <span>▼</span>
+                </button>
+                
+                <!-- Dropdown Content -->
+                <div id="portfolio-dropdown-content" style="display:none; position:absolute; top:calc(100% + 5px); left:0; background:white; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.25); min-width:300px; z-index:99999; border:1px solid #ddd;">
+                    <div style="background:#f8f9fa; padding:10px 15px; border-bottom:1px solid #eee; border-radius:8px 8px 0 0;">
+                        <strong style="color:#333; font-size:0.9em;">📦 Portfolio auswählen</strong>
+                    </div>
+                    <div id="portfolio-list" style="max-height:200px; overflow-y:auto;"></div>
+                    <div style="border-top:1px solid #eee; padding:12px; background:#fafafa;">
+                        <label style="font-size:0.8em; color:#666; display:block; margin-bottom:5px;">✏️ Umbenennen:</label>
+                        <input type="text" id="portfolioNameInput" placeholder="Name eingeben..." 
+                            style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:0.9em; box-sizing:border-box;"
+                            onchange="savePortfolioName()" onkeyup="if(event.key==='Enter') savePortfolioName()">
+                    </div>
+                    <div style="border-top:1px solid #eee; padding:12px; display:flex; gap:8px;">
+                        <button onclick="addNewPortfolio()" style="flex:1; padding:10px; background:#0176d3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">
+                            ➕ Neues Portfolio
+                        </button>
+                        <button onclick="deleteCurrentPortfolio()" style="padding:10px 15px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.9em;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="chart-container import-bar-compact" style="align-items: center;">
@@ -7810,6 +8257,9 @@ function renderPortfolio() {
     const cashContainer = document.getElementById('cashTableContainer');
     if (stocksContainer) stocksContainer.style.height = Math.min(600, Math.max(150, posList.length * 42 + 60)) + 'px';
     if (cashContainer) cashContainer.style.maxHeight = Math.min(400, Math.max(120, cashList.length * 38 + 60)) + 'px';
+    
+    // Portfolio-Dropdown Liste füllen
+    renderPortfolioDropdown();
 }
 
 // Helper: Wert in USD umrechnen
@@ -8804,11 +9254,41 @@ async function importTaxZIP(input) {
 
 // 1. Laden & Speichern
 function loadPortfolio() {
-    // Lade Multi-Year Struktur
+    // ========== MULTI-PORTFOLIO SYSTEM LADEN ==========
+    
+    // Lade alle Portfolios
+    const allPortfoliosData = localStorage.getItem('allPortfolios');
+    if (allPortfoliosData) {
+        allPortfolios = JSON.parse(allPortfoliosData);
+        console.log('📦 Alle Portfolios geladen:', Object.keys(allPortfolios));
+    }
+    
+    // Lade aktuelles Portfolio
+    const savedPortfolioId = localStorage.getItem('currentPortfolioId');
+    if (savedPortfolioId && allPortfolios[savedPortfolioId]) {
+        currentPortfolioId = savedPortfolioId;
+    }
+    
+    // Falls keine Portfolios existieren, erstelle ein Standard-Portfolio
+    if (Object.keys(allPortfolios).length === 0) {
+        allPortfolios['portfolio_1'] = {
+            name: 'Portfolio 1',
+            years: {}
+        };
+        currentPortfolioId = 'portfolio_1';
+    }
+    
+    // Setze portfoliosByYear auf das aktuelle Portfolio
+    portfoliosByYear = allPortfolios[currentPortfolioId]?.years || {};
+    
+    // Legacy: Lade alte Multi-Year Struktur und migriere
     const multiYear = localStorage.getItem('portfoliosByYear');
-    if (multiYear) {
-        portfoliosByYear = JSON.parse(multiYear);
-        console.log('📦 Portfolios geladen:', Object.keys(portfoliosByYear));
+    if (multiYear && Object.keys(allPortfolios).length === 1 && Object.keys(portfoliosByYear).length === 0) {
+        const legacyData = JSON.parse(multiYear);
+        allPortfolios['portfolio_1'].years = legacyData;
+        portfoliosByYear = legacyData;
+        console.log('🔄 Legacy portfoliosByYear migriert');
+        savePortfolio();
     }
     
     // Lade globale exchangeRates
@@ -8823,26 +9303,213 @@ function loadPortfolio() {
         currentPortfolioYear = savedYear;
     }
     
-    // Legacy support: Migriere alte Daten
+    // Legacy support: Migriere sehr alte Daten
     const legacy = localStorage.getItem('tradeLog_portfolio');
-    if (legacy && !multiYear) {
+    if (legacy && !multiYear && Object.keys(portfoliosByYear).length === 0) {
         const legacyData = JSON.parse(legacy);
         const currentYear = new Date().getFullYear().toString();
         portfoliosByYear[currentYear] = legacyData;
+        allPortfolios[currentPortfolioId].years = portfoliosByYear;
         console.log('🔄 Legacy Portfolio migriert zu Jahr', currentYear);
-        savePortfolio(); // Speichere im neuen Format
+        savePortfolio();
     }
     
+    // UI aktualisieren
+    renderPortfolioDropdown();
     renderPortfolio();
 }
 
 function savePortfolio() {
-    // Speichere Multi-Year Struktur
-    localStorage.setItem('portfoliosByYear', JSON.stringify(portfoliosByYear));
+    // Sync portfoliosByYear zurück zum aktuellen Portfolio
+    if (allPortfolios[currentPortfolioId]) {
+        allPortfolios[currentPortfolioId].years = portfoliosByYear;
+    }
+    
+    // Speichere alles
+    localStorage.setItem('allPortfolios', JSON.stringify(allPortfolios));
+    localStorage.setItem('currentPortfolioId', currentPortfolioId);
     localStorage.setItem('globalExchangeRates', JSON.stringify(globalExchangeRates));
     localStorage.setItem('currentPortfolioYear', currentPortfolioYear);
-    console.log('💾 Portfolio gespeichert für Jahr', currentPortfolioYear);
+    console.log('💾 Portfolio gespeichert:', currentPortfolioId, 'Jahr', currentPortfolioYear);
 }
+
+// ========== MULTI-PORTFOLIO UI FUNKTIONEN ==========
+
+function togglePortfolioDropdown(event) {
+    event.stopPropagation();
+    const content = document.getElementById('portfolio-dropdown-content');
+    
+    if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        renderPortfolioDropdown();
+    } else {
+        content.style.display = 'none';
+    }
+}
+
+function renderPortfolioDropdown() {
+    const list = document.getElementById('portfolio-list');
+    if (!list) return;
+    
+    let html = '';
+    Object.keys(allPortfolios).forEach(id => {
+        const portfolio = allPortfolios[id];
+        const isActive = id === currentPortfolioId;
+        html += `
+            <div onclick="switchPortfolio('${id}')" 
+                style="padding:12px 15px; cursor:pointer; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; ${isActive ? 'background:#e3f2fd; font-weight:600;' : ''}"
+                onmouseover="this.style.background='${isActive ? '#e3f2fd' : '#f5f5f5'}'" 
+                onmouseout="this.style.background='${isActive ? '#e3f2fd' : 'white'}'">
+                <span>${portfolio.name || id}</span>
+                ${isActive ? '<span style="color:#0176d3;">✓</span>' : ''}
+            </div>
+        `;
+    });
+    list.innerHTML = html;
+    
+    // Update Button Text (beide möglichen IDs)
+    const btn = document.getElementById('currentPortfolioName');
+    if (btn && allPortfolios[currentPortfolioId]) {
+        btn.textContent = allPortfolios[currentPortfolioId].name || currentPortfolioId;
+    }
+    
+    // Dein globaler Button mit id="portfolioId"
+    const globalBtn = document.getElementById('portfolioId');
+    if (globalBtn && allPortfolios[currentPortfolioId]) {
+        globalBtn.textContent = allPortfolios[currentPortfolioId].name || currentPortfolioId;
+    }
+    
+    // Update Name Input (beide möglichen IDs)
+    const nameInput = document.getElementById('portfolioNameInput');
+    if (nameInput && allPortfolios[currentPortfolioId]) {
+        nameInput.value = allPortfolios[currentPortfolioId].name || '';
+    }
+    
+    // Dein globales Input mit id="portfolioIdInput"
+    const globalInput = document.getElementById('portfolioIdInput');
+    if (globalInput && allPortfolios[currentPortfolioId]) {
+        globalInput.value = allPortfolios[currentPortfolioId].name || '';
+    }
+}
+
+function switchPortfolio(portfolioId) {
+    if (!allPortfolios[portfolioId]) return;
+    
+    // Speichere aktuelles Portfolio
+    savePortfolio();
+    
+    // Wechsle zum neuen Portfolio
+    currentPortfolioId = portfolioId;
+    portfoliosByYear = allPortfolios[portfolioId].years || {};
+    
+    // Schließe Dropdown
+    document.getElementById('portfolio-dropdown-content').style.display = 'none';
+    
+    // Update UI
+    renderPortfolioDropdown();
+    renderPortfolio();
+    
+    console.log('📦 Gewechselt zu Portfolio:', portfolioId);
+}
+
+function addNewPortfolio() {
+    // Frage nach Namen
+    const name = prompt('Name für das neue Portfolio:', 'Neues Portfolio');
+    if (name === null) return; // Abgebrochen
+    
+    // Generiere neue ID
+    let newId = 'portfolio_' + (Object.keys(allPortfolios).length + 1);
+    let counter = Object.keys(allPortfolios).length + 1;
+    while (allPortfolios[newId]) {
+        counter++;
+        newId = 'portfolio_' + counter;
+    }
+    
+    // Erstelle neues Portfolio mit dem eingegebenen Namen
+    allPortfolios[newId] = {
+        name: name.trim() || 'Portfolio ' + counter,
+        years: {}
+    };
+    
+    // Wechsle zum neuen Portfolio
+    currentPortfolioId = newId;
+    portfoliosByYear = {};
+    
+    savePortfolio();
+    
+    // Schließe Dropdown
+    document.getElementById('portfolio-dropdown-content').style.display = 'none';
+    
+    // Update UI
+    renderPortfolioDropdown();
+    renderPortfolio();
+    
+    console.log('➕ Neues Portfolio erstellt:', newId, 'Name:', allPortfolios[newId].name);
+}
+
+function savePortfolioName() {
+    const nameInput = document.getElementById('portfolioNameInput');
+    if (!nameInput || !allPortfolios[currentPortfolioId]) return;
+    
+    allPortfolios[currentPortfolioId].name = nameInput.value.trim() || currentPortfolioId;
+    savePortfolio();
+    renderPortfolioDropdown();
+    
+    console.log('✏️ Portfolio umbenannt:', allPortfolios[currentPortfolioId].name);
+}
+
+// Alias für dein Input-Feld "portfolioIdInput"
+function savePortfolioID() {
+    const nameInput = document.getElementById('portfolioIdInput');
+    if (!nameInput || !allPortfolios[currentPortfolioId]) return;
+    
+    const newName = nameInput.value.trim();
+    if (newName) {
+        allPortfolios[currentPortfolioId].name = newName;
+        savePortfolio();
+        renderPortfolioDropdown();
+        console.log('✏️ Portfolio umbenannt:', newName);
+    }
+}
+
+function deleteCurrentPortfolio() {
+    if (Object.keys(allPortfolios).length <= 1) {
+        alert('Das letzte Portfolio kann nicht gelöscht werden.');
+        return;
+    }
+    
+    const name = allPortfolios[currentPortfolioId]?.name || currentPortfolioId;
+    if (!confirm(`Portfolio "${name}" wirklich löschen?\n\nAlle Daten dieses Portfolios gehen verloren!`)) {
+        return;
+    }
+    
+    // Lösche Portfolio
+    delete allPortfolios[currentPortfolioId];
+    
+    // Wechsle zum ersten verfügbaren Portfolio
+    currentPortfolioId = Object.keys(allPortfolios)[0];
+    portfoliosByYear = allPortfolios[currentPortfolioId].years || {};
+    
+    savePortfolio();
+    renderPortfolioDropdown();
+    renderPortfolio();
+    
+    console.log('🗑️ Portfolio gelöscht');
+}
+
+// Klick außerhalb schließt Portfolio-Dropdown
+document.addEventListener('click', (e) => {
+    const content = document.getElementById('portfolio-dropdown-content');
+    const btn = document.getElementById('portfolio-dropdown-btn');
+    
+    // Schließe nur wenn Klick NICHT auf Dropdown-Content oder Button ist
+    if (content && btn) {
+        const isClickInside = content.contains(e.target) || btn.contains(e.target);
+        if (!isClickInside && content.style.display !== 'none') {
+            content.style.display = 'none';
+        }
+    }
+});
 
 // 2. IMPORT HANDLER (Aufruf-Logik)
 function handlePortfolioImport(input) {
@@ -9127,7 +9794,28 @@ function renderTaxSecurities() {
     if (typeof currentTaxYear === 'undefined') currentTaxYear = new Date().getFullYear().toString();
     console.log(`📊 Berechne Steuerdaten für Jahr ${currentTaxYear}...`);
     
-    let yearData = portfoliosByYear[currentTaxYear];
+    // Portfolio-Auswahl für Tax Securities (falls nicht gesetzt, nutze aktuelles)
+    if (typeof window.taxSecuritiesPortfolioId === 'undefined') {
+        window.taxSecuritiesPortfolioId = currentPortfolioId;
+    }
+    
+    // Befülle Portfolio-Dropdown
+    const portfolioSelect = document.getElementById('taxSecuritiesPortfolio');
+    if (portfolioSelect) {
+        let portfolioOptions = '';
+        Object.keys(allPortfolios).forEach(id => {
+            const name = allPortfolios[id].name || id;
+            const selected = id === window.taxSecuritiesPortfolioId ? 'selected' : '';
+            portfolioOptions += `<option value="${id}" ${selected}>${name}</option>`;
+        });
+        portfolioSelect.innerHTML = portfolioOptions;
+    }
+    
+    // Hole Daten vom ausgewählten Portfolio
+    const selectedPortfolio = allPortfolios[window.taxSecuritiesPortfolioId];
+    const selectedPortfolioYears = selectedPortfolio?.years || {};
+    
+    let yearData = selectedPortfolioYears[currentTaxYear];
     if (!yearData) yearData = { positions: {}, summary: { totalValue: 0, dividends: 0, tax: 0, realized: 0 }, lastUpdate: null, exchangeRates: { ...globalExchangeRates } };
 
     // --- GLOBALE KURSE NUTZEN ---
@@ -9139,11 +9827,11 @@ function renderTaxSecurities() {
         return getRate(curr);
     };
 
-    // Dropdown
+    // Dropdown für Jahr (basierend auf ausgewähltem Portfolio)
     const currentY = new Date().getFullYear();
     let optionsHTML = '';
     for(let y = 2020; y <= currentY + 1; y++) {
-        const hasData = portfoliosByYear[y.toString()] && portfoliosByYear[y.toString()].lastUpdate;
+        const hasData = selectedPortfolioYears[y.toString()] && selectedPortfolioYears[y.toString()].lastUpdate;
         const selected = y.toString() === currentTaxYear ? 'selected' : '';
         optionsHTML += `<option value="${y}" ${selected} style="${hasData?'font-weight:bold;color:#2ecc71;':''}">${hasData ? y + ' ✓' : y}</option>`;
     }
@@ -9251,6 +9939,15 @@ function resetCurrentPortfolio() {
 function updateTaxYear(year) {
     currentTaxYear = year;
     renderTaxSecurities(); // Tabelle neu laden
+}
+
+// Wechsle das Portfolio im Steuern/Wertschriften Tab
+function switchTaxSecuritiesPortfolio() {
+    const select = document.getElementById('taxSecuritiesPortfolio');
+    if (select) {
+        window.taxSecuritiesPortfolioId = select.value;
+        renderTaxSecurities();
+    }
 }
 
 // ========== SALARY/LOHN FUNKTIONEN ==========
