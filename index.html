@@ -1889,7 +1889,7 @@ tbody tr:hover {
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Claude SFDC 13</h1>
+<h1>Trade Log / Version Claude SFDC 14</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -3733,9 +3733,9 @@ async function saveToday() {
     const v = document.getElementById('todayPnL').value;
     const note = document.getElementById('todayNote').value;
     
-    // Einfache Validierung
-    if(!v && todayTrades.length === 0 && todayScreenshots.length === 0){
-        alert('Bitte PnL, Trades oder einen Screenshot eingeben');
+    // Einfache Validierung - GEÄNDERT: Notiz allein reicht jetzt auch aus
+    if(!v && todayTrades.length === 0 && todayScreenshots.length === 0 && !note.trim()){
+        alert('Bitte PnL, Trades, Screenshot oder eine Notiz eingeben');
         return;
     }
     
@@ -4645,15 +4645,23 @@ function saveFullModal() {
     const pnl = parseFloat(document.getElementById('modal-pnl').value) || 0;
     const note = document.getElementById('modal-note').value;
     
+    // Validierung: Mindestens ein Wert muss vorhanden sein (inkl. Notiz!)
+    const trades = window.currentFullTrades || [];
+    const screenshots = window.currentFullScreenshots || [];
+    if(pnl === 0 && trades.length === 0 && screenshots.length === 0 && !note.trim()) {
+        alert('Bitte mindestens PnL, Trade, Screenshot oder Notiz eingeben');
+        return;
+    }
+    
     if(!data[k]) data[k] = {};
     data[k].total = pnl;
     data[k].note = note;
-    data[k].trades = window.currentFullTrades || [];
+    data[k].trades = trades;
     
-    saveData();
+    save(); // KORRIGIERT: war vorher saveData() was nicht existiert!
     closeFullModal();
     renderDayDetails(selDate);
-    renderCalendar();
+    renderCal(); // KORRIGIERT: renderCalendar() existiert auch nicht, es heißt renderCal()
     console.log('💾 Gespeichert!');
 }
 
@@ -4661,10 +4669,10 @@ function deleteFullEntry() {
     if(!confirm('Eintrag wirklich löschen?')) return;
     const k = dk(selDate);
     delete data[k];
-    saveData();
+    save(); // KORRIGIERT: war vorher saveData()
     closeFullModal();
     renderDayDetails(selDate);
-    renderCalendar();
+    renderCal(); // KORRIGIERT: war vorher renderCalendar()
 }
 
 // WICHTIG: async davor schreiben!
@@ -4787,12 +4795,24 @@ function recalcTotalFromTrades() { if(currentTrades.length > 0) { const sum = cu
 
 // WICHTIG: async davor schreiben!
 async function saveModal(){
-    if(!selDate) return;
+    console.log('saveModal() aufgerufen');
+    if(!selDate) {
+        console.log('Kein selDate vorhanden, Abbruch');
+        return;
+    }
     const k = dk(selDate); // Das Datum, z.B. "2026-01-24"
     
     // Werte aus den Feldern holen
     const pnlVal = parseFloat(document.getElementById('modalPnL').value) || 0;
     const note = document.getElementById('modalNote').value;
+    
+    console.log('Speichere:', { date: k, pnl: pnlVal, note: note, trades: currentTrades.length, screenshots: currentModalScreenshots.length });
+    
+    // Validierung: Mindestens ein Wert muss vorhanden sein
+    if(pnlVal === 0 && currentTrades.length === 0 && currentModalScreenshots.length === 0 && !note.trim()) {
+        alert('Bitte mindestens PnL, Trade, Screenshot oder Notiz eingeben');
+        return;
+    }
     
     // --- BILDER SPEICHERN ---
     const savedFilenames = [];
@@ -6524,7 +6544,7 @@ async function generateTaxPDF() {
         const coverNum = getSectionNumber('cover');
 
         doc.setFontSize(22); doc.setTextColor(44, 62, 80);
-        doc.text("Jahresabschluss", 105, 20, { align: 'center' });
+        doc.text("Jahresabschluss (Trading und Investitionen)", 105, 20, { align: 'center' });
         doc.setFontSize(12); doc.setTextColor(100);
         doc.text(`Steuerperiode ${year} | Kanton Schaffhausen`, 105, 28, { align: 'center' });
         
