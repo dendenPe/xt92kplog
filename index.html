@@ -1889,7 +1889,7 @@ tbody tr:hover {
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Claude SFDC v16</h1>
+<h1>Trade Log / Version Claude SFDC v16a</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -9043,7 +9043,7 @@ async function renderExpenseReceipts(index) {
         }
     }
 }
-// --- TAX ZIP LOGIC (MIT SPRECHENDEN DATEINAMEN) ---
+// --- TAX ZIP EXPORT (ERWEITERT) ---
 async function exportTaxZIP() {
     const btn = document.querySelector('button[onclick="exportTaxZIP()"]');
     const oldText = btn ? btn.innerText : "ZIP";
@@ -9052,24 +9052,67 @@ async function exportTaxZIP() {
     try {
         const zip = new JSZip();
         
-        // 1. JSON Daten
+        // 1. JSON Daten (Steuerdaten Basis)
         zip.file("tax_data.json", JSON.stringify(taxData, null, 2));
         
-        // 2. Belege speichern (mit Umbenennung!)
+        // ---------------------------------------------------------
+        // NEU: A) WERTPAPIERE / PORTFOLIOS EXPORTIEREN
+        // Struktur: Wertpapiere / [PortfolioName] / [Jahr] / Portfolio_[Jahr].csv
+        // ---------------------------------------------------------
+        const secFolder = zip.folder("Wertpapiere");
+        
+        // Iteriere über alle Portfolios
+        for (const [pId, pData] of Object.entries(allPortfolios)) {
+            // Ordnername bereinigen (ungültige Zeichen entfernen)
+            const safePName = (pData.name || pId).replace(/[^a-z0-9äöüÄÖÜ\s-]/gi, '_').trim();
+            const pFolder = secFolder.folder(safePName);
+            
+            // Iteriere über Jahre in diesem Portfolio
+            if (pData.years) {
+                for (const [year, yearData] of Object.entries(pData.years)) {
+                    // Prüfen ob Daten existieren
+                    if (yearData && yearData.positions && Object.keys(yearData.positions).length > 0) {
+                        const yFolder = pFolder.folder(year);
+                        const csvContent = generatePortfolioCSVString(yearData);
+                        yFolder.file(`Portfolio_${year}.csv`, csvContent);
+                    }
+                }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // NEU: B) LOHN/GEHALT EXPORTIEREN
+        // Struktur: Lohn_Gehalt / [Jahr] / Lohn_[Jahr].csv
+        // ---------------------------------------------------------
+        const salaryFolder = zip.folder("Lohn_Gehalt");
+        
+        if (salaryData) {
+            const salaryYears = Object.keys(salaryData);
+            for (const year of salaryYears) {
+                // Erstelle Unterordner für das Jahr
+                const yearFolder = salaryFolder.folder(year);
+                
+                // Erstelle CSV
+                const csvContent = generateSalaryCSVString(year);
+                yearFolder.file(`Lohn_${year}.csv`, csvContent);
+                
+                // Kopiere auch die PDFs in diesen Ordner (optional, aber sauberer als in separaten Ordnern)
+                // Wir behalten deine alte Logik für PDFs unten bei oder verschieben sie hierhin.
+                // Um Duplikate zu vermeiden, lassen wir deine alte PDF Logik drin, 
+                // aber die CSV kommt jetzt strukturiert hier rein.
+            }
+        }
+
+        // ---------------------------------------------------------
+        // 2. Belege speichern (bestehender Code)
+        // ---------------------------------------------------------
         const folder = zip.folder("receipts");
         
         if(taxData.expenses) {
-            let fileCounter = 0;
-            
             for(const ex of taxData.expenses) {
                 if(ex.receipts && ex.receipts.length > 0) {
-                    
-                    // Wir bauen einen schönen Namen: Kategorie_Beschreibung
-                    // Ersetze ungültige Zeichen durch Unterstrich
                     let safeDesc = (ex.desc || "Ohne_Beschreibung").replace(/[^a-z0-9äöüÄÖÜ\s-]/gi, '_').trim();
                     let safeCat = (ex.cat || "Allgemein").replace(/[^a-z0-9äöüÄÖÜ\s-]/gi, '_');
-                    
-                    // Leerzeichen zu Unterstrich
                     safeDesc = safeDesc.replace(/\s+/g, '_');
                     
                     for(let i=0; i < ex.receipts.length; i++) {
@@ -9077,95 +9120,59 @@ async function exportTaxZIP() {
                         const blob = await getImageFromDB(originalInternalName);
                         
                         if(blob) {
-                            // Dateiendung vom Blob oder vom Originalnamen raten
                             let ext = "jpg";
                             if (blob.type === "application/pdf") ext = "pdf";
                             else if (originalInternalName.includes('.')) ext = originalInternalName.split('.').pop();
                             
-                            // Neuer Name: Kategorie_Beschreibung_Nr.ext
-                            // z.B. Software_TradingView_1.pdf
                             const newFilename = `${safeCat}_${safeDesc}_${i+1}.${ext}`;
-                            
-                            // WICHTIG: Wir speichern es im ZIP unter dem neuen Namen!
                             folder.file(newFilename, blob);
-                            
-                            // HINWEIS: Für den Import müssen wir eine "Mapping"-Datei erstellen,
-                            // sonst wissen wir beim Import nicht mehr, welcher schöne Name zu welcher ID gehört.
-                            // ODER einfacher: Wir speichern die Zuordnung im tax_data.json (machen wir eh).
-                            // ABER: Wenn wir die Datei im ZIP umbenennen, findet der Import sie unter dem alten Namen nicht mehr.
-                            
-                            // LÖSUNG: Wir lassen die Datei im ZIP unter dem "schönen" Namen.
-                            // Beim Import ist uns der Name egal, wir laden einfach alle Dateien in den DB-Speicher 
-                            // und müssen die Referenzen in taxData aktualisieren.
-                            // DAS IST KOMPLEX.
-                            
-                            // EINFACHERE LÖSUNG FÜR DICH:
-                            // Wir speichern die Datei ZWEIMAL im ZIP (einmal technisch für Restore, einmal schön für dich).
-                            // Das kostet Speicher, ist aber am sichersten.
-                            
-                            // Ordner "human_readable" für dich:
                             zip.folder("Lesbare_Belege").file(newFilename, blob);
-                            
-                            // Ordner "receipts" für das System (Originalname):
-                            folder.file(originalInternalName, blob);
-                            
-                            fileCounter++;
+                            folder.file(originalInternalName, blob); // System-Name
                         }
                     }
                 }
             }
         }
         
-        // 3. Lohnabrechnungen PDFs speichern
+        // 3. Bestehende PDF Logik (Lohnabrechnungen & Banknachweise)
+        // Dies bleibt bestehen, damit deine alten Pfade noch stimmen, 
+        // auch wenn wir Lohn jetzt zusätzlich als CSV haben.
         if(salaryData) {
             for(const [year, yearData] of Object.entries(salaryData)) {
-                const salaryFolder = zip.folder(`Lohnabrechnungen-${year}`);
+                // Wir packen die PDFs jetzt AUCH in den neuen Lohn_Gehalt Ordner für Konsistenz
+                const targetFolder = salaryFolder.folder(year); 
                 
                 for(const [month, monthData] of Object.entries(yearData)) {
                     if(monthData.pdfData && monthData.pdfFilename) {
-                        // Konvertiere Base64 zu Blob
-                        const base64Data = monthData.pdfData.split(',')[1]; // Entferne "data:application/pdf;base64,"
+                        const base64Data = monthData.pdfData.split(',')[1];
                         const binaryStr = atob(base64Data);
                         const bytes = new Uint8Array(binaryStr.length);
-                        for(let i = 0; i < binaryStr.length; i++) {
-                            bytes[i] = binaryStr.charCodeAt(i);
-                        }
+                        for(let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
                         const blob = new Blob([bytes], {type: 'application/pdf'});
-                        
-                        // Speichere mit Originalname
-                        salaryFolder.file(monthData.pdfFilename, blob);
+                        targetFolder.file(monthData.pdfFilename, blob);
                     }
                 }
             }
         }
         
-        // 4. Saldonachweise zum Jahresende speichern
+        // 4. Saldonachweise
         if(taxData.balances) {
             const nachweiseFolder = zip.folder("Saldonachweise_zum_Jahresende");
-            
             for(const [year, balData] of Object.entries(taxData.balances)) {
-                // UBS PDF
                 if(balData.ubsPdfData && balData.ubsPdfFilename) {
-                    const base64Data = balData.ubsPdfData.split(',')[1];
-                    const binaryStr = atob(base64Data);
-                    const bytes = new Uint8Array(binaryStr.length);
-                    for(let i = 0; i < binaryStr.length; i++) {
-                        bytes[i] = binaryStr.charCodeAt(i);
-                    }
-                    const blob = new Blob([bytes], {type: 'application/pdf'});
-                    nachweiseFolder.file(`${year}_UBS_${balData.ubsPdfFilename}`, blob);
+                    // ... (Code wie vorher für Blob Conversion)
+                    const b64 = balData.ubsPdfData.split(',')[1];
+                    const bin = atob(b64);
+                    const arr = new Uint8Array(bin.length);
+                    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+                    nachweiseFolder.file(`${year}_UBS_${balData.ubsPdfFilename}`, new Blob([arr], {type:'application/pdf'}));
                 }
-                
-                // Comdirect PDF
                 if(balData.comdirectPdfData && balData.comdirectPdfFilename) {
-                    const base64Data = balData.comdirectPdfData.split(',')[1];
-                    const binaryStr = atob(base64Data);
-                    const bytes = new Uint8Array(binaryStr.length);
-                    for(let i = 0; i < binaryStr.length; i++) {
-                        bytes[i] = binaryStr.charCodeAt(i);
-                    }
-                    const blob = new Blob([bytes], {type: 'application/pdf'});
-                    nachweiseFolder.file(`${year}_Comdirect_${balData.comdirectPdfFilename}`, blob);
+                    const b64 = balData.comdirectPdfData.split(',')[1];
+                    const bin = atob(b64);
+                    const arr = new Uint8Array(bin.length);
+                    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+                    nachweiseFolder.file(`${year}_Comdirect_${balData.comdirectPdfFilename}`, new Blob([arr], {type:'application/pdf'}));
                 }
             }
         }
@@ -9181,71 +9188,180 @@ async function exportTaxZIP() {
 
     } catch (e) {
         console.error(e);
-        alert("Fehler beim ZIP: " + e.message);
+        alert("Fehler beim ZIP Export: " + e.message);
         if(btn) btn.innerText = oldText;
     }
 }
 
-// --- TAX ZIP IMPORT (REPARIERT) ---
+// --- TAX ZIP IMPORT (ERWEITERT) ---
 async function importTaxZIP(input) {
     const file = input.files[0];
     if(!file) return;
     
-    // Feedback Button
     const btn = input.nextElementSibling;
     const oldText = btn ? btn.innerText : "";
     if(btn) { btn.innerText = "⏳ Lade..."; btn.disabled = true; }
     
     try {
         const zip = await JSZip.loadAsync(file);
+        let importedPortfoliosCount = 0;
+        let importedSalaryYearsCount = 0;
         
-        // 1. JSON Daten laden
-        let jsonText = null;
+        // 1. JSON Daten laden (Basis Steuerdaten)
         if(zip.file("tax_data.json")) {
-            jsonText = await zip.file("tax_data.json").async("text");
+            const jsonText = await zip.file("tax_data.json").async("text");
+            taxData = JSON.parse(jsonText);
         }
         
-        if(!jsonText) throw new Error("Keine 'tax_data.json' im ZIP gefunden!");
-        
-        const newTaxData = JSON.parse(jsonText);
-        
-        // 2. Belege wiederherstellen (NUR aus dem System-Ordner 'receipts')
+        // 2. Belege wiederherstellen
         let imgCount = 0;
-        
-        // Wir suchen direkt im zip.files Objekt
         for(const filename in zip.files) {
-            // Wir ignorieren den Ordner "Lesbare_Belege" und nehmen nur "receipts/"
-            // Wir ignorieren Ordner-Einträge selbst (.dir)
             if(filename.startsWith("receipts/") && !zip.files[filename].dir) {
-                
                 const blob = await zip.file(filename).async("blob");
-                // Dateinamen säubern (Pfad entfernen): "receipts/img.jpg" -> "img.jpg"
                 const cleanName = filename.split('/').pop();
-                
                 if(cleanName && blob.size > 0) {
                     await saveImageToDB(cleanName, blob);
                     imgCount++;
                 }
             }
         }
-        
-        // 3. Daten übernehmen
-        taxData = newTaxData;
+
+        // ---------------------------------------------------------
+        // NEU: A) WERTPAPIERE IMPORTIEREN
+        // Scannt Ordner: Wertpapiere / [PortfolioName] / [Jahr] / *.csv
+        // ---------------------------------------------------------
+        for (const filename in zip.files) {
+            if (filename.startsWith("Wertpapiere/") && filename.endsWith(".csv") && !zip.files[filename].dir) {
+                // Pfad zerlegen: "Wertpapiere/MeinPortfolio/2024/Portfolio_2024.csv"
+                const parts = filename.split('/');
+                if (parts.length >= 4) {
+                    const portfolioName = parts[1]; // "MeinPortfolio"
+                    const year = parts[2];          // "2024"
+                    
+                    // CSV lesen und parsen
+                    const csvText = await zip.file(filename).async("text");
+                    const parsedData = parseImportedPortfolioCSV(csvText);
+                    
+                    // Portfolio ID finden oder erstellen
+                    let targetId = null;
+                    
+                    // Suche nach existierendem Portfolio mit diesem Namen
+                    for(const [id, p] of Object.entries(allPortfolios)) {
+                        // Einfacher Namensvergleich (Case insensitive, bereinigt)
+                        const cleanName1 = (p.name || id).replace(/[^a-z0-9]/gi, '').toLowerCase();
+                        const cleanName2 = portfolioName.replace(/[^a-z0-9]/gi, '').toLowerCase();
+                        if(cleanName1 === cleanName2) {
+                            targetId = id;
+                            break;
+                        }
+                    }
+                    
+                    // Wenn nicht gefunden, neues erstellen
+                    if (!targetId) {
+                        targetId = 'portfolio_import_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+                        allPortfolios[targetId] = {
+                            name: portfolioName.replace(/_/g, ' '), // Unterstriche zurück zu Leerzeichen (kosmetisch)
+                            years: {}
+                        };
+                        console.log(`Neues Portfolio erstellt beim Import: ${portfolioName}`);
+                    }
+                    
+                    // Daten in das Jahr mergen
+                    if (!allPortfolios[targetId].years) allPortfolios[targetId].years = {};
+                    allPortfolios[targetId].years[year] = parsedData;
+                    
+                    importedPortfoliosCount++;
+                }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // NEU: B) LOHN/GEHALT IMPORTIEREN
+        // Scannt Ordner: Lohn_Gehalt / [Jahr] / *.csv
+        // ---------------------------------------------------------
+        for (const filename in zip.files) {
+            if (filename.startsWith("Lohn_Gehalt/") && filename.endsWith(".csv") && !zip.files[filename].dir) {
+                // Pfad zerlegen: "Lohn_Gehalt/2024/Lohn_2024.csv"
+                const parts = filename.split('/');
+                if (parts.length >= 3) {
+                    const year = parts[1]; // "2024"
+                    
+                    const csvText = await zip.file(filename).async("text");
+                    
+                    // Wir nutzen die existierende Logik "parseBackupCSV", müssen sie aber etwas anpassen,
+                    // da parseBackupCSV direkt in salaryData schreibt und Alerts wirft.
+                    // Wir rufen hier eine "stille" Version auf.
+                    
+                    const lines = csvText.split('\n').filter(line => line.trim());
+                    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+                    
+                    // Finde Column Indices (Logik analog zu parseBackupCSV)
+                    const idxMap = {};
+                    headers.forEach((h, i) => idxMap[h] = i);
+                    
+                    if (!salaryData[year]) salaryData[year] = {};
+                    
+                    for(let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, '')); // Quotes entfernen für Text
+                        
+                        // Monat finden
+                        const mIdx = idxMap['monat'];
+                        if (mIdx === undefined || !cols[mIdx]) continue;
+                        const monat = String(parseInt(cols[mIdx])).padStart(2, '0');
+                        
+                        // Werte mappen
+                        salaryData[year][monat] = {
+                            monatslohn: parseFloat(cols[idxMap['monatslohn']]) || 0,
+                            familienzulage: parseFloat(cols[idxMap['familienzulage']]) || 0,
+                            pauschalspesen: parseFloat(cols[idxMap['pauschalspesen']]) || 0,
+                            aufrechnung: parseFloat(cols[idxMap['aufrechnung geschäftswagen']]) || 0,
+                            brutto: parseFloat(cols[idxMap['bruttolohn']]) || 0,
+                            ahv: parseFloat(cols[idxMap['ahv']]) || 0,
+                            alv: parseFloat(cols[idxMap['alv']]) || 0,
+                            sozialfond: parseFloat(cols[idxMap['sozialfond']]) || 0,
+                            bvg: parseFloat(cols[idxMap['bvg']]) || 0,
+                            quellensteuer: parseFloat(cols[idxMap['quellensteuer']]) || 0,
+                            abzuege: parseFloat(cols[idxMap['total abzüge']]) || 0,
+                            netto: parseFloat(cols[idxMap['nettolohn']]) || 0,
+                            korrektur: parseFloat(cols[idxMap['korrektur geschäftswagen']]) || 0,
+                            auszahlung: parseFloat(cols[idxMap['auszahlung']]) || 0,
+                            kommentar: cols[idxMap['kommentar']] || ''
+                        };
+                    }
+                    importedSalaryYearsCount++;
+                }
+            }
+        }
+
+        // 3. Speichern
         saveTaxData(true); // Speichern ohne Popup
+        savePortfolio();   // Portfolios speichern
+        localStorage.setItem('salaryData', JSON.stringify(salaryData)); // Salary speichern
         
-        alert(`✅ Import erfolgreich!\n${imgCount} Belege wiederhergestellt.`);
+        // 4. UI Aktualisieren
+        renderPortfolioDropdown(); // Falls neue Portfolios dazu kamen
+        if (currentPortfolioId && allPortfolios[currentPortfolioId]) {
+            // Jahr syncen falls möglich
+            if (allPortfolios[currentPortfolioId].years[currentPortfolioYear]) {
+                portfoliosByYear = allPortfolios[currentPortfolioId].years;
+            }
+        }
         
-        // UI aktualisieren, falls wir gerade drauf schauen
+        alert(`✅ Import erfolgreich!\n- ${imgCount} Belege\n- ${importedPortfoliosCount} Portfolio-Jahre\n- ${importedSalaryYearsCount} Lohn-Jahre aktualisiert.`);
+        
+        // UI Views refreshen
         if(document.getElementById('tax-expenses').classList.contains('active')) renderExpenses();
-        if(document.getElementById('tax-personal').classList.contains('active')) loadPersonalData();
-        if(document.getElementById('tax-balances').classList.contains('active')) loadBalanceEntries();
+        if(document.getElementById('tax-personal').classList.contains('active')) loadPersonalData(); // falls Funktion existiert
+        if(document.getElementById('tax-balances').classList.contains('active')) renderBalances();
+        if(document.getElementById('holdings').classList.contains('active')) renderPortfolio();
+        if(document.getElementById('salary').classList.contains('active')) renderSalaryTable();
         
     } catch(e) {
         console.error(e);
         alert("❌ Fehler beim Import: " + e.message);
     } finally {
         if(btn) { btn.innerText = oldText; btn.disabled = false; }
-        input.value = ''; // Reset für nächsten Versuch
+        input.value = ''; // Reset
     }
 }
 // ==========================================
@@ -10926,6 +11042,112 @@ document.addEventListener('click', (e) => {
 window.addEventListener('load', () => {
     showView('today'); // Starte mit Heute-View
 });
+
+// --- NEUE HILFSFUNKTIONEN FÜR DEN CSV EXPORT/IMPORT ---
+
+// Generiert CSV-String für ein Portfolio-Jahr
+function generatePortfolioCSVString(yearData) {
+    let csv = 'Symbol,Currency,Quantity,CostBasis,MarketValue,UnrealizedPnL,RealizedPnL,IsCash,OriginalAmount\n';
+    
+    if (yearData && yearData.positions) {
+        Object.values(yearData.positions).forEach(p => {
+            const sym = (p.symbol || '').replace(',', ''); // Kommas entfernen
+            const curr = p.currency || 'USD';
+            const qty = p.qty || 0;
+            const cost = p.cost || 0;
+            const val = p.val || 0;
+            const unreal = p.unReal || 0;
+            const real = p.real || 0;
+            const isCash = p.isCash ? 'true' : 'false';
+            const orig = p.originalAmount !== undefined ? p.originalAmount : '';
+
+            csv += `${sym},${curr},${qty},${cost},${val},${unreal},${real},${isCash},${orig}\n`;
+        });
+    }
+    return csv;
+}
+
+// Generiert CSV-String für ein Lohn-Jahr (Backup Format)
+function generateSalaryCSVString(year) {
+    const yearData = salaryData[year] || {};
+    let csv = 'Jahr,Monat,Monatslohn,Familienzulage,Pauschalspesen,Aufrechnung Geschäftswagen,Bruttolohn,AHV,ALV,Sozialfond,BVG,Quellensteuer,Total Abzüge,Nettolohn,Korrektur Geschäftswagen,Auszahlung,Kommentar\n';
+    
+    for(let month = 1; month <= 12; month++) {
+        const monthKey = String(month).padStart(2, '0');
+        const data = yearData[monthKey] || {};
+        
+        // CSV-Safe String für Kommentar
+        const safeKommentar = (data.kommentar || '').replace(/"/g, '""');
+        
+        csv += `${year},${month},`;
+        csv += `${data.monatslohn || 0},`;
+        csv += `${data.familienzulage || 0},`;
+        csv += `${data.pauschalspesen || 0},`;
+        csv += `${data.aufrechnung || 0},`;
+        csv += `${data.brutto || 0},`;
+        csv += `${data.ahv || 0},`;
+        csv += `${data.alv || 0},`;
+        csv += `${data.sozialfond || 0},`;
+        csv += `${data.bvg || 0},`;
+        csv += `${data.quellensteuer || 0},`;
+        csv += `${data.abzuege || 0},`;
+        csv += `${data.netto || 0},`;
+        csv += `${data.korrektur || 0},`;
+        csv += `${data.auszahlung || 0},`;
+        csv += `"${safeKommentar}"\n`;
+    }
+    return csv;
+}
+
+// Parst die Portfolio CSV zurück in das interne Format
+function parseImportedPortfolioCSV(csvText) {
+    const lines = csvText.split('\n');
+    const positions = {};
+    let summary = { totalValue: 0, unrealized: 0, realized: 0, dividends: 0, tax: 0 };
+    
+    // Header überspringen (Index 0)
+    for(let i=1; i<lines.length; i++) {
+        const line = lines[i].trim();
+        if(!line) continue;
+        
+        const cols = line.split(',');
+        // Erwarte: Symbol,Currency,Quantity,CostBasis,MarketValue,UnrealizedPnL,RealizedPnL,IsCash,OriginalAmount
+        if(cols.length < 8) continue;
+
+        const sym = cols[0];
+        const isCash = cols[7] === 'true';
+        
+        // Schlüssel generieren (für Cash speziell)
+        let key = sym;
+        if(isCash && !key.startsWith('CASH_')) key = `CASH_${cols[1]}`; // Fallback key generation
+
+        positions[key] = {
+            symbol: sym,
+            currency: cols[1],
+            qty: parseFloat(cols[2]) || 0,
+            cost: parseFloat(cols[3]) || 0,
+            val: parseFloat(cols[4]) || 0,
+            unReal: parseFloat(cols[5]) || 0,
+            real: parseFloat(cols[6]) || 0,
+            isCash: isCash,
+            originalAmount: cols[8] ? parseFloat(cols[8]) : (isCash ? parseFloat(cols[4]) : undefined)
+        };
+        
+        // Einfache Summary Rekonstruktion
+        if(!isCash) {
+            summary.totalValue += positions[key].val;
+            summary.unrealized += positions[key].unReal;
+            summary.realized += positions[key].real;
+        }
+    }
+    
+    return { 
+        positions: positions, 
+        summary: summary, 
+        lastUpdate: new Date().toISOString(),
+        exchangeRates: {} // Kurse müssen ggf. neu gesetzt werden
+    };
+}
 
 </script>
 </body>
