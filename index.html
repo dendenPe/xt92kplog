@@ -1662,6 +1662,14 @@ tbody td {
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
+/* ALLE Buttons in der Ausgaben-Karte weiß machen */
+#tax-expenses .btn,
+#tax-expenses button,
+.expense-karten-layout .btn,
+.expense-linke-spalte .btn {
+    color: white !important;
+}
+
 </style>
 <!-- 
 SALESFORCE LIGHTNING DESIGN - CSS OVERRIDE
@@ -1883,13 +1891,160 @@ tbody tr:hover {
         padding: 1rem !important;
     }
 }
+
+/* --- NEUES LAYOUT FÜR AUSGABEN-KARTEN (50/50 Split) --- */
+.expense-layout-grid {
+    display: flex;
+    gap: 20px;
+    align-items: stretch; /* Gleich hoch */
+}
+
+.expense-left-col {
+    flex: 1; /* 50% Breite */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.expense-right-col {
+    flex: 1; /* 50% Breite */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Der Upload-Container soll die ganze Höhe der rechten Spalte füllen */
+.expense-right-col .expense-receipts-container {
+    height: 100%;
+    margin-top: 0; /* Alten Margin entfernen */
+    display: flex;
+    flex-direction: column;
+}
+
+.expense-right-col .expense-dropzone {
+    flex-grow: 1; /* Dropzone wächst um Platz zu füllen */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    min-height: 120px; /* Mindesthöhe für Ästhetik */
+}
+
+/* Auf Handy wieder untereinander */
+@media (max-width: 768px) {
+    .expense-layout-grid {
+        flex-direction: column;
+    }
+    .expense-right-col .expense-receipts-container {
+        height: auto;
+        margin-top: 15px;
+    }
+}
+
+/* --- EXPENSE TABLE (SFDC STYLE) --- */
+.slds-table {
+    background: white;
+    border: 1px solid #dddbda;
+    border-radius: 0.25rem;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.slds-table thead th {
+    background-color: #fafaf9;
+    color: #514f4d;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.0625rem;
+    border-bottom: 1px solid #dddbda;
+}
+
+.slds-table tbody tr {
+    border-bottom: 1px solid #dddbda;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.slds-table tbody tr:hover {
+    background-color: #f3f2f2;
+    box-shadow: inset 4px 0 0 #0176d3; /* Blauer Balken links bei Hover */
+}
+
+.slds-table tbody td {
+    padding: 8px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.8125rem;
+    color: #080707;
+}
+
+/* Modal Anpassungen für 50/50 Layout */
+#expense-edit-modal .modal-content {
+    max-width: 900px; /* Breiter für das 50/50 Layout */
+    min-height: 500px;
+}
+
+/* Zeilen klickbar machen */
+.slds-table tbody tr {
+    cursor: pointer;
+}
+.slds-table tbody tr:hover {
+    background-color: #f3f2f2;
+}
+/* Löschen Button in der Tabelle */
+.row-delete-btn {
+    opacity: 0.3;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.2em;
+}
+.slds-table tbody tr:hover .row-delete-btn {
+    opacity: 1;
+}
+
+/* Steuerrelevant-Spalte Styling */
+.tax-relevant-check {
+    color: var(--slds-success);
+    font-size: 1.2em;
+}
+
+.tax-relevant-missing {
+    color: var(--slds-border);
+    font-size: 1.2em;
+}
+
+/* Breite für Kurs-Felder erzwingen */
+input[type="number"]#modal_exp_rate, 
+input[type="number"]#balance_modal_rate {
+    min-width: 80px; /* Mindestbreite für 3-4 Stellen + Dezimal */
+}
+
+/* Balance Table spezifisch */
+.balance-group-header {
+    background: #eef4ff;
+    padding: 10px 15px;
+    font-weight: bold;
+    color: #16325c;
+    border-radius: 4px 4px 0 0;
+    border: 1px solid #dddbda;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
 </style>
 </head>
 <body>
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Claude SFDC v16c</h1>
+<h1>Trade Log / Version Claude SFDC v20</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -2259,6 +2414,7 @@ tbody tr:hover {
     </div>
 </div>
 
+
 <script>
 // CSV Import Event Handler für Lohn/Gehalt
 document.getElementById('salary-csv-input').addEventListener('change', function(e) {
@@ -2468,6 +2624,122 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
     </div>
 </div>
 </div> 
+
+<!-- NEUES MODAL FÜR AUSGABEN BEARBEITUNG (50/50 Layout) -->
+<div id="expense-edit-modal" class="detail-modal">
+    <div class="detail-content">
+        <div class="detail-header">
+            <h3 id="expense-modal-title">Ausgabe bearbeiten</h3>
+            <button onclick="closeExpenseEditModal()" style="background:none;border:none;font-size:1.5em;cursor:pointer;">&times;</button>
+        </div>
+        
+        <div class="detail-body">
+            <!-- 50/50 GRID -->
+            <div class="expense-layout-grid">
+                
+                <!-- LINKE SPALTE: INPUTS -->
+                <div class="expense-left-col">
+                    <div class="tax-input-row">
+                        <div style="flex:3">
+                            <label class="slds-form-label">Beschreibung</label>
+                            <input type="text" id="modal_exp_desc" class="slds-input">
+                        </div>
+                        <div style="flex:1">
+                            <label class="slds-form-label">Jahr</label>
+                            <select id="modal_exp_year" class="slds-input">
+                                <!-- Wird dynamisch gefüllt -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="tax-input-row">
+                        <div style="width:100%">
+                            <label class="slds-form-label">Kategorie</label>
+                            <select id="modal_exp_cat" class="slds-input" onchange="checkSpecialExpenseButtons()">
+                                <option value="Software/Daten">Software / Daten</option>
+                                <option value="Hardware">Hardware / Büro</option>
+                                <option value="Unterhalt">👤 Unterhalt an Mutter/Ex</option>
+                                <option value="Alimente">👶 Alimente für Kind</option>
+                                <option value="Säule 3a">Säule 3a</option>
+                                <option value="Krankenkasse">Krankenkasse</option>
+                                <option value="Werbung">Werbekosten</option>
+                                <option value="Sonstiges">Sonstiges</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- In expense-left-col nach der Kategorie -->
+                    <div class="tax-input-row">
+                        <div style="width:100%">
+                            <label class="slds-form-label" style="display:flex; align-items:center;">
+                                <input type="checkbox" id="modal_exp_tax_relevant" style="margin-right:8px;"> Steuerrelevant?
+                            </label>
+                        </div>
+                    </div>
+
+
+                    <!-- Spezial-Button für Unterhalt (wird per JS ein/ausgeblendet) -->
+                    <div id="modal_special_btn_container" style="display:none; margin-bottom:10px;">
+                        <button class="btn btn-info" id="modal_special_btn" style="width:100%;">
+                            ✏️ Details bearbeiten
+                        </button>
+                    </div>
+
+                    <div class="tax-input-row bottom" style="margin-top:auto;">
+                        <div style="flex:2">
+                            <label class="slds-form-label">Betrag</label>
+                            <input type="number" step="0.01" id="modal_exp_amount" class="slds-input">
+                        </div>
+                        <div style="width:90px; flex-shrink:0;">
+                            <label class="slds-form-label">Währung</label>
+                            <select id="modal_exp_currency" class="slds-input">
+                                <option value="CHF">CHF</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        <div style="flex:1">
+                            <label class="slds-form-label">Kurs</label>
+                            <div style="display:flex; gap:2px;">
+                                <input type="number" step="0.0001" id="modal_exp_rate" value="1.00" class="slds-input">
+                                <button class="btn btn-info" onclick="applyGlobalRateToModal()" 
+                                        style="padding:0 8px; width:auto; margin:0;" title="Kurs holen">🌐</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="modal_exp_preview" class="expense-preview-total" style="margin-top: 10px; text-align:right;">
+                        = 0.00 CHF
+                    </div>
+                </div>
+
+                <!-- RECHTE SPALTE: DATEIEN -->
+                <div class="expense-right-col">
+                    <div class="expense-receipts-container">
+                        <label class="expense-receipts-label">📄 Belege</label>
+                        <input type="file" id="modal_exp_file_input" multiple style="display:none" onchange="handleModalExpenseFiles(this.files)">
+                        <div class="expense-dropzone" id="modal_exp_dropzone" onclick="document.getElementById('modal_exp_file_input').click()">
+                            <span style="font-size:2em">📎</span>
+                            <span style="font-size:0.9em; margin-top:5px;">Datei hier reinziehen</span>
+                        </div>
+                        
+                        <!-- Vorschau Container -->
+                        <div id="modal_exp_previews" class="preview-grid" style="margin-top:10px; max-height:200px; overflow-y:auto;">
+                            <!-- Bilder kommen hier rein -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-footer">
+            <button class="btn btn-outline" onclick="closeExpenseEditModal()" style="margin-right:10px;">Abbrechen</button>
+            <button class="btn btn-danger" id="modal_btn_delete" onclick="deleteExpenseFromModal()" style="margin-right:auto; display:none;">Löschen</button>
+            <button class="btn btn-primary" onclick="saveExpenseFromModal()">💾 Speichern</button>
+        </div>
+    </div>
+</div>
+
 
 <!-- TAX VIEW -->
 <div id="tax" class="view">
@@ -2781,25 +3053,96 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
         </div>
     </div>
 
-    <!-- 3. KONTOSTÄNDE -->
-    <div id="tax-balances" class="tax-subview">
-        <div class="slds-card">
-            <div class="slds-card-header">
-                <h3 class="slds-card-title">💰 Vermögensnachweis (CHF)</h3>
-            </div>
-            <div class="slds-card-body">
-                <div class="info-box">
-                    ℹ️ Bitte gib hier die Kontostände per 01.01. und 31.12. ein (für die Vermögenssteuer).
+    <!-- 3. KONTOSTÄNDE (UPDATE: Zeilen-Layout) -->
+<div id="tax-balances" class="tax-subview">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div class="info-box" style="margin:0; flex:1;">
+            ℹ️ Vermögensnachweis per 31.12. (für Wertschriftenverzeichnis Code A).
+        </div>
+        <button class="btn btn-primary" onclick="addBalanceYear()" style="margin-left:15px;">
+            + Jahr hinzufügen
+        </button>
+    </div>
+    
+    <!-- Hier werden die Jahres-Gruppen generiert -->
+    <div id="balanceEntries"></div>
+</div>
+
+<!-- MODAL FÜR KONTOSTÄNDE (NEU HINZUFÜGEN AM ENDE VOM BODY) -->
+<div id="balance-edit-modal" class="detail-modal">
+    <div class="detail-content" style="max-width: 900px; min-height: 450px;">
+        <div class="detail-header">
+            <h3 id="balance-modal-title">Kontostand bearbeiten</h3>
+            <button onclick="closeBalanceModal()" style="background:none;border:none;font-size:1.5em;cursor:pointer;">&times;</button>
+        </div>
+        
+        <div class="detail-body">
+            <div class="expense-layout-grid">
+                <!-- LINKE SPALTE: EINGABEN -->
+                <div class="expense-left-col">
+                    <!-- Bank Name -->
+                    <div class="form-group">
+                        <label class="slds-form-label">Bank / Institut</label>
+                        <input type="text" id="balance_modal_bank" class="slds-input" disabled style="background:#f3f2f2; font-weight:bold;">
+                    </div>
+
+                    <!-- NUR FÜR IBKR -->
+                    <div id="balance_ibkr_selector" style="display:none; margin-bottom:15px; background:#f0f8ff; padding:10px; border-radius:4px; border:1px solid #cce4f7;">
+                        <label class="slds-form-label">Portfolio auswählen (für autom. Berechnung)</label>
+                        <select id="balance_modal_portfolio" class="slds-input" onchange="recalcIBKRBalance()">
+                            <!-- Dynamisch -->
+                        </select>
+                        <div style="font-size:0.75em; color:#54698d; margin-top:5px;">
+                            Summiert alle "Cash"-Positionen aus dem Tab "Wertpapiere".
+                        </div>
+                    </div>
+
+                    <!-- NUR FÜR COMDIRECT -->
+                    <div id="balance_comdirect_inputs" style="display:none;">
+                        <div class="tax-input-row">
+                            <div style="flex:2">
+                                <label class="slds-form-label">Betrag in EUR</label>
+                                <input type="number" step="0.01" id="balance_modal_amount_eur" class="slds-input">
+                            </div>
+                            <div style="flex:1">
+                                <label class="slds-form-label">Kurs (EUR/CHF)</label>
+                                <div style="display:flex; gap:2px;">
+                                    <input type="number" step="0.0001" id="balance_modal_rate" value="0.9400" class="slds-input">
+                                    <button class="btn btn-info" onclick="applyGlobalEuroRate()" style="padding:0 8px; width:auto; margin:0;" title="Globalen EUR Kurs holen">🌐</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CHF Betrag -->
+                    <div class="form-group">
+                        <label class="slds-form-label">Steuerwert in CHF (per 31.12.)</label>
+                        <input type="number" step="0.01" id="balance_modal_amount_chf" class="slds-input" style="font-size:1.2em; font-weight:bold; color:#2ecc71;">
+                        <div id="balance_calc_info" style="font-size:0.8em; color:#888; margin-top:2px;"></div>
+                    </div>
                 </div>
-                
-                <div id="balanceEntries"></div>
-                
-                <button class="btn btn-info" onclick="addBalanceYear()" style="margin-top:1rem; color: white !important; background-color: #0176d3 !important;">
-                    + Jahr hinzufügen
-                </button>
+
+                <!-- RECHTE SPALTE: BELEGE -->
+                <div class="expense-right-col">
+                    <div class="expense-receipts-container">
+                        <label class="expense-receipts-label">📄 Belege (Saldonachweis)</label>
+                        <input type="file" id="balance_modal_file_input" accept="application/pdf, image/*" style="display:none" onchange="handleBalanceFile(this.files)">
+                        <div class="expense-dropzone" id="balance_modal_dropzone" onclick="document.getElementById('balance_modal_file_input').click()">
+                            <span style="font-size:2em">📎</span>
+                            <span style="font-size:0.9em; margin-top:5px;">PDF hier reinziehen</span>
+                        </div>
+                        <div id="balance_modal_preview" style="margin-top:15px; text-align:center;"></div>
+                    </div>
+                </div>
             </div>
         </div>
+        
+        <div class="detail-footer">
+            <button class="btn btn-outline" onclick="closeBalanceModal()">Abbrechen</button>
+            <button class="btn btn-primary" onclick="saveBalanceFromModal()">💾 Speichern</button>
+        </div>
     </div>
+</div>
 
 <!-- 3. AUSGABEN (NEU) -->
    <!-- 3. AUSGABEN (MIT SPEICHER-BUTTON) -->
@@ -2810,8 +3153,7 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
             </div>
             <div class="slds-card-body">
                 <div class="info-box">
-                    ℹ️ Hier Kosten erfassen (z.B. Software, Hardware, Büro).
-    Diese werden im PDF separat aufgelistet.
+                    ℹ️ Hier Kosten erfassen (z.B. Software, Hardware, Büro). Diese werden im PDF separat aufgelistet.
                 </div>
                 
                 <div id="expenseEntries"></div>
@@ -6176,132 +6518,341 @@ function renderTaxOverview() {
     }
 }
 
-// --- SCHRITT 1: KONTOSTAND UI (UBS, Comdirect manuell + IBKR Auto) ---
+// ==========================================
+// === KONTOSTAND (BALANCES) NEUE LOGIK ===
+// ==========================================
+
+let editingBalanceYear = null;
+let editingBalanceType = null; 
+let tempBalanceFile = null;
+
+// 1. NEUES RENDERING (ZEILEN STATT KARTEN)
 function renderBalances() {
-    const div = document.getElementById('balanceEntries');
-    div.innerHTML = '';
-    
-    // Wir zeigen aktuelle Jahre +/- 1
-    const currentYear = new Date().getFullYear();
-    const years = [currentYear - 1, currentYear, currentYear + 1];
+    const container = document.getElementById('balanceEntries');
+    if(!container) return;
+    container.innerHTML = '';
     
     if(!taxData.balances) taxData.balances = {};
-
-    // --- IBKR CASH BERECHNUNG (Automatisch aus CSV) ---
-    // Wir holen uns die Cash-Bestände aus dem Parser und rechnen sie in CHF um
-    let ibkrCashTotalCHF = 0;
-    let ibkrCashDetails = [];
     
-    // Kurs für die finale Umrechnung (USD -> CHF)
-    const rateUSDCHF = parseFloat(document.getElementById('taxExchangeRate')?.value || 0.85);
-
-    if (portfolioData && portfolioData.positions) {
-        // Wir suchen alle Positionen, die als 'isCash' markiert sind oder 'Cash' im Namen haben
-        Object.values(portfolioData.positions).forEach(p => {
-            if (p.isCash || p.symbol.includes('Cash') || p.symbol.includes('EUR') || p.symbol.includes('USD')) {
-                // Wir nutzen den Wert 'val' (der ist im Parser bereits in USD umgerechnet worden!)
-                // Falls 'val' 0 ist (passiert manchmal bei Forex), nehmen wir den Marktwert.
-                const valInUSD = p.val || 0;
-                
-                if (Math.abs(valInUSD) > 0.01) {
-                    const valInCHF = valInUSD * rateUSDCHF;
-                    ibkrCashTotalCHF += valInCHF;
-                    ibkrCashDetails.push(`${p.currency}: ${valInUSD.toFixed(2)} $`);
-                }
-            }
-        });
+    // Jahre sortieren (neueste oben)
+    const years = Object.keys(taxData.balances).sort().reverse();
+    
+    if(years.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">Noch keine Jahre erfasst.<br>Klicke oben auf "+ Jahr hinzufügen".</div>';
+        return;
     }
 
-    years.forEach(y => {
-        const yStr = y.toString();
-        // Sicherstellen, dass das Objekt existiert
-        if (!taxData.balances[yStr]) taxData.balances[yStr] = { ubs: 0, comdirect: 0 };
-        const bal = taxData.balances[yStr];
+    years.forEach(year => {
+        const bal = taxData.balances[year];
+        const group = document.createElement('div');
         
-        // IBKR Anzeige Logik (Prüfen ob Jahr passt, sonst Warnung)
-        let displayIBKR = 0;
-        let infoIBKR = "(Datum passt evtl. nicht)";
-        
-        // Wenn Report Ende "2025" enthält, zeigen wir den Wert bei 2025 an
-        if (portfolioData && portfolioData.reportPeriod && portfolioData.reportPeriod.end && portfolioData.reportPeriod.end.includes(yStr)) {
-            displayIBKR = ibkrCashTotalCHF;
-            infoIBKR = "Gemäss Import";
-        }
-
-        const row = document.createElement('div');
-        row.className = 'slds-card';
-        row.style.padding = '15px';
-        row.innerHTML = `
-            <div style="font-weight:bold; color:#16325c; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
-                Vermögen per 31.12.${y} (in CHF)
-            </div>
-            
-            <div class="tax-input-row">
-                <div style="flex:2">
-                    <label class="slds-form-label">🏦 UBS Switzerland AG (CHF)</label>
-                    <div style="display:flex;gap:10px;align-items:center;">
-                        <input type="number" step="0.01" value="${bal.ubs || 0}" 
-                               onchange="updateBalance('${yStr}', 'ubs', this.value)"
-                               style="flex:1;padding:8px; border:1px solid #ccc; border-radius:4px;">
-                        ${bal.ubsPdfFilename ? `
-                            <button onclick="viewBankPDF('${yStr}', 'ubs')" style="padding:8px 12px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;" title="${bal.ubsPdfFilename}">📄 PDF</button>
-                            <button onclick="deleteBankPDF('${yStr}', 'ubs')" style="padding:8px;background:#e74c3c;color:white;border:none;border-radius:4px;cursor:pointer;">✕</button>
-                        ` : `
-                            <button onclick="uploadBankPDF('${yStr}', 'ubs')" style="padding:8px 12px;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;">📎 PDF</button>
-                        `}
-                    </div>
-                </div>
-            </div>
-            
-            <div class="tax-input-row" style="margin-top:10px; background:#fff9e6; padding:12px; border-radius:6px; border:1px solid #ffe066;">
-                <div style="flex:1; font-weight:bold; color:#16325c; margin-bottom:8px; grid-column: span 3; display:flex; justify-content:space-between; align-items:center;">
-                    <span>🏦 Comdirect Bank (Deutschland)</span>
-                    ${bal.comdirectPdfFilename ? `
-                        <div style="display:flex;gap:8px;">
-                            <button onclick="viewBankPDF('${yStr}', 'comdirect')" style="padding:6px 10px;background:#27ae60;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;" title="${bal.comdirectPdfFilename}">📄 PDF</button>
-                            <button onclick="deleteBankPDF('${yStr}', 'comdirect')" style="padding:6px 8px;background:#e74c3c;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">✕</button>
-                        </div>
-                    ` : `
-                        <button onclick="uploadBankPDF('${yStr}', 'comdirect')" style="padding:6px 10px;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">📎 PDF</button>
-                    `}
-                </div>
-                <div style="flex:1;">
-                    <label class="slds-form-label">Betrag (EUR)</label>
-                    <input type="number" step="0.01" value="${bal.comdirectEUR || 0}" 
-                           id="comdirect_eur_${yStr}"
-                           onchange="updateComdirectBalance('${yStr}', this.value)"
-                           style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                </div>
-                <div style="flex:1;">
-                    <label class="slds-form-label">Wechselkurs (EUR/CHF)</label>
-                    <input type="number" step="0.0001" value="${bal.comdirectRate || 0.94}" 
-                           id="comdirect_rate_${yStr}"
-                           onchange="updateComdirectBalance('${yStr}')"
-                           style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                </div>
-                <div style="flex:1;">
-                    <label class="slds-form-label">Betrag (CHF) <span style="font-size:0.75em;color:#888;">berechnet</span></label>
-                    <div id="comdirect_chf_${yStr}" style="padding:8px; background:#f8f9fa; border:1px solid #e0e0e0; border-radius:4px; font-weight:bold; color:#0176d3;">
-                        ${((bal.comdirectEUR || 0) * (bal.comdirectRate || 0.94)).toFixed(2)} CHF
-                    </div>
-                </div>
-            </div>
-
-            <div class="tax-input-row" style="margin-top:10px; background:#f0f4f8; padding:10px; border-radius:4px;">
-                <div style="flex:1">
-                    <label class="slds-form-label" style="color:#0176d3;">📈 Interactive Brokers (Cash Total)</label>
-                    <div style="font-size:1.1em; font-weight:bold;">${displayIBKR.toFixed(2)} CHF</div>
-                    <div style="font-size:0.75em; color:#54698d;">${infoIBKR}</div>
-                </div>
-                <div style="flex:2; font-size:0.8em; color:#54698d;">
-                    Automatisch berechnet aus CSV:<br>
-                    ${ibkrCashDetails.slice(0,3).join(', ')} ${(ibkrCashDetails.length>3?'...':'')}
-                </div>
-            </div>
+        // Header pro Jahr
+        const header = document.createElement('div');
+        header.style.cssText = "background:#eef4ff; padding:10px 15px; font-weight:bold; color:#16325c; border-radius:4px 4px 0 0; border:1px solid #dddbda; border-bottom:none; display:flex; justify-content:space-between; align-items:center; margin-top:15px;";
+        header.innerHTML = `
+            <span>📅 Steuerjahr ${year}</span>
+            <button class="btn btn-sm btn-destructive" onclick="deleteBalanceYear('${year}')" style="background:#ff3b30; border:none; color:white;">
+                Jahr löschen 🗑️
+            </button>
         `;
-        div.appendChild(row);
+        group.appendChild(header);
+        
+        // Tabelle
+        const table = document.createElement('table');
+        table.className = 'slds-table';
+        table.style.borderTop = 'none';
+        table.style.borderRadius = '0 0 4px 4px';
+        
+        // Zeilen definieren
+        const rows = [
+            { id: 'ubs', label: '🏦 UBS Switzerland AG', val: bal.ubs, file: bal.ubsPdfFilename },
+            { id: 'comdirect', label: '🏦 Comdirect Bank (DE)', val: bal.comdirect, file: bal.comdirectPdfFilename, extra: bal.comdirectEUR ? `(${formatCHF(bal.comdirectEUR)} €)` : '' },
+            { id: 'ibkr', label: '📈 Interactive Brokers (Cash)', val: bal.ibkr, file: bal.ibkrPdfFilename, extra: bal.ibkrPortfolioId ? `<span class="slds-badge">Portfolio: ${getPortfolioName(bal.ibkrPortfolioId)}</span>` : '' }
+        ];
+
+        let tbodyHtml = '';
+        rows.forEach(r => {
+            const hasFile = r.file ? '📄 PDF' : '-';
+            const valDisplay = r.val ? formatCHF(r.val) + ' CHF' : '0.00 CHF';
+            
+            tbodyHtml += `
+                <tr onclick="openBalanceModal('${year}', '${r.id}')" style="cursor:pointer;">
+                    <td style="font-weight:600;">${r.label}</td>
+                    <td>${r.extra || ''}</td>
+                    <td style="text-align:right; font-weight:bold; color:#0176d3;">${valDisplay}</td>
+                    <td style="text-align:center; width:80px;">${hasFile}</td>
+                    <td style="width:30px; text-align:center;">✏️</td>
+                </tr>
+            `;
+        });
+
+        table.innerHTML = `<tbody>${tbodyHtml}</tbody>`;
+        group.appendChild(table);
+        container.appendChild(group);
     });
 }
+
+function addBalanceYear() {
+    const y = prompt("Welches Jahr hinzufügen? (z.B. 2025)", new Date().getFullYear());
+    if(y && y.length === 4) {
+        if(taxData.balances[y]) {
+            alert("Dieses Jahr existiert bereits.");
+            return;
+        }
+        taxData.balances[y] = { ubs: 0, comdirect: 0, ibkr: 0 };
+        saveTaxData(true);
+        renderBalances();
+    }
+}
+
+function deleteBalanceYear(year) {
+    if(confirm(`Willst du das gesamte Jahr ${year} mit allen Einträgen löschen?`)) {
+        delete taxData.balances[year];
+        saveTaxData(true);
+        renderBalances();
+    }
+}
+
+// 2. MODAL ÖFFNEN & LOGIK
+
+function openBalanceModal(year, type) {
+    editingBalanceYear = year;
+    editingBalanceType = type;
+    tempBalanceFile = null;
+
+    const bal = taxData.balances[year];
+    const modal = document.getElementById('balance-edit-modal');
+    if(!modal) return;
+
+    // UI Reset
+    document.getElementById('balance_ibkr_selector').style.display = 'none';
+    document.getElementById('balance_comdirect_inputs').style.display = 'none';
+    document.getElementById('balance_modal_amount_chf').disabled = false;
+    document.getElementById('balance_modal_preview').innerHTML = '';
+    document.getElementById('balance_calc_info').innerText = '';
+
+    if (type === 'ubs') {
+        document.getElementById('balance_modal_bank').value = "UBS Switzerland AG";
+        document.getElementById('balance_modal_amount_chf').value = bal.ubs || 0;
+        showCurrentFile(bal.ubsPdfFilename);
+    
+    } else if (type === 'comdirect') {
+        document.getElementById('balance_modal_bank').value = "Comdirect Bank (Deutschland)";
+        document.getElementById('balance_comdirect_inputs').style.display = 'block';
+        
+        document.getElementById('balance_modal_amount_eur').value = bal.comdirectEUR || 0;
+        document.getElementById('balance_modal_rate').value = bal.comdirectRate || 0.94;
+        document.getElementById('balance_modal_amount_chf').value = bal.comdirect || 0;
+        document.getElementById('balance_modal_amount_chf').disabled = true; // Auto-calc
+        showCurrentFile(bal.comdirectPdfFilename);
+
+    } else if (type === 'ibkr') {
+        document.getElementById('balance_modal_bank').value = "Interactive Brokers (Cash Position)";
+        document.getElementById('balance_ibkr_selector').style.display = 'block';
+        
+        // Portfolio Dropdown füllen
+        const sel = document.getElementById('balance_modal_portfolio');
+        sel.innerHTML = '<option value="">-- Bitte wählen --</option>';
+        Object.keys(allPortfolios).forEach(id => {
+            const name = allPortfolios[id].name || id;
+            const selected = (bal.ibkrPortfolioId === id) ? 'selected' : '';
+            sel.innerHTML += `<option value="${id}" ${selected}>${name}</option>`;
+        });
+
+        sel.onchange = () => {
+            console.log("Portfolio gewechselt auf:", sel.value);
+            recalcIBKRBalance();
+        };
+        
+        //document.getElementById('balance_modal_amount_chf').value = bal.ibkr || 0;
+
+        setTimeout(() => {
+        if (bal.ibkrPortfolioId) {
+            // Portfolio ist ausgewählt -> berechnen
+            recalcIBKRBalance();
+        } else {
+            // Kein Portfolio ausgewählt -> Feld leer lassen
+            document.getElementById('balance_modal_amount_chf').value = '';
+        }
+    }, 100); // Kleine Verzögerung, damit das Dropdown fertig geladen ist
+
+        showCurrentFile(bal.ibkrPdfFilename);
+    }
+
+    modal.classList.add('active');
+}
+
+function closeBalanceModal() {
+    document.getElementById('balance-edit-modal').classList.remove('active');
+}
+
+// 3. IBKR BERECHNUNG (KORRIGIERT: VORZEICHEN & WÄHRUNG)
+// Dein Problem war, dass 'JPY' oft negativ ist und 'val' in der DB schon USD ist.
+// Wir müssen sicherstellen, dass wir die korrekten Werte summieren.
+
+// IBKR: Auto-Calculate from Portfolio (KORRIGIERT: EXAKTE PDF LOGIK)
+function recalcIBKRBalance() {
+    const pId = document.getElementById('balance_modal_portfolio').value;
+    const year = editingBalanceYear;
+    // Feld sofort leeren, damit kein alter Wert stehen bleibt
+document.getElementById('balance_modal_amount_chf').value = '';
+    
+    if (!pId || !allPortfolios[pId] || !allPortfolios[pId].years[year]) {
+        document.getElementById('balance_calc_info').innerText = "Keine Daten für dieses Portfolio/Jahr gefunden.";
+        return;
+    }
+    
+    // Daten holen
+    const yearData = allPortfolios[pId].years[year];
+    const positions = yearData.positions || {};
+    
+    let totalCashCHF = 0;
+    
+    // Globale Rates (falls vorhanden) - wie im PDF Export
+    const globalRateUSDCHF = (typeof getGlobalUSDCHFRate === 'function') ? getGlobalUSDCHFRate() : 0.85;
+    const globalRateEURCHF = (typeof getGlobalEURCHFRate === 'function') ? getGlobalEURCHFRate() : 0.94;
+
+    // Lokale Rate-Funktion für dieses Portfolio (WICHTIG!)
+    const getThisPortfolioRate = (curr) => {
+        if (!curr || curr === 'USD') return 1;
+        if (yearData.exchangeRates && yearData.exchangeRates[curr]) {
+            return yearData.exchangeRates[curr];
+        }
+        // Fallback auf globale getRate Funktion
+        if (typeof getRate === 'function') return getRate(curr);
+        return 1;
+    };
+
+    // Summieren (Exakt wie im PDF Export)
+    Object.values(positions).forEach(p => {
+        // Nur Cash Positionen
+        if (
+    p.isCash === true ||
+    p.type === 'CASH' ||
+    p.assetClass === 'Cash'
+) {
+            
+            const currency = (p.currency || 'USD').trim();
+            // Nimm den Original-Betrag (falls vorhanden), sonst val
+            const originalAmount = p.originalAmount !== undefined ? p.originalAmount : p.val;
+            
+            // 1. Umrechnung in USD (mit Portfolio-spezifischem Kurs)
+            const rateToUSD = getThisPortfolioRate(currency);
+            const usdAmount = originalAmount * rateToUSD;
+            
+            // 2. Umrechnung in CHF (für Steuerwert)
+            let chfAmount = 0;
+            if (currency === 'EUR') {
+                // Spezialfall EUR: Direkt mit EUR/CHF Kurs
+                chfAmount = originalAmount * globalRateEURCHF;
+            } else {
+                // Alle anderen via USD -> CHF
+                chfAmount = usdAmount * globalRateUSDCHF;
+            }
+            
+            totalCashCHF += chfAmount;
+            if (totalCashCHF === 0) {
+            document.getElementById('balance_calc_info').innerText =
+                'Kein Cash für dieses Portfolio/Jahr gefunden';
+            }   
+        }
+    });
+    
+    // Runden auf 2 Stellen
+    totalCashCHF = Math.round(totalCashCHF * 100) / 100;
+    
+    // Ergebnis setzen
+    document.getElementById('balance_modal_amount_chf').value = totalCashCHF.toFixed(2);
+    document.getElementById('balance_calc_info').innerText = `Automatisch berechnet (PDF-Logik)`;
+}
+
+// 4. SPEICHERN & PDF
+async function saveBalanceFromModal() {
+    const year = editingBalanceYear;
+    const type = editingBalanceType;
+    const bal = taxData.balances[year];
+    
+    const valCHF = parseFloat(document.getElementById('balance_modal_amount_chf').value) || 0;
+    
+    if (type === 'ubs') {
+        bal.ubs = valCHF;
+    } else if (type === 'comdirect') {
+        bal.comdirect = valCHF;
+        bal.comdirectEUR = parseFloat(document.getElementById('balance_modal_amount_eur').value) || 0;
+        bal.comdirectRate = parseFloat(document.getElementById('balance_modal_rate').value) || 0;
+    } else if (type === 'ibkr') {
+        bal.ibkr = valCHF;
+        bal.ibkrPortfolioId = document.getElementById('balance_modal_portfolio').value;
+    }
+    
+    // PDF Speichern (Falls neu hochgeladen)
+    if (tempBalanceFile) {
+        const keyData = type + 'PdfData';
+        const keyName = type + 'PdfFilename';
+        const readBase64 = (file) => new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        const base64 = await readBase64(tempBalanceFile);
+        bal[keyData] = base64;
+        bal[keyName] = tempBalanceFile.name;
+    }
+
+    saveTaxData(true);
+    closeBalanceModal();
+    renderBalances();
+}
+
+// Helper für Comdirect Berechnung
+function calcComdirect() {
+    if(editingBalanceType !== 'comdirect') return;
+    const eur = parseFloat(document.getElementById('balance_modal_amount_eur').value) || 0;
+    const rate = parseFloat(document.getElementById('balance_modal_rate').value) || 0;
+    document.getElementById('balance_modal_amount_chf').value = (eur * rate).toFixed(2);
+}
+// Event Listener
+const cdEur = document.getElementById('balance_modal_amount_eur');
+const cdRate = document.getElementById('balance_modal_rate');
+if(cdEur) cdEur.addEventListener('input', calcComdirect);
+if(cdRate) cdRate.addEventListener('input', calcComdirect);
+
+function applyGlobalEuroRate() {
+    let rate = 0.94;
+    if(typeof getGlobalEURCHFRate === 'function') rate = getGlobalEURCHFRate();
+    document.getElementById('balance_modal_rate').value = rate;
+    calcComdirect();
+}
+
+function handleBalanceFile(files) {
+    if(files.length > 0) {
+        tempBalanceFile = files[0];
+        document.getElementById('balance_modal_preview').innerHTML = `✅ Datei ausgewählt: ${tempBalanceFile.name}`;
+    }
+}
+
+function showCurrentFile(filename) {
+    const el = document.getElementById('balance_modal_preview');
+    if(filename) el.innerHTML = `📄 Gespeichert: <strong>${filename}</strong>`;
+    else el.innerHTML = `<span style="color:#aaa">Kein Beleg vorhanden</span>`;
+}
+
+function getPortfolioName(id) {
+    if(allPortfolios && allPortfolios[id]) return allPortfolios[id].name || id;
+    return id;
+}
+
+// --- WICHTIG: ALTE FUNKTIONEN (DUMMIES / WRAPPER) BEHALTEN ---
+// Damit der PDF Generator nicht abstürzt, falls er diese aufruft.
+// Wir leiten sie einfach um oder lassen sie leer, falls sie nur UI waren.
+
+function uploadBankPDF(year, bank) {
+    // Falls das vom PDF Generator aufgerufen wird, müssen wir schauen was es tun soll.
+    // Aber eigentlich ruft der PDF Generator das nicht auf.
+    // Falls du Buttons hast, die das aufrufen -> Die sind jetzt weg (HTML ersetzt).
+    console.log("Legacy uploadBankPDF called");
+}
+// ... weitere alte Funktionen können bleiben, stören nicht.
 
 function updateBalance(year, bank, val) {
     if(!taxData.balances[year]) taxData.balances[year] = { ubs: 0, comdirect: 0 };
@@ -7182,11 +7733,8 @@ portfoliosToRender.forEach((portfolioInfo, portfolioIndex) => {
             const portfolioLabel = selectedPortfoliosForPdf.length > 1 ? ` - ${portfolioName}` : '';
             
             doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(0); 
-            doc.text(
-              `Interactive Brokers Cash Position${portfolioLabel} (31.12.${year})`,
-              16.5,   
-              finalY + 5
-            );
+          const displayName = portfolioIndex === 0 ? 'U11489694' : 'Denis';
+doc.text(`Interactive Brokers Cash Position - ${displayName} (31.12.${year})`, 16.5, finalY + 5);
             
             finalY += 8;
             
@@ -7229,12 +7777,7 @@ portfoliosToRender.forEach((portfolioInfo, portfolioIndex) => {
             
             totalBankAssetsCHF += totalCashCHF;
 
-            cashRows.push([
-                `TOTAL IBKR CASH${portfolioLabel}`,
-                '',
-                fmtNum(totalCashUSD, 'USD'),
-                fmtNum(totalCashCHF, 'CHF')
-            ]);
+            cashRows.push([`TOTAL IBKR CASH - ${displayName}`, '', fmtNum(totalCashUSD, 'USD'), fmtNum(totalCashCHF, 'CHF')]);
             
             doc.autoTable({
                 startY: finalY,
@@ -7905,7 +8448,7 @@ function renderPortfolio() {
     const view = document.getElementById('holdings');
     view.innerHTML = `
         <div class="header" style="background:linear-gradient(135deg,#3498db 0%,#2980b9 100%); padding: 10px;">
-            <h1 style="font-size:1.0em; margin:0;">📦 Wertpapier Beteiligungen</h1>
+            <h1 style="font-size:1.0em; margin:0;">📦 Wertpapier Beteiligungen (Beim Import den IBKR "Kontoauszug" Importieren)</h1>
         </div>
 
         <div class="chart-container import-bar-compact" style="align-items: center;">
@@ -8439,211 +8982,297 @@ document.addEventListener('paste', function(e) {
     }
 });
 
-// --- AUSGABEN LOGIC (MIT DETAIL-MODAL) ---
-let currentExpenseIndex = -1; // Merkt sich, welche Zeile wir bearbeiten
 
-// --- FIX: FLEXIBLE JAHRESAUSWAHL & BESSERES SPEICHERN ---
+// ==========================================
+// AUSGABEN LOGIK (KOMPLETT) ===
+// ==========================================
 
+let editingExpenseIndex = -1; 
+let tempReceipts = []; 
+
+// 1. TABELLE RENDERN
 function renderExpenses() {
     const container = document.getElementById('expenseEntries');
     if(!container) return;
     container.innerHTML = '';
     
     if(!taxData.expenses) taxData.expenses = [];
+
+    // Header Zeile
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;";
+    headerDiv.innerHTML = `
+        <div style="font-size:0.9em; color:#666;">${taxData.expenses.length} Einträge gefunden</div>
+        <button class="btn btn-primary" onclick="createNewExpense()">+ Neue Ausgabe erfassen</button>
+    `;
+    container.appendChild(headerDiv);
+
+    // Tabelle aufbauen
+    const table = document.createElement('table');
+    table.className = 'slds-table';
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th style="width:50px;">Jahr</th>
+                <th>Kategorie</th>
+                <th>Beschreibung</th>
+                <th style="text-align:right;">Betrag</th>
+                <th style="text-align:center; width:70px;">Steuerrelevant</th>
+                <th style="text-align:center; width:60px;">Belege</th>
+                <th style="text-align:center; width:50px;"></th>
+            </tr>
+        </thead>
+        <tbody id="expenseTableBody"></tbody>
+    `;
     
-    // Dynamische Jahre generieren (Aktuelles Jahr +/- 2)
+    const tbody = table.querySelector('tbody');
+
+    if(taxData.expenses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">Keine Ausgaben erfasst</td></tr>';
+    } else {
+        taxData.expenses.forEach((ex, i) => {
+            const tr = document.createElement('tr');
+            tr.onclick = () => openExpenseRow(i); // Zeile klickbar machen
+            
+            const amount = parseFloat(ex.amount) || 0;
+            const rate = parseFloat(ex.rate) || 1;
+            const totalCHF = amount * rate;
+            const countBelege = ex.receipts ? ex.receipts.length : 0;
+            const hasBelege = countBelege > 0 ? '📎 ' + countBelege : '';
+            const isTaxRelevant = ex.taxRelevant !== false; // Default true
+            const taxIcon = isTaxRelevant ? '✅' : '❌';
+            const taxClass = isTaxRelevant ? 'tax-relevant-check' : 'tax-relevant-missing';
+            
+            // Formatierung sicherstellen
+            let displayCHF = "0.00";
+            try { displayCHF = formatCHF(totalCHF); } catch(e) { displayCHF = totalCHF.toFixed(2); }
+
+            tr.innerHTML = `
+                <td>${ex.year || '-'}</td>
+                <td>${ex.cat}</td>
+                <td style="font-weight:600;">${ex.desc || 'Ohne Beschreibung'}</td>
+                <td style="text-align:right;">${displayCHF} <span style="font-size:0.8em;color:#888;">CHF</span></td>
+                <td style="text-align:center;" class="${taxClass}" title="${isTaxRelevant ? 'Steuerrelevant' : 'Nicht steuerrelevant'}">
+                    ${taxIcon}
+                </td>
+                <td style="text-align:center;">${hasBelege}</td>
+                <td style="text-align:center;">
+                    <button class="row-delete-btn" onclick="event.stopPropagation(); deleteExpenseDirect(${i})" title="Löschen">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    container.appendChild(table);
+}
+
+// Löschen direkt aus der Tabelle
+function deleteExpenseDirect(index) {
+    if(confirm("Diesen Eintrag wirklich löschen?")) {
+        taxData.expenses.splice(index, 1);
+        saveTaxData(true);
+        renderExpenses();
+    }
+}
+
+// 2. HAUPT-MODAL STEUERUNG
+
+function createNewExpense() {
+    editingExpenseIndex = -1;
+    tempReceipts = [];
+    
+    const modal = document.getElementById('expense-edit-modal');
+    if(!modal) { alert("Fehler: Modal-HTML fehlt!"); return; }
+
+    document.getElementById('modal_exp_desc').value = '';
+    document.getElementById('modal_exp_amount').value = '';
+    document.getElementById('modal_exp_rate').value = '1.00';
+    document.getElementById('modal_exp_currency').value = 'CHF';
+    document.getElementById('modal_exp_cat').value = 'Software/Daten';
+    document.getElementById('modal_exp_tax_relevant').checked = true; // NEU: Default checked
+    document.getElementById('expense-modal-title').innerText = "Neue Ausgabe erfassen";
+    
+    // Löschen Button im Modal ausblenden bei Neu
+    const delBtn = document.getElementById('modal_btn_delete');
+    if(delBtn) delBtn.style.display = 'none';
+    
+    fillYearDropdown(new Date().getFullYear().toString());
+    updateModalPreview();
+    renderModalReceipts();
+    checkSpecialExpenseButtons(); 
+    
+    modal.classList.add('active');
+}
+
+function openExpenseRow(index) {
+    try {
+        editingExpenseIndex = index;
+        const ex = taxData.expenses[index];
+        if (!ex) return;
+
+        tempReceipts = ex.receipts ? [...ex.receipts] : [];
+        
+        const modal = document.getElementById('expense-edit-modal');
+        if(!modal) { alert("Fehler: Modal-HTML fehlt!"); return; }
+
+        document.getElementById('modal_exp_desc').value = ex.desc || '';
+        document.getElementById('modal_exp_amount').value = ex.amount || '';
+        document.getElementById('modal_exp_rate').value = ex.rate || 1;
+        document.getElementById('modal_exp_currency').value = ex.currency || 'CHF';
+        document.getElementById('modal_exp_cat').value = ex.cat || 'Sonstiges';
+        document.getElementById('modal_exp_tax_relevant').checked = ex.taxRelevant !== false; // NEU: Default true
+        document.getElementById('expense-modal-title').innerText = "Ausgabe bearbeiten";
+        
+        // Löschen Button anzeigen
+        const delBtn = document.getElementById('modal_btn_delete');
+        if(delBtn) delBtn.style.display = 'inline-block';
+        
+        fillYearDropdown(ex.year);
+        updateModalPreview();
+        renderModalReceipts();
+        checkSpecialExpenseButtons();
+        
+        modal.classList.add('active');
+    } catch (e) {
+        console.error(e);
+        alert("Fehler beim Öffnen: " + e.message);
+    }
+}
+
+function closeExpenseEditModal() {
+    const modal = document.getElementById('expense-edit-modal');
+    if(modal) modal.classList.remove('active');
+}
+
+// 3. SPEICHERN & LÖSCHEN
+
+function saveExpenseFromModal() {
+    const desc = document.getElementById('modal_exp_desc').value;
+    const amount = parseFloat(document.getElementById('modal_exp_amount').value) || 0;
+    
+    if(!desc) { alert("Bitte eine Beschreibung eingeben."); return; }
+
+     // HIER IST DER FEHLER: taxRelevant war nicht definiert
+    const taxRelevant = document.getElementById('modal_exp_tax_relevant').checked;
+    
+    const newExpense = {
+        desc: desc,
+        amount: amount,
+        year: document.getElementById('modal_exp_year').value,
+        cat: document.getElementById('modal_exp_cat').value,
+        currency: document.getElementById('modal_exp_currency').value,
+        rate: parseFloat(document.getElementById('modal_exp_rate').value) || 1.0,
+        receipts: tempReceipts,
+        taxRelevant: taxRelevant
+    };
+    
+    if(editingExpenseIndex > -1 && taxData.expenses[editingExpenseIndex].details) {
+        newExpense.details = taxData.expenses[editingExpenseIndex].details;
+    }
+
+    if(editingExpenseIndex === -1) {
+        taxData.expenses.push(newExpense);
+    } else {
+        taxData.expenses[editingExpenseIndex] = newExpense;
+    }
+    
+    saveTaxData(true);
+    closeExpenseEditModal();
+    renderExpenses();
+}
+
+function deleteExpenseFromModal() {
+    if(editingExpenseIndex > -1) {
+        if(confirm("Diesen Eintrag wirklich löschen?")) {
+            taxData.expenses.splice(editingExpenseIndex, 1);
+            saveTaxData(true);
+            closeExpenseEditModal();
+            renderExpenses();
+        }
+    }
+}
+
+// 4. HELPER FUNKTIONEN 
+
+function fillYearDropdown(selectedYear) {
+    const sel = document.getElementById('modal_exp_year');
+    if(!sel) return;
+    
+    sel.innerHTML = '';
     const currentYear = new Date().getFullYear();
+    const safeSelectedYear = selectedYear ? selectedYear.toString() : currentYear.toString();
+    
     const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
     
-    taxData.expenses.forEach((ex, i) => {
-        // Fallbacks
-        if(!ex.year) ex.year = currentYear.toString();
-        if(!ex.currency) ex.currency = 'CHF';
-        if(ex.rate === undefined) ex.rate = 1.00;
-        if(!ex.receipts) ex.receipts = [];
-
-        const div = document.createElement('div');
-        div.className = 'expense-item';
-
-        const amount = parseFloat(ex.amount) || 0;
-        const rate = parseFloat(ex.rate) || 0;
-        const totalCHF = (amount * rate).toFixed(2);
-        
-        const isSpecial = (ex.cat === 'Unterhalt' || ex.cat === 'Alimente');
-        
-        // Dropdown Optionen bauen
-        let yearOptions = '';
-        years.forEach(y => {
-            const yStr = y.toString();
-            // WICHTIG: String Vergleich für 'selected'
-            const isSel = (ex.year && ex.year.toString() === yStr) ? 'selected' : '';
-            yearOptions += `<option value="${yStr}" ${isSel}>${yStr}</option>`;
-        });
-
-        // Mittlerer Teil (Beträge vs. Button)
-        let centerPartHTML = '';
-        if (isSpecial) {
-            const btnLabel = ex.cat === 'Alimente' ? '👶 Kinder & Zahlung bearbeiten' : '👤 Empfänger & Zahlung bearbeiten';
-            centerPartHTML = `
-                <div style="flex:4;">
-                    <button class="btn btn-info" onclick="openDetailModal(${i})" style="width:100%; padding:0.75rem;">
-                        ✏️ ${btnLabel}
-                    </button>
-                </div>`;
-        } else {
-            // Normale Ausgabe
-            centerPartHTML = `
-                <div style="flex:2">
-                    <label class="slds-form-label">Betrag</label>
-                    <input type="number" step="0.01" value="${ex.amount}" onchange="updateExp(${i},'amount',this.value)" 
-                           style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;">
-                </div>
-                <div style="width:100px; flex-shrink:0;">
-                    <label class="slds-form-label">Währung</label>
-                    <select onchange="updateExp(${i},'currency',this.value)" id="currency_exp_${i}"
-                            style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;background:white;">
-                        <option value="CHF" ${ex.currency==='CHF'?'selected':''}>CHF</option>
-                        <option value="USD" ${ex.currency==='USD'?'selected':''}>USD</option>
-                        <option value="EUR" ${ex.currency==='EUR'?'selected':''}>EUR</option>
-                    </select>
-                </div>
-                <div style="flex:1">
-                    <label class="slds-form-label">Kurs</label>
-                    <div style="display:flex; gap:2px;">
-                        <input type="number" step="0.0001" value="${ex.rate}" id="rate_exp_${i}"
-                               onchange="updateExp(${i},'rate',this.value)" 
-                               style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;">
-                        <button class="btn btn-info" onclick="applyGlobalRateToExp(${i})" 
-                                style="padding:0 8px; width:auto; margin:0;" title="Globalen Steuerkurs anwenden">
-                            🌐
-                        </button>
-                    </div>
-                </div>`;
-        }
-
-        div.innerHTML = `
-            <!-- Zeile 1: Beschreibung & Jahr -->
-            <div class="tax-input-row">
-                <div style="flex:2">
-                    <label class="slds-form-label">Beschreibung</label>
-                    <input type="text" value="${ex.desc}" onchange="updateExp(${i},'desc',this.value)" 
-                           style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;" 
-                           ${isSpecial ? 'disabled' : ''}>
-                </div>
-                <div style="flex:1">
-                    <label class="slds-form-label">Jahr</label>
-                    <!-- HIER WAR DAS PROBLEM: Jetzt dynamische Optionen -->
-                    <select onchange="updateExp(${i},'year',this.value)" 
-                            style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;background:white;">
-                        ${yearOptions}
-                    </select>
-                </div>
-            </div>
-            
-            <!-- Zeile 2: Kategorie -->
-            <div class="tax-input-row">
-                <div style="width:100%">
-                    <label class="slds-form-label">Kategorie</label>
-                    <select style="width:100%;padding:0.5rem 0.75rem;border:1px solid var(--slds-border);border-radius:0.25rem;background:white;" 
-                            onchange="updateExp(${i},'cat',this.value)">
-                        <option value="Software/Daten" ${ex.cat==='Software/Daten'?'selected':''}>Software / Daten</option>
-                        <option value="Hardware" ${ex.cat==='Hardware'?'selected':''}>Hardware / Büro</option>
-                        <option value="Unterhalt" ${ex.cat==='Unterhalt'?'selected':''}>👤 Unterhalt an Mutter/Ex</option>
-                        <option value="Alimente" ${ex.cat==='Alimente'?'selected':''}>👶 Alimente für Kind</option>
-                        <option value="Säule 3a" ${ex.cat==='Säule 3a'?'selected':''}>Säule 3a</option>
-                        <option value="Krankenkasse" ${ex.cat==='Krankenkasse'?'selected':''}>Krankenkasse</option>
-                        <option value="Werbung" ${ex.cat==='Werbung'?'selected':''}>Werbekosten</option>
-                        <option value="Sonstiges" ${ex.cat==='Sonstiges'?'selected':''}>Sonstiges</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Zeile 3: Beträge & Löschen -->
-            <div class="tax-input-row bottom" style="align-items:flex-end;">
-                ${centerPartHTML}
-                <button onclick="removeExp(${i})" class="btn btn-destructive" 
-                        style="background:#ff3b30; color:white; border:none; width:50px; height:38px; border-radius:4px; cursor:pointer;">
-                    ✕
-                </button>
-            </div>
-            
-            <div id="preview_${i}" class="expense-preview-total">= ${totalCHF} CHF</div>
-
-            <div class="expense-receipts-container" onmouseenter="activeExpenseIndex=${i}" onmouseleave="activeExpenseIndex=-1">
-                <label class="expense-receipts-label">📄 Belege</label>
-                <div class="expense-dropzone" id="dropzone_exp_${i}" onclick="document.getElementById('input_exp_${i}').click()">
-                    📎 Datei hier reinziehen
-                </div>
-                <input type="file" id="input_exp_${i}" style="display:none" onchange="handleExpenseFile(${i}, this.files)">
-                <div id="preview_exp_${i}" class="preview-grid"></div>
-            </div>
-        `;
-        
-        container.appendChild(div);
-        setTimeout(() => setupExpenseDropzone(i), 0);
-        renderExpenseReceipts(i);
+    years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.text = y;
+        if(y.toString() === safeSelectedYear) opt.selected = true;
+        sel.add(opt);
     });
 }
 
-// --- HELPER: GLOBALEN KURS IM MODAL ANWENDEN ---
-function applyGlobalRate() {
-    const curr = document.getElementById('detailCurrency').value;
-    let rate = 1.00;
-    let found = false;
-
-    // Wir nutzen die globalen Helper, die wir vorhin erstellt haben
-    if (curr === 'USD') {
-        rate = getGlobalUSDCHFRate();
-        found = true;
-    } else if (curr === 'EUR') {
-        rate = getGlobalEURCHFRate();
-        found = true;
-    }
-
-    if (found) {
-        document.getElementById('detailRate').value = rate;
-        recalcAllMonths(); // Wichtig: Summen sofort aktualisieren!
-        
-        // Kleines visuelles Feedback
-        const btn = document.querySelector('button[onclick="applyGlobalRate()"]');
+function checkSpecialExpenseButtons() {
+    const catEl = document.getElementById('modal_exp_cat');
+    if(!catEl) return;
+    
+    const cat = catEl.value;
+    const btnContainer = document.getElementById('modal_special_btn_container');
+    const btn = document.getElementById('modal_special_btn');
+    
+    if(cat === 'Unterhalt' || cat === 'Alimente') {
+        if(btnContainer) btnContainer.style.display = 'block';
         if(btn) {
-            const oldHtml = btn.innerHTML;
-            btn.innerHTML = "✓";
-            setTimeout(() => btn.innerHTML = oldHtml, 800);
+            btn.innerText = cat === 'Alimente' ? '👶 Details (Kind) bearbeiten' : '👤 Details (Partner) bearbeiten';
+            btn.onclick = () => {
+                if(editingExpenseIndex === -1) {
+                    taxData.expenses.push({amount:0}); 
+                    editingExpenseIndex = taxData.expenses.length - 1;
+                }
+                if(typeof openDetailModal === 'function') openDetailModal(editingExpenseIndex); 
+            };
         }
     } else {
-        alert(`Für die Währung ${curr} ist kein globaler Steuerkurs im Export-Tab definiert.`);
+        if(btnContainer) btnContainer.style.display = 'none';
     }
 }
 
-// --- HELPER: GLOBALEN KURS AUF NORMALE AUSGABE ANWENDEN ---
-function applyGlobalRateToExp(index) {
-    // 1. Währung aus der Zeile lesen
-    const currSelect = document.getElementById(`currency_exp_${index}`);
-    // Fallback falls ID nicht gefunden (sollte nicht passieren durch renderExpenses)
-    const curr = currSelect ? currSelect.value : taxData.expenses[index].currency;
+function updateModalPreview() {
+    const amtEl = document.getElementById('modal_exp_amount');
+    const rateEl = document.getElementById('modal_exp_rate');
+    const prevEl = document.getElementById('modal_exp_preview');
     
-    let rate = 1.00;
-    let found = false;
-
-    if (curr === 'USD') {
-        rate = getGlobalUSDCHFRate();
-        found = true;
-    } else if (curr === 'EUR') {
-        rate = getGlobalEURCHFRate();
-        found = true;
+    if(amtEl && rateEl && prevEl) {
+        const amt = parseFloat(amtEl.value) || 0;
+        const rate = parseFloat(rateEl.value) || 0;
+        prevEl.innerText = `= ${(amt * rate).toFixed(2)} CHF`;
     }
+}
 
-    if (found) {
-        // Wert ins Feld schreiben
-        const rateInput = document.getElementById(`rate_exp_${index}`);
-        if(rateInput) rateInput.value = rate;
-        
-        // Daten aktualisieren & speichern
-        updateExp(index, 'rate', rate);
-    } else {
-        // Optional: Kleines Feedback, dass für CHF kein Kurs nötig ist
-        if(curr !== 'CHF') alert(`Kein globaler Kurs für ${curr} definiert.`);
+// Event Listener für Live-Update (mit Check ob Elemente da sind)
+setTimeout(() => {
+    const amtInput = document.getElementById('modal_exp_amount');
+    const rateInput = document.getElementById('modal_exp_rate');
+    if(amtInput) amtInput.oninput = updateModalPreview;
+    if(rateInput) rateInput.oninput = updateModalPreview;
+}, 500);
+
+function applyGlobalRateToModal() {
+    const currEl = document.getElementById('modal_exp_currency');
+    if(!currEl) return;
+    
+    const curr = currEl.value;
+    let rate = 1.0;
+    
+    if(typeof getGlobalUSDCHFRate === 'function' && curr === 'USD') rate = getGlobalUSDCHFRate();
+    else if(typeof getGlobalEURCHFRate === 'function' && curr === 'EUR') rate = getGlobalEURCHFRate();
+    
+    const rateEl = document.getElementById('modal_exp_rate');
+    if(rateEl) {
+        rateEl.value = rate;
+        updateModalPreview();
     }
 }
 
@@ -8786,6 +9415,75 @@ function calcDetailTotal() {
     `;
 }
 
+// 5. BILDER & DATEI HANDLING IM MODAL
+
+async function handleModalExpenseFiles(files) {
+    for(let i=0; i<files.length; i++) {
+        const file = files[i];
+        if (file.type.match('image.*') || file.type === 'application/pdf') {
+            const timestamp = new Date().getTime();
+            let ext = file.name.split('.').pop();
+            const filename = `receipt_temp_${timestamp}_${i}.${ext}`;
+            
+            await saveImageToDB(filename, file);
+            tempReceipts.push(filename);
+        }
+    }
+    renderModalReceipts();
+}
+
+async function renderModalReceipts() {
+    const container = document.getElementById('modal_exp_previews');
+    if(!container) return;
+    container.innerHTML = '';
+    
+    // Drag & Drop neu binden (sicherstellen dass es nur einmal passiert)
+    const dropzone = document.getElementById('modal_exp_dropzone');
+    if(dropzone) {
+        dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
+        dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+        dropzone.ondrop = (e) => {
+            e.preventDefault(); dropzone.classList.remove('dragover');
+            handleModalExpenseFiles(e.dataTransfer.files);
+        };
+    }
+
+    for(let i=0; i<tempReceipts.length; i++) {
+        const filename = tempReceipts[i];
+        const blob = await getImageFromDB(filename);
+        
+        if(blob) {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.style.width = '80px'; div.style.height = '80px';
+            
+            const btn = document.createElement('div');
+            btn.className = 'btn-remove-img';
+            btn.innerHTML = '✕';
+            btn.onclick = (e) => { 
+                e.stopPropagation(); 
+                tempReceipts.splice(i, 1); 
+                renderModalReceipts(); 
+            };
+            
+            if(filename.toLowerCase().endsWith('.pdf') || blob.type === 'application/pdf') {
+                div.innerHTML = `<div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;background:#ffeaea;color:#d63031;font-size:0.8em;flex-direction:column;">PDF</div>`;
+                div.onclick = () => window.open(URL.createObjectURL(blob), '_blank');
+            } else {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(blob);
+                img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover';
+                div.appendChild(img);
+                // Hover Vorschau falls vorhanden
+                if(typeof addHoverPreview === 'function') addHoverPreview(div, img.src);
+            }
+            
+            div.appendChild(btn);
+            container.appendChild(div);
+        }
+    }
+}
+
 function saveDetailFromModal() {
     if(currentExpenseIndex === -1) return;
     
@@ -8871,7 +9569,8 @@ function addExpenseItem() {
     if(!taxData.expenses) taxData.expenses = [];
     taxData.expenses.push({ 
         desc: '', amount: 0, year: new Date().getFullYear().toString(), 
-        cat: 'Software/Daten', currency: 'CHF', rate: 1.00 
+        cat: 'Software/Daten', currency: 'CHF', rate: 1.00, 
+        taxRelevant: true  // NEU: Default true
     });
     // Nur beim Hinzufügen rendern wir neu
     renderExpenses();
@@ -8985,6 +9684,28 @@ async function renderExpenseReceipts(index) {
         }
     }
 }
+
+// Diese Funktion filtert steuerrelevante Ausgaben für den PDF-Report
+function getTaxRelevantExpenses() {
+    if (!taxData.expenses) return [];
+    return taxData.expenses.filter(expense => expense.taxRelevant !== false);
+}
+
+// Statistik für steuerrelevante Ausgaben
+function getTaxRelevantStats() {
+    const relevantExpenses = getTaxRelevantExpenses();
+    const total = relevantExpenses.reduce((sum, exp) => {
+        const amount = parseFloat(exp.amount) || 0;
+        const rate = parseFloat(exp.rate) || 1;
+        return sum + (amount * rate);
+    }, 0);
+    
+    return {
+        count: relevantExpenses.length,
+        total: total
+    };
+}
+
 // --- TAX ZIP EXPORT (MIT DIVIDENDEN) ---
 async function exportTaxZIP() {
     const btn = document.querySelector('button[onclick="exportTaxZIP()"]');
@@ -11382,6 +12103,14 @@ function deleteCurrentPortfolioFromDropdown() {
     // UI neu laden
     selectPortfolioFromNav(currentPortfolioId);
 }
+
+// GLOBALER Listener für IBKR Portfolio Wechsel (sicherste Variante) //KANN SPÄTER WEG
+document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'balance_modal_portfolio') {
+        console.log("✅ Portfolio gewechselt (global):", e.target.value);
+        recalcIBKRBalance();
+    }
+});
 
 </script>
 </body>
