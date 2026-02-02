@@ -1889,7 +1889,7 @@ tbody tr:hover {
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Claude SFDC v16b</h1>
+<h1>Trade Log / Version Claude SFDC v16c</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -1907,7 +1907,11 @@ tbody tr:hover {
 ">
     Trading ▾
 </button>
-<button class="nav-btn" data-view="holdings" onclick="showView('holdings')">Wertpapiere</button>
+<!-- Neuer Wertpapiere Button mit Dropdown-Funktion -->
+<button class="nav-btn" id="holdings-nav-btn" onclick="toggleHoldingsMenu(this)">
+    Wertpapiere ▾
+</button>
+
 <button class="nav-btn" data-view="salary" onclick="showView('salary')">Lohn/Gehalt</button>
 <button class="nav-btn" data-view="tax" onclick="showView('tax')">Steuern</button>
 </div>
@@ -1930,6 +1934,12 @@ tbody tr:hover {
         <span style="margin-right: 0.5rem;">💾</span>Im/Export
     </div>
 </div>
+
+<!-- Das Dropdown Menü für Wertpapiere (Versteckt) -->
+<div id="holdings-menu-fixed" style="display: none; position: fixed; background: white; min-width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 999999; border-radius: 0.25rem; border: 1px solid #dddbda; overflow: hidden;">
+    <!-- Wird dynamisch per JS gefüllt -->
+</div>
+
 <div class="content">
 <div id="today" class="view active">
 <div class="success-msg" id="msg">Gespeichert! ✓</div>
@@ -2126,56 +2136,6 @@ tbody tr:hover {
         <h1>📦 Wertpapier Beteiligungen</h1>
     </div>
     
-    <!-- Portfolio Auswahl Box -->
-    <div class="chart-container" style="margin-bottom:15px; padding:12px 15px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; align-items:center; gap:15px;">
-            <label style="font-weight:600; color:#333;">Portfolio:</label>
-            <div style="position:relative;">
-                <button id="portfolio-dropdown-btn" onclick="togglePortfolioDropdown(event)" 
-                    style="background:#0176d3; border:none; color:white; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:0.95em; display:flex; align-items:center; gap:10px; font-weight:500; min-width:180px; justify-content:space-between;">
-                    <span id="currentPortfolioName">Portfolio 1</span>
-                    <span>▼</span>
-                </button>
-                
-                <!-- Dropdown Content -->
-                <div id="portfolio-dropdown-content" style="display:none; position:absolute; top:calc(100% + 5px); left:0; background:white; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.25); min-width:300px; z-index:99999; border:1px solid #ddd;">
-                    <div style="background:#f8f9fa; padding:10px 15px; border-bottom:1px solid #eee; border-radius:8px 8px 0 0;">
-                        <strong style="color:#333; font-size:0.9em;">📦 Portfolio auswählen</strong>
-                    </div>
-                    
-                    <!-- Portfolio Liste -->
-                    <div id="portfolio-list" style="max-height:200px; overflow-y:auto;">
-                        <!-- Wird dynamisch gefüllt -->
-                    </div>
-                    
-                    <!-- Umbenennen Sektion -->
-                    <div style="border-top:1px solid #eee; padding:12px; background:#fafafa;">
-                        <label style="font-size:0.8em; color:#666; display:block; margin-bottom:5px;">✏️ Aktuelles Portfolio umbenennen:</label>
-                        <input type="text" id="portfolioNameInput" 
-                            placeholder="Name eingeben..." 
-                            style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:0.9em; box-sizing:border-box;"
-                            onchange="savePortfolioName()"
-                            onkeyup="if(event.key==='Enter') savePortfolioName()">
-                    </div>
-                    
-                    <!-- Aktionen -->
-                    <div style="border-top:1px solid #eee; padding:12px; display:flex; gap:8px;">
-                        <button onclick="addNewPortfolio()" style="flex:1; padding:10px; background:#0176d3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">
-                            ➕ Neues Portfolio
-                        </button>
-                        <button onclick="deleteCurrentPortfolio()" style="padding:10px 15px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.9em;" title="Aktuelles Portfolio löschen">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Info rechts -->
-        <div style="font-size:0.85em; color:#666;">
-            Klicke auf den Button um Portfolio zu wechseln oder neues zu erstellen
-        </div>
-    </div>
 
     <!-- Import Area -->
     <div class="chart-container" style="text-align:center;">
@@ -2233,48 +2193,43 @@ tbody tr:hover {
 <!-- === STEUER VIEW (NEU) === -->
 <!-- SALARY VIEW -->
 <div id="salary" class="view">
-<h2 style="text-align:center;margin-bottom:20px;color:#495057">💰 Lohn/Gehalt</h2>
 
-<!-- Year Selector -->
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:0 20px;">
-    <h3 style="margin:0;color:#495057;">Jahr: <span id="salaryYearDisplay">2025</span></h3>
-    <div style="display:flex;gap:10px;">
-        <button onclick="changeSalaryYear(-1)" style="padding:8px 16px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;">
-            ← Zurück
-        </button>
-        <button onclick="changeSalaryYear(1)" style="padding:8px 16px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;">
-            Vor →
-        </button>
+<!-- Alles in einer Zeile -->
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;margin-bottom:20px;padding:0 20px;">
+    <!-- Linke Seite: Jahr und Navigation -->
+    <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <h3 style="margin:0;color:#495057;">Jahr:</h3>
+            <span id="salaryYearDisplay" style="font-size:1.2em;font-weight:bold;color:#0176d3;">2025</span>
+        </div>
+        
+        <div style="display:flex;gap:5px;">
+            <button onclick="changeSalaryYear(-1)" style="padding:6px 12px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;">
+                ← Zurück
+            </button>
+            <button onclick="changeSalaryYear(1)" style="padding:6px 12px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;">
+                Vor →
+            </button>
+        </div>
     </div>
-</div>
 
-<!-- CSV Import -->
-<div style="margin:0 20px 20px 20px;background:#f8f9fa;padding:20px;border-radius:8px;">
-    <h4 style="margin:0 0 15px 0;color:#495057;">📄 Daten Import/Export</h4>
-    
-    
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button onclick="window.open('https://dendenpe.github.io/Parserf-Lohnz/', '_blank')" style="padding:10px 20px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;">
-            🔗 Lohnzettel Parser öffnen
+    <!-- Rechte Seite: Buttons -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        <button onclick="window.open('https://dendenpe.github.io/Parserf-Lohnz/', '_blank')" style="padding:8px 15px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;white-space:nowrap;">
+            🔗 Lohnzettel Parser
         </button>
-        <button onclick="document.getElementById('salary-csv-input').click()" style="padding:10px 20px;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer;">
-            📥 CSV importieren (vom Parser)
+        <button onclick="document.getElementById('salary-csv-input').click()" style="padding:8px 15px;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;white-space:nowrap;">
+            📥 CSV importieren
         </button>
-        <button onclick="exportSalaryCSV()" style="padding:10px 20px;background:#34a853;color:white;border:none;border-radius:4px;cursor:pointer;">
-            📤 CSV exportieren (Backup)
+        <button onclick="exportSalaryCSV()" style="padding:8px 15px;background:#34a853;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;white-space:nowrap;">
+            📤 CSV exportieren
         </button>
-        <button onclick="exportSteuerDaten()" style="padding:10px 20px;background:#e67e22;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;">
-            📋 Steuerdaten exportieren
+        <button onclick="exportSteuerDaten()" style="padding:8px 15px;background:#e67e22;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;white-space:nowrap;">
+            📋 Steuerdaten
         </button>
     </div>
+
     
-    <div style="margin-top:15px;padding:12px;background:#e3f2fd;border-left:4px solid #2196f3;border-radius:4px;font-size:0.85em;">
-        <strong style="color:#1976d2;">💡 Hinweis:</strong>
-        <ul style="margin:5px 0 0 20px;color:#666;">
-            <li><strong>"📥 CSV importieren"</strong> - Für CSV vom Lohnzettel-Parser (strukturiert mit Datei, Monat, Position, Betrag)</li>
-            <li><strong>"📤 CSV exportieren"</strong> - Für Backup dieser Tabelle (Jahr, Monat, alle Spalten)</li>
-        </ul>
-    </div>
     
     <input type="file" id="salary-csv-input" accept=".csv" style="display:none;">
 </div>
@@ -2326,17 +2281,37 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
 <!-- Spalten-Filter -->
 <div style="margin:0 20px 20px 20px;background:white;padding:15px;border-radius:8px;border:1px solid #e9ecef;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <h4 style="margin:0;color:#495057;font-size:0.9em;">👁️ Spalten anzeigen/ausblenden:</h4>
         <div style="display:flex;gap:10px;">
-            <button onclick="showColumnManager()" style="padding:8px 16px;background:#51cf66;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;font-weight:600;">
-                ➕ Spalten verwalten
+            <button onclick="showColumnManager()" style="padding:8px 16px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;font-weight:600;">
+                Spalten verwalten
             </button>
-            <button id="edit-mode-btn" onclick="toggleEditMode()" style="padding:8px 16px;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;font-weight:600;">
-                ✏️ Bearbeiten
+            <button id="edit-mode-btn" onclick="toggleEditMode()" style="padding:8px 16px;background:#0176d3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;font-weight:600;">
+                Bearbeiten
+            </button>
+            <!-- NEUER BUTTON -->
+            <button onclick="
+                const checkboxes = document.getElementById('checkbox-container');
+                const button = this;
+                if (checkboxes.style.display === 'none') {
+                    checkboxes.style.display = 'flex';
+                    button.textContent = 'Spaltenauswahl ausblenden';
+                    button.style.background = '#495057';
+                } else {
+                    checkboxes.style.display = 'none';
+                    button.textContent = 'Spaltenauswahl anzeigen';
+                    button.style.background = '#6c757d';
+                }
+            " style="padding:8px 16px;background:#6c757d;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;font-weight:600;">
+                Spaltenauswahl anzeigen
             </button>
         </div>
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:15px;font-size:0.85em;">
+
+       <!-- Checkboxen Container (ZUNÄCHST AUSGEBLENDET: display:none) -->
+    <div id="checkbox-container" style="display:none;flex-wrap:wrap;gap:15px;font-size:0.85em;">
+    
+    <!-- Checkboxen Container (zunächst sichtbar) -->
+    <div id="checkbox-container" style="display:flex;flex-wrap:wrap;gap:15px;font-size:0.85em;">
         <label style="cursor:pointer;"><input type="checkbox" id="col-monatslohn" checked onchange="toggleColumn(this)"> Monatslohn</label>
         <label style="cursor:pointer;"><input type="checkbox" id="col-familienzulage" checked onchange="toggleColumn(this)"> Familienzulage</label>
         <label style="cursor:pointer;"><input type="checkbox" id="col-pauschalspesen" checked onchange="toggleColumn(this)"> Pauschalspesen</label>
@@ -2356,6 +2331,7 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
         <label style="cursor:pointer;"><input type="checkbox" id="col-kommentar" checked onchange="toggleColumn(this)"> Kommentar</label>
     </div>
 </div>
+
 
 <!-- Salary Table -->
 <div style="margin:0 20px;overflow-x:auto;">
@@ -2414,6 +2390,7 @@ document.getElementById('salary-csv-input').addEventListener('change', function(
             </tr>
         </tfoot>
     </table>
+</div>
 </div>
 
 <!-- Live Steuer-Übersicht -->
@@ -7931,40 +7908,6 @@ function renderPortfolio() {
             <h1 style="font-size:1.0em; margin:0;">📦 Wertpapier Beteiligungen</h1>
         </div>
 
-        <!-- PORTFOLIO AUSWAHL BOX -->
-        <div class="chart-container" style="padding:12px 15px !important; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-            <label style="font-weight:600; color:#333;">Portfolio:</label>
-            <div style="position:relative;">
-                <button id="portfolio-dropdown-btn" onclick="togglePortfolioDropdown(event)" 
-                    style="background:#0176d3; border:none; color:white; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:0.95em; display:flex; align-items:center; gap:10px; font-weight:500; min-width:180px; justify-content:space-between;">
-                    <span id="currentPortfolioName">${currentPortfolioNameDisplay}</span>
-                    <span>▼</span>
-                </button>
-                
-                <!-- Dropdown Content -->
-                <div id="portfolio-dropdown-content" style="display:none; position:absolute; top:calc(100% + 5px); left:0; background:white; border-radius:8px; box-shadow:0 8px 30px rgba(0,0,0,0.25); min-width:300px; z-index:99999; border:1px solid #ddd;">
-                    <div style="background:#f8f9fa; padding:10px 15px; border-bottom:1px solid #eee; border-radius:8px 8px 0 0;">
-                        <strong style="color:#333; font-size:0.9em;">📦 Portfolio auswählen</strong>
-                    </div>
-                    <div id="portfolio-list" style="max-height:200px; overflow-y:auto;"></div>
-                    <div style="border-top:1px solid #eee; padding:12px; background:#fafafa;">
-                        <label style="font-size:0.8em; color:#666; display:block; margin-bottom:5px;">✏️ Umbenennen:</label>
-                        <input type="text" id="portfolioNameInput" placeholder="Name eingeben..." 
-                            style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:0.9em; box-sizing:border-box;"
-                            onchange="savePortfolioName()" onkeyup="if(event.key==='Enter') savePortfolioName()">
-                    </div>
-                    <div style="border-top:1px solid #eee; padding:12px; display:flex; gap:8px;">
-                        <button onclick="addNewPortfolio()" style="flex:1; padding:10px; background:#0176d3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">
-                            ➕ Neues Portfolio
-                        </button>
-                        <button onclick="deleteCurrentPortfolio()" style="padding:10px 15px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.9em;">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="chart-container import-bar-compact" style="align-items: center;">
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-info btn-sm" onclick="document.getElementById('portfolioFile').click()" style="margin:0;">
@@ -8258,8 +8201,7 @@ function renderPortfolio() {
     if (stocksContainer) stocksContainer.style.height = Math.min(600, Math.max(150, posList.length * 42 + 60)) + 'px';
     if (cashContainer) cashContainer.style.maxHeight = Math.min(400, Math.max(120, cashList.length * 38 + 60)) + 'px';
     
-    // Portfolio-Dropdown Liste füllen
-    renderPortfolioDropdown();
+ 
 }
 
 // Helper: Wert in USD umrechnen
@@ -9505,51 +9447,6 @@ function switchPortfolio(portfolioId) {
     console.log('📦 Gewechselt zu Portfolio:', portfolioId);
 }
 
-function addNewPortfolio() {
-    // Frage nach Namen
-    const name = prompt('Name für das neue Portfolio:', 'Neues Portfolio');
-    if (name === null) return; // Abgebrochen
-    
-    // Generiere neue ID
-    let newId = 'portfolio_' + (Object.keys(allPortfolios).length + 1);
-    let counter = Object.keys(allPortfolios).length + 1;
-    while (allPortfolios[newId]) {
-        counter++;
-        newId = 'portfolio_' + counter;
-    }
-    
-    // Erstelle neues Portfolio mit dem eingegebenen Namen
-    allPortfolios[newId] = {
-        name: name.trim() || 'Portfolio ' + counter,
-        years: {}
-    };
-    
-    // Wechsle zum neuen Portfolio
-    currentPortfolioId = newId;
-    portfoliosByYear = {};
-    
-    savePortfolio();
-    
-    // Schließe Dropdown
-    document.getElementById('portfolio-dropdown-content').style.display = 'none';
-    
-    // Update UI
-    renderPortfolioDropdown();
-    renderPortfolio();
-    
-    console.log('➕ Neues Portfolio erstellt:', newId, 'Name:', allPortfolios[newId].name);
-}
-
-function savePortfolioName() {
-    const nameInput = document.getElementById('portfolioNameInput');
-    if (!nameInput || !allPortfolios[currentPortfolioId]) return;
-    
-    allPortfolios[currentPortfolioId].name = nameInput.value.trim() || currentPortfolioId;
-    savePortfolio();
-    renderPortfolioDropdown();
-    
-    console.log('✏️ Portfolio umbenannt:', allPortfolios[currentPortfolioId].name);
-}
 
 // Alias für dein Input-Feld "portfolioIdInput"
 function savePortfolioID() {
@@ -10366,11 +10263,11 @@ function toggleEditMode() {
     const btn = document.getElementById('edit-mode-btn');
     
     if(salaryEditMode) {
-        btn.textContent = '💾 Speichern';
-        btn.style.background = '#34a853';
+        btn.textContent = 'Speichern';
+        btn.style.background = '#4DA6FF';
     } else {
-        btn.textContent = '✏️ Bearbeiten';
-        btn.style.background = '#667eea';
+        btn.textContent = 'Bearbeiten';
+        btn.style.background = '#0176d3';
         // Speichere wenn Edit-Modus beendet wird
         localStorage.setItem('salaryData', JSON.stringify(salaryData));
     }
@@ -11164,6 +11061,326 @@ function parseImportedSummaryCSV(csvText) {
         else if (key === 'TotalValue') summary.totalValue = val;
     }
     return summary;
+}
+
+// ==========================================
+// === NAV DROPWDOWN LOGIK FÜR WERTPAPIERE ===
+// ==========================================
+
+function toggleHoldingsMenu(btn) {
+    const menu = document.getElementById('holdings-menu-fixed');
+    
+    // Sicherheitscheck
+    if (!menu) {
+        console.error("Menü-Element 'holdings-menu-fixed' nicht gefunden!");
+        return;
+    }
+    
+    // Wenn das Menü schon offen ist -> schließen
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        return;
+    }
+    
+    // Menü leeren und neu aufbauen (damit es immer aktuell ist)
+    menu.innerHTML = '';
+    
+    // 1. Header (Überschrift)
+    const header = document.createElement('div');
+    header.style.cssText = "padding: 8px 12px; background: #f3f2f2; font-size: 0.75rem; font-weight: 700; color: #706e6b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #dddbda;";
+    header.innerText = "Meine Portfolios";
+    menu.appendChild(header);
+    
+    // 2. Liste der existierenden Portfolios erstellen
+    // Wir prüfen, ob die Variable allPortfolios existiert
+    if (typeof allPortfolios !== 'undefined' && Object.keys(allPortfolios).length > 0) {
+        Object.keys(allPortfolios).forEach(id => {
+            const p = allPortfolios[id];
+            const name = p.name || id;
+            // Prüfen, ob dieses Portfolio gerade aktiv ist
+            const isActive = (typeof currentPortfolioId !== 'undefined' && id === currentPortfolioId);
+            
+            const item = document.createElement('div');
+            item.style.cssText = "padding: 10px 15px; cursor: pointer; font-size: 0.9rem; color: #181818; border-bottom: 1px solid #f3f2f2; display: flex; justify-content: space-between; align-items: center; transition: background 0.1s;";
+            
+            // Aktives Portfolio farblich markieren
+            if(isActive) {
+                item.style.background = "#f0f8ff"; // Helles Blau
+                item.style.fontWeight = "600";
+                item.innerHTML = `<span>${name}</span><span style="color:#0176d3">●</span>`;
+            } else {
+                item.innerHTML = `<span>${name}</span>`;
+            }
+            
+            // Hover Effekt (Maus drüber)
+            item.onmouseover = () => { if(!isActive) item.style.background = '#f3f2f2'; };
+            item.onmouseout = () => { if(!isActive) item.style.background = 'white'; };
+            
+            // Klick Aktion: Portfolio wechseln
+            item.onclick = () => {
+                selectPortfolioFromNav(id);
+                menu.style.display = 'none';
+            };
+            
+            menu.appendChild(item);
+        });
+    } else {
+        // Fallback, falls keine Portfolios da sind
+        const empty = document.createElement('div');
+        empty.innerText = "Keine Portfolios gefunden";
+        empty.style.padding = "10px";
+        empty.style.fontStyle = "italic";
+        empty.style.color = "#999";
+        menu.appendChild(empty);
+    }
+
+    // ================================
+// PORTFOLIO UMBENENNEN (AKTIVES)
+// ================================
+if (typeof currentPortfolioId !== 'undefined' && allPortfolios[currentPortfolioId]) {
+
+    const divider = document.createElement('div');
+    divider.style.borderTop = '1px solid #dddbda';
+    menu.appendChild(divider);
+
+    const renameBox = document.createElement('div');
+    renameBox.style.cssText = `
+        padding: 10px 15px;
+        background: #fafaf9;
+    `;
+
+    renameBox.innerHTML = `
+        <div style="font-size:0.75rem; color:#706e6b; margin-bottom:4px;">
+            Aktives Portfolio umbenennen
+        </div>
+
+        <input
+            id="rename-portfolio-input"
+            type="text"
+            value="${allPortfolios[currentPortfolioId].name || ''}"
+            style="
+                width:100%;
+                padding:6px 8px;
+                font-size:0.85rem;
+                border:1px solid #c9c9c9;
+                border-radius:4px;
+                margin-bottom:6px;
+            "
+            onkeydown="if(event.key==='Enter') renameCurrentPortfolioFromDropdown()"
+        />
+
+        <div
+            style="
+                padding:6px;
+                text-align:center;
+                font-size:0.85rem;
+                background:#0176d3;
+                color:white;
+                border-radius:4px;
+                cursor:pointer;
+            "
+            onclick="renameCurrentPortfolioFromDropdown()"
+        >
+            ✏️ Portfolioname ändern
+        </div>
+    `;
+
+    menu.appendChild(renameBox);
+}
+
+// ================================
+// PORTFOLIO LÖSCHEN (AKTIVES)
+// ================================
+const deleteBox = document.createElement('div');
+deleteBox.style.cssText = `
+    padding: 8px 15px;
+    background: #fff;
+`;
+
+deleteBox.innerHTML = `
+    <div
+        style="
+            padding:6px;
+            text-align:center;
+            font-size:0.85rem;
+            background:#c23934;
+            color:white;
+            border-radius:4px;
+            cursor:pointer;
+        "
+        onclick="deleteCurrentPortfolioFromDropdown()"
+    >
+        🗑️ Aktives Portfolio löschen
+    </div>
+`;
+
+menu.appendChild(deleteBox);
+    
+    // 3. Button "Neues Portfolio" ganz unten
+    const addBtn = document.createElement('div');
+    addBtn.style.cssText = "padding: 12px 15px; cursor: pointer; font-size: 0.9rem; color: #0176d3; font-weight: 600; border-top: 2px solid #dddbda; display: flex; align-items: center; gap: 8px; background: #fafaf9;";
+    addBtn.innerHTML = '<span style="font-size:1.2em; font-weight:bold;">+</span> Neues Portfolio';
+    
+    addBtn.onmouseover = () => addBtn.style.background = '#eef4ff';
+    addBtn.onmouseout = () => addBtn.style.background = '#fafaf9';
+    
+    addBtn.onclick = () => {
+        createNewPortfolioFromNav();
+        menu.style.display = 'none';
+    };
+    
+    menu.appendChild(addBtn);
+
+    // POSITIONIERUNG DES MENÜS (Direkt unter dem Button)
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = (rect.bottom + 2) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.display = 'block';
+    
+    // Event Listener: Schließen bei Klick irgendwo anders hin
+    setTimeout(() => {
+        const closeHandler = (e) => {
+            if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.style.display = 'none';
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        document.addEventListener('click', closeHandler);
+    }, 0);
+}
+
+// HILFSFUNKTION 1: Existierendes Portfolio auswählen
+// HILFSFUNKTION 1: Portfolio auswählen und Daten laden
+function selectPortfolioFromNav(id) {
+    console.log("Wechsle zu Portfolio:", id);
+    
+    // 1. ID setzen
+    currentPortfolioId = id;
+    
+    // 2. WICHTIG: Die Daten für dieses Portfolio laden!
+    if (allPortfolios[id]) {
+        // Wir setzen die globale Variable 'portfoliosByYear', auf die 'renderPortfolio' zugreift
+        portfoliosByYear = allPortfolios[id].years || {};
+        
+        // Name auch im globalen Speicher aktualisieren
+        localStorage.setItem('currentPortfolioId', id);
+        
+        // Optional: Jahr auf aktuelles Jahr zurücksetzen oder beibehalten
+        // currentPortfolioYear = new Date().getFullYear().toString();
+    }
+
+    // 3. Zur Ansicht wechseln
+    showView('holdings');
+    
+    // 4. Tabelle erzwingen neu zu zeichnen
+    if (typeof renderPortfolio === 'function') {
+        renderPortfolio(); 
+    }
+}
+
+// HILFSFUNKTION 2: Neues Portfolio erstellen
+function createNewPortfolioFromNav() {
+    // 1. Namen abfragen
+    const name = prompt('Name für das neue Portfolio:', 'Neues Portfolio');
+    if (name === null) return; // Abgebrochen
+    
+    // 2. ID generieren
+    let counter = 1;
+    if (typeof allPortfolios !== 'undefined') {
+        counter = Object.keys(allPortfolios).length + 1;
+    }
+    let newId = 'portfolio_' + counter;
+    
+    // Sicherstellen, dass ID eindeutig ist
+    if (typeof allPortfolios !== 'undefined') {
+        while (allPortfolios[newId]) {
+            counter++;
+            newId = 'portfolio_' + counter;
+        }
+        
+        // 3. Erstellen (Struktur anlegen)
+        allPortfolios[newId] = {
+            name: name.trim() || 'Portfolio ' + counter,
+            years: {}
+        };
+        
+        // 4. Wechseln
+        currentPortfolioId = newId;
+        portfoliosByYear = {}; // Leeres Jahr-Objekt für den Start
+        
+        // Aktuelles Jahr setzen
+        if(typeof currentPortfolioYear !== 'undefined') {
+             // Nichts tun, behalte aktuelles Jahr oder setze neu:
+             currentPortfolioYear = new Date().getFullYear().toString();
+        } else {
+             window.currentPortfolioYear = new Date().getFullYear().toString();
+        }
+        
+        // 5. Speichern
+        if (typeof savePortfolio === 'function') savePortfolio();
+    }
+    
+    // 6. View anzeigen
+    showView('holdings');
+    
+    // Tabelle neu rendern
+    if (typeof renderPortfolio === 'function') renderPortfolio();
+    
+    console.log('➕ Neues Portfolio erstellt:', newId);
+}
+
+
+function renameCurrentPortfolioFromDropdown() {
+    const input = document.getElementById('rename-portfolio-input');
+    if (!input) return;
+
+    const newName = input.value.trim();
+    if (!newName) {
+        alert('Bitte einen Portfolionamen eingeben.');
+        return;
+    }
+
+    if (!allPortfolios[currentPortfolioId]) return;
+
+    allPortfolios[currentPortfolioId].name = newName;
+    savePortfolio();
+
+    // Dropdown schließen nach Umbenennen
+    document.getElementById('holdings-menu-fixed').style.display = 'none';
+}
+
+function deleteCurrentPortfolioFromDropdown() {
+    if (!currentPortfolioId || !allPortfolios[currentPortfolioId]) return;
+
+    const portfolioName = allPortfolios[currentPortfolioId].name || currentPortfolioId;
+
+    // Nicht löschen, wenn es das letzte Portfolio ist
+    if (Object.keys(allPortfolios).length <= 1) {
+        alert('Das letzte Portfolio kann nicht gelöscht werden.');
+        return;
+    }
+
+    const confirmDelete = confirm(
+        `Möchtest du das Portfolio "${portfolioName}" wirklich löschen?\n\nDieser Vorgang kann nicht rückgängig gemacht werden.`
+    );
+
+    if (!confirmDelete) return;
+
+    // ID merken, dann löschen
+    const deletedId = currentPortfolioId;
+    delete allPortfolios[deletedId];
+
+    // Neues aktives Portfolio wählen (erstes verbleibendes)
+    const remainingIds = Object.keys(allPortfolios);
+    currentPortfolioId = remainingIds[0];
+
+    savePortfolio();
+
+    // Dropdown schließen
+    document.getElementById('holdings-menu-fixed').style.display = 'none';
+
+    // UI neu laden
+    selectPortfolioFromNav(currentPortfolioId);
 }
 
 </script>
