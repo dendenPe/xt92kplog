@@ -2044,7 +2044,7 @@ input[type="number"]#balance_modal_rate {
 <!-- HAUPTCONTAINER -->
 <div class="container">
 <div class="header">
-<h1>Trade Log / Version Claude SFDC v20</h1>
+<h1>Trade Log / Version Mandarin v02</h1>
 <div class="backup-status" id="status">🔒 Bereit</div>
 </div>
 <div class="nav">
@@ -4709,7 +4709,7 @@ async function renderDayDetails(d) {
     }
 }
 
-function editCurrentDay() { 
+async function editCurrentDay() { 
     if(!selDate) return;
     
     // Entferne altes Modal falls vorhanden
@@ -4719,6 +4719,23 @@ function editCurrentDay() {
     const k = dk(selDate);
     const entry = getEntry(k);
     
+    // INITIALISIERUNG DER GLOBALE VARIABLE FÜR SCREENSHOTS
+    window.currentFullScreenshots = []; 
+
+    // Bestehende Bilder aus der Datenbank laden
+    if (entry.screenshots && entry.screenshots.length > 0) {
+        for (const filename of entry.screenshots) {
+            const blob = await getImageFromDB(filename);
+            if (blob) {
+                // Wir speichern das Blob direkt in der Liste
+                window.currentFullScreenshots.push(blob);
+            } else {
+                // Falls Bild nicht gefunden, behalten wir den Dateinamen (damit er nicht verloren geht)
+                window.currentFullScreenshots.push(filename);
+            }
+        }
+    }
+
     // Erstelle vollständiges Modal
     const modal = document.createElement('div');
     modal.id = 'full-modal';
@@ -4731,54 +4748,9 @@ function editCurrentDay() {
             
             <!-- 3 TABS -->
             <div style="display: flex; border-bottom: 1px solid #e9ecef;">
-                <button id="tab-btn-gesamt" onclick="
-                    document.getElementById('tab-btn-gesamt').style.color = '#667eea';
-                    document.getElementById('tab-btn-gesamt').style.background = 'white';
-                    document.getElementById('tab-btn-gesamt').style.borderBottom = '3px solid #667eea';
-                    document.getElementById('tab-btn-trades').style.color = '#868e96';
-                    document.getElementById('tab-btn-trades').style.background = '#f8f9fa';
-                    document.getElementById('tab-btn-trades').style.borderBottom = 'none';
-                    document.getElementById('tab-btn-notizen').style.color = '#868e96';
-                    document.getElementById('tab-btn-notizen').style.background = '#f8f9fa';
-                    document.getElementById('tab-btn-notizen').style.borderBottom = 'none';
-                    document.getElementById('content-gesamt').style.display = 'block';
-                    document.getElementById('content-trades').style.display = 'none';
-                    document.getElementById('content-notizen').style.display = 'none';
-                " style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: #667eea; background: white; border: none; border-bottom: 3px solid #667eea;">
-                    Gesamt
-                </button>
-                <button id="tab-btn-trades" onclick="
-                    document.getElementById('tab-btn-gesamt').style.color = '#868e96';
-                    document.getElementById('tab-btn-gesamt').style.background = '#f8f9fa';
-                    document.getElementById('tab-btn-gesamt').style.borderBottom = 'none';
-                    document.getElementById('tab-btn-trades').style.color = '#667eea';
-                    document.getElementById('tab-btn-trades').style.background = 'white';
-                    document.getElementById('tab-btn-trades').style.borderBottom = '3px solid #667eea';
-                    document.getElementById('tab-btn-notizen').style.color = '#868e96';
-                    document.getElementById('tab-btn-notizen').style.background = '#f8f9fa';
-                    document.getElementById('tab-btn-notizen').style.borderBottom = 'none';
-                    document.getElementById('content-gesamt').style.display = 'none';
-                    document.getElementById('content-trades').style.display = 'block';
-                    document.getElementById('content-notizen').style.display = 'none';
-                " style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: #868e96; background: #f8f9fa; border: none; border-bottom: none;">
-                    Trades
-                </button>
-                <button id="tab-btn-notizen" onclick="
-                    document.getElementById('tab-btn-gesamt').style.color = '#868e96';
-                    document.getElementById('tab-btn-gesamt').style.background = '#f8f9fa';
-                    document.getElementById('tab-btn-gesamt').style.borderBottom = 'none';
-                    document.getElementById('tab-btn-trades').style.color = '#868e96';
-                    document.getElementById('tab-btn-trades').style.background = '#f8f9fa';
-                    document.getElementById('tab-btn-trades').style.borderBottom = 'none';
-                    document.getElementById('tab-btn-notizen').style.color = '#667eea';
-                    document.getElementById('tab-btn-notizen').style.background = 'white';
-                    document.getElementById('tab-btn-notizen').style.borderBottom = '3px solid #667eea';
-                    document.getElementById('content-gesamt').style.display = 'none';
-                    document.getElementById('content-trades').style.display = 'none';
-                    document.getElementById('content-notizen').style.display = 'block';
-                " style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: #868e96; background: #f8f9fa; border: none; border-bottom: none;">
-                    Notizen
-                </button>
+                <button id="tab-btn-gesamt" onclick="switchFullTab('gesamt')" style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: #667eea; background: white; border: none; border-bottom: 3px solid #667eea;">Gesamt</button>
+                <button id="tab-btn-trades" onclick="switchFullTab('trades')" style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: #868e96; background: #f8f9fa; border: none; border-bottom: none;">Trades</button>
+                <button id="tab-btn-notizen" onclick="switchFullTab('notizen')" style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: #868e96; background: #f8f9fa; border: none; border-bottom: none;">Notizen</button>
             </div>
             
             <!-- TAB CONTENT -->
@@ -4818,10 +4790,11 @@ function editCurrentDay() {
                             <span>Bilder hier reinziehen oder klicken</span>
                             <div style="font-size: 0.8em; opacity: 0.7; margin-top: 5px;">(JPEG/PNG)</div>
                         </div>
-                        <div id="modal-screenshot-previews" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;"></div>
+                        <!-- HINWEIS (erscheint nur wenn Clipboard aktiv) -->
+                        <div id="paste-hint" style="display: none; font-size: 0.75em; color: #667eea; margin-top: 5px; font-weight: bold;">
+                            📋 Ctrl+V zum Einfügen!
+                        </div>
                     </div>
-                </div>
-            </div>
             
             <!-- Footer -->
             <div style="padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef; display: flex; gap: 10px;">
@@ -4838,89 +4811,138 @@ function editCurrentDay() {
         </div>
     `;
     
-    modal.style.cssText = `
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: rgba(0, 0, 0, 0.6) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        z-index: 9999999 !important;
-        padding: 20px !important;
-        backdrop-filter: blur(5px);
-        pointer-events: auto !important;
-    `;
+    modal.style.cssText = `position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.6) !important; display: flex !important; align-items: center !important; justify-content: center !important; z-index: 9999999 !important; padding: 20px !important; backdrop-filter: blur(5px); pointer-events: auto !important;`;
     
-    // Click außerhalb schließt Modal
-    modal.onclick = (e) => {
-        if(e.target === modal) closeFullModal();
-    };
-    
+    modal.onclick = (e) => { if(e.target === modal) closeFullModal(); };
     document.body.appendChild(modal);
+
+    // Nachdem das Modal erstellt wurde (nach document.body.appendChild(modal)):
+const notizenTab = document.getElementById('content-notizen');
+if (notizenTab) {
+    // Suche die Screenshot-Section
+    const screenshotSection = notizenTab.querySelector('div:has(#modal-screenshot-dropzone)');
+    if (screenshotSection) {
+        // Container hinzufügen falls nicht vorhanden
+        if (!document.getElementById('modal-screenshot-previews')) {
+            const previewContainer = document.createElement('div');
+            previewContainer.id = 'modal-screenshot-previews';
+            previewContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; min-height: 120px;';
+            screenshotSection.appendChild(previewContainer);
+            console.log('✅ Container nachträglich hinzugefügt');
+        }
+    }
+}
     
-    // Lade Daten
     document.getElementById('modal-pnl').value = entry.total || '';
     document.getElementById('modal-note').value = entry.note || '';
+    if(data[k]) document.getElementById('delete-btn').style.display = 'block';
     
-    // Zeige Delete Button wenn Eintrag existiert
-    if(data[k]) {
-        document.getElementById('delete-btn').style.display = 'block';
-    }
-    
-    // Lade Trades
     window.currentFullTrades = entry.trades ? JSON.parse(JSON.stringify(entry.trades)) : [];
     renderFullTrades();
     
-    // Tab Switching
-    document.querySelectorAll('.modal-tab').forEach(tab => {
-        tab.onclick = () => switchFullTab(tab.dataset.tab);
-    });
-    
-    // Screenshot Upload
+    // === HIER: Render Screenshots aufrufen ===
+    renderFullScreenshots();
+
+    // Event Listeners für Drag & Drop
     const input = document.getElementById('modal-screenshot-input');
     const dropzone = document.getElementById('modal-screenshot-dropzone');
     
     input.onchange = (e) => handleFullScreenshots(e.target.files);
-    
-    dropzone.ondragover = (e) => {
-        e.preventDefault();
-        dropzone.style.borderColor = '#667eea';
-        dropzone.style.background = '#e8eaf6';
-    };
-    
-    dropzone.ondragleave = () => {
-        dropzone.style.borderColor = '#ccc';
-        dropzone.style.background = '#f8f9fa';
-    };
-    
+    dropzone.ondragover = (e) => { e.preventDefault(); dropzone.style.borderColor = '#667eea'; dropzone.style.background = '#e8eaf6'; };
+    dropzone.ondragleave = () => { dropzone.style.borderColor = '#ccc'; dropzone.style.background = '#f8f9fa'; };
     dropzone.ondrop = (e) => {
         e.preventDefault();
         dropzone.style.borderColor = '#ccc';
         dropzone.style.background = '#f8f9fa';
         handleFullScreenshots(e.dataTransfer.files);
     };
+}
+
+// ========== SIMPLE PASTE FUNCTION ==========
+// Direkt nach editCurrentDay() einfügen
+
+// 1. Paste Event auf Dokument-Ebene
+document.addEventListener('paste', function(e) {
+    // Debug: Console log
+    console.log('📋 Paste event triggered');
     
-    // PASTE aus Zwischenablage
-    document.addEventListener('paste', (e) => {
-        const items = e.clipboardData?.items;
-        if (!items) return;
+    // Prüfe ob das full-Modal existiert
+    const modal = document.getElementById('full-modal');
+    if (!modal) {
+        console.log('❌ No full-modal found');
+        return; // Kein Modal = ignorieren
+    }
+    
+    // Prüfe ob wir im Modal sind (kann auch auf Body sein)
+    if (!modal.contains(e.target) && e.target !== document.body) {
+        console.log('❌ Paste outside modal');
+        return;
+    }
+    
+    e.preventDefault();
+    
+    // Clipboard Daten prüfen
+    const clipboardItems = e.clipboardData.items;
+    console.log(`📋 Clipboard items: ${clipboardItems.length}`);
+    
+    const imageFiles = [];
+    
+    // Alle Clipboard Items durchgehen
+    for (let i = 0; i < clipboardItems.length; i++) {
+        const item = clipboardItems[i];
+        console.log(`Item ${i}: type = ${item.type}`);
         
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                if (blob) {
-                    handleFullScreenshots([blob]);
-                    e.preventDefault();
-                }
+        // Nur Bilder akzeptieren (PNG, JPEG, etc.)
+        if (item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) {
+                console.log(`✅ Image file: ${file.name || 'clipboard'}, ${file.type}, ${file.size} bytes`);
+                imageFiles.push(file);
             }
         }
-    });
+    }
     
-    console.log('✅ Vollständiges Modal erstellt!');
-}
+    if (imageFiles.length > 0) {
+        console.log(`✅ Found ${imageFiles.length} image(s) to process`);
+        
+        // Visuelles Feedback
+        const dropzone = document.getElementById('modal-screenshot-dropzone');
+        if (dropzone) {
+            dropzone.style.borderColor = '#2ecc71';
+            dropzone.style.background = '#e8f6ef';
+            setTimeout(() => {
+                dropzone.style.borderColor = '#ccc';
+                dropzone.style.background = '#f8f9fa';
+            }, 500);
+        }
+        
+        // Screenshots verarbeiten
+        if (typeof window.handleFullScreenshots === 'function') {
+            console.log('✅ Calling handleFullScreenshots...');
+            handleFullScreenshots(imageFiles);
+        } else {
+            console.error('❌ handleFullScreenshots function not found!');
+            alert('Fehler: Screenshot-Funktion nicht gefunden. Bitte Seite neu laden.');
+        }
+    } else {
+        console.log('❌ No images found in clipboard');
+    }
+});
+
+// 2. Show hint when copying (optional)
+document.addEventListener('copy', function() {
+    setTimeout(() => {
+        const hint = document.getElementById('paste-hint');
+        if (hint) {
+            hint.style.display = 'block';
+            setTimeout(() => {
+                hint.style.display = 'none';
+            }, 3000);
+        }
+    }, 100);
+});
+
+console.log('✅ Paste functionality loaded');
 
 function switchFullTab(tabName) {
     // Update tab buttons
@@ -5059,22 +5081,72 @@ function recalcFullPnL() {
 }
 
 function handleFullScreenshots(files) {
-    const preview = document.getElementById('modal-screenshot-previews');
+    if (window.currentFullScreenshots.length + files.length > 5) {
+        alert("Maximal 5 Screenshots erlaubt!");
+        return;
+    }
+    
     Array.from(files).forEach(file => {
-        if(!file.type.startsWith('image/')) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const div = document.createElement('div');
-            div.style.cssText = 'position: relative; width: 100px; height: 100px;';
-            div.innerHTML = `
-                <img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 2px solid #e9ecef;">
-                <button onclick="this.parentElement.remove()" style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: #dc3545; color: white; border: none; cursor: pointer; font-size: 12px;">×</button>
-            `;
-            preview.appendChild(div);
-        };
-        reader.readAsDataURL(file);
+        if (!file.type.match('image.*')) {
+            alert("Nur Bilder (JPEG/PNG) erlaubt!");
+            return;
+        }
+        // Füge das File-Objekt zur globalen Liste hinzu
+        window.currentFullScreenshots.push(file);
     });
+    
+    // Aktualisiere die Anzeige
+    renderFullScreenshots();
+}
+
+function renderFullScreenshots() {
+    const container = document.getElementById('modal-screenshot-previews');
+    if(!container) return;
+    container.innerHTML = ''; // Leeren
+
+    window.currentFullScreenshots.forEach((file, index) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'position: relative; width: 100px; height: 100px; flex-shrink: 0;';
+        
+        const img = document.createElement('img');
+        
+        // Unterscheidung: Ist es ein neues File (Blob) oder ein String (alter Dateiname aus DB)?
+        if (file instanceof File || file instanceof Blob) {
+            img.src = URL.createObjectURL(file);
+        } else if (typeof file === 'string') {
+            // Falls wir es als String haben (sollte durch editCurrentDay eigentlich als Blob geladen sein, aber sicher ist sicher)
+            // Hier bräuchten wir eigentlich das Blob, aber editCurrentDay hat das schon erledigt.
+            // Falls file hier ein String ist, ist beim Laden was schief gelaufen, wir zeigen Platzhalter
+            img.src = ''; 
+            img.alt = 'Bild geladen...';
+        }
+        
+        img.style.cssText = "width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 2px solid #e9ecef; cursor: pointer;";
+        
+        // Doppelklick zum Vergrößern
+        img.ondblclick = () => {
+            const newTab = window.open();
+            if(newTab) newTab.document.write(`<html><body style="margin:0;background:#222;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${img.src}" style="max-width:100%;max-height:100%"></body></html>`);
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.innerHTML = '×';
+        delBtn.onclick = (e) => { e.stopPropagation(); removeFullScreenshot(index); };
+        delBtn.style.cssText = "position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; background: #dc3545; color: white; border: none; cursor: pointer; font-size: 12px; font-weight: bold; z-index: 10;";
+
+        div.appendChild(img);
+        div.appendChild(delBtn);
+        container.appendChild(div);
+        
+        // Hover Vorschau (falls vorhanden)
+        if(typeof addHoverPreview === 'function') addHoverPreview(div, img.src);
+    });
+}
+
+function removeFullScreenshot(index) {
+    if(typeof clearAllPreviews === 'function') clearAllPreviews();
+    window.currentFullScreenshots.splice(index, 1);
+    renderFullScreenshots();
 }
 
 function switchModalTab(tabName) {
@@ -5122,29 +5194,68 @@ function closeFullModal() {
     if(modal) modal.remove();
 }
 
-function saveFullModal() {
+async function saveFullModal() {
+    if(!selDate) return;
     const k = dk(selDate);
-    const pnl = parseFloat(document.getElementById('modal-pnl').value) || 0;
-    const note = document.getElementById('modal-note').value;
     
-    // Validierung: Mindestens ein Wert muss vorhanden sein (inkl. Notiz!)
+    const pnlVal = parseFloat(document.getElementById('modal-pnl').value) || 0;
+    const note = document.getElementById('modal-note').value;
     const trades = window.currentFullTrades || [];
     const screenshots = window.currentFullScreenshots || [];
-    if(pnl === 0 && trades.length === 0 && screenshots.length === 0 && !note.trim()) {
+    
+    // Validierung
+    if(pnlVal === 0 && trades.length === 0 && screenshots.length === 0 && !note.trim()) {
         alert('Bitte mindestens PnL, Trade, Screenshot oder Notiz eingeben');
         return;
     }
     
+    // --- BILDER SPEICHERN ---
+    const savedFilenames = [];
+    
+    // Feedback Button
+    const saveBtn = document.querySelector('button[onclick="saveFullModal()"]');
+    const oldText = saveBtn ? saveBtn.innerText : "Speichern";
+    if(saveBtn) saveBtn.innerText = "Speichere Bilder...";
+
+    for (let i = 0; i < screenshots.length; i++) {
+        const file = screenshots[i];
+        
+        if (file instanceof File || file instanceof Blob) {
+            // Neues Bild -> Speichern
+            const timestamp = new Date().getTime();
+            let ext = 'jpg';
+            if(file.type === 'image/png') ext = 'png';
+            
+            // Eindeutiger Name
+            const filename = `img_${k}_${timestamp}_${i}.${ext}`;
+            
+            try {
+                await saveImageToDB(filename, file);
+                savedFilenames.push(filename);
+            } catch (e) {
+                console.error("Fehler beim Speichern:", e);
+                alert("Fehler beim Speichern eines Bildes!");
+            }
+        } else if (typeof file === 'string') {
+            // Bereits ein Dateiname (wurde nicht geändert)
+            savedFilenames.push(file);
+        }
+    }
+    
+    // Daten zusammenstellen
     if(!data[k]) data[k] = {};
-    data[k].total = pnl;
+    data[k].total = pnlVal;
     data[k].note = note;
     data[k].trades = trades;
+    data[k].screenshots = savedFilenames; // Dateinamen speichern!
     
-    save(); // KORRIGIERT: war vorher saveData() was nicht existiert!
+    save(); // CSV/LocalStorage speichern
+    
     closeFullModal();
-    renderDayDetails(selDate);
-    renderCal(); // KORRIGIERT: renderCalendar() existiert auch nicht, es heißt renderCal()
-    console.log('💾 Gespeichert!');
+    renderDayDetails(selDate); // Details neu laden
+    renderCal(); // Kalender neu malen
+    
+    if(saveBtn) saveBtn.innerText = oldText;
 }
 
 function deleteFullEntry() {
@@ -5225,6 +5336,39 @@ async function openModal(d){
     // modalEl.style.cssText = `...`; // DIESEN CODE ENTFERNEN
     
     console.log('✅ Modal geöffnet');
+}
+
+// ========== FUNCTION: switchFullTab (FÜR DAS GROßE MODAL) ==========
+function switchFullTab(tabName) {
+    console.log("switchFullTab aufgerufen für:", tabName);
+    
+    // Alle Tab-Inhalte verstecken
+    ['gesamt', 'trades', 'notizen'].forEach(tab => {
+        const content = document.getElementById('content-' + tab);
+        if (content) content.style.display = 'none';
+        
+        // Tab-Buttons zurücksetzen
+        const btn = document.getElementById('tab-btn-' + tab);
+        if (btn) {
+            btn.style.color = '#868e96';
+            btn.style.background = '#f8f9fa';
+            btn.style.borderBottom = 'none';
+        }
+    });
+    
+    // Aktiven Tab anzeigen
+    const activeContent = document.getElementById('content-' + tabName);
+    const activeBtn = document.getElementById('tab-btn-' + tabName);
+    
+    if (activeContent) {
+        activeContent.style.display = 'block';
+    }
+    
+    if (activeBtn) {
+        activeBtn.style.color = '#667eea';
+        activeBtn.style.background = 'white';
+        activeBtn.style.borderBottom = '3px solid #667eea';
+    }
 }
 
 function renderTradesList() {
